@@ -1,4 +1,4 @@
-package com.example.gameplan;
+package com.carroll.gameplan;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

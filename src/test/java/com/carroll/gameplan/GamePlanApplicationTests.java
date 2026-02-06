@@ -1,4 +1,4 @@
-package com.example.gameplan;
+package com.carroll.gameplan;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

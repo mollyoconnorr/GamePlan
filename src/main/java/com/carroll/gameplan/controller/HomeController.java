@@ -1,4 +1,4 @@
-package com.example.gameplan.controller;
+package com.carroll.gameplan.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
