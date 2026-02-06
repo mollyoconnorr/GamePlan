@@ -1,11 +1,22 @@
 HELP.md
-.gradle
+.gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### STS ###
+!gradle/wrapper/gradle-wrapper.jar
+
+backend/build/
+backend/bin/
+backend/out/
+
+backend/local.properties
+backend/src/main/resources/application.properties
+
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
 .apt_generated
 .classpath
 .factorypath
@@ -13,29 +24,21 @@ build/
 .settings
 .springBeans
 .sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### VS Code ###
 .vscode/
 
-local.properties
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
 
-src/main/resources/application.properties
+.DS_Store
+Thumbs.db
