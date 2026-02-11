@@ -10,6 +10,8 @@ backend/out/
 
 backend/local.properties
 backend/src/main/resources/application.properties
+backend/src/main/resources/application.yaml
+src/local.properties
 
 .idea/
 *.iws
