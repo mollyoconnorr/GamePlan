@@ -1,3 +1,6 @@
+import type {JSX} from "react";
+import * as React from "react";
+
 export type User = {
     id: string;
     email: string;
@@ -12,4 +15,10 @@ export type AuthState = {
     refresh: () => Promise<void>;
     login: () => void;
     logout: () => void;
+}
+
+export interface hamProps {
+    navHTML: JSX.Element[];
+    display: boolean;
+    setDisplay: React.Dispatch<React.SetStateAction<boolean>>;
 }
