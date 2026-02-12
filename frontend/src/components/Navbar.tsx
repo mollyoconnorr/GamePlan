@@ -1,19 +1,20 @@
 import {useState} from "react";
 import {Menu, X, CircleUserRound, LogOut} from "lucide-react";
-import type {hamProps} from "../types.ts";
+import type {hamProps, NavbarProps} from "../types.ts";
 
-export default function Navbar() {
-    // Nav options / icons to display
+export default function Navbar({username, logout}: NavbarProps) {
+    // Nav options / icons to display / actions on click of item
     const navItems = [
-        { label: "Profile", Icon: CircleUserRound },
-        { label: "Sign out", Icon: LogOut },
+        { label: username, Icon: CircleUserRound, action: null },
+        { label: "Sign out", Icon: LogOut, action: logout},
     ];
 
     // Turn above list into HTML
-    const navHTML = navItems.map(({ label, Icon }) => (
+    const navHTML = navItems.map(({ label, Icon, action }) => (
         <div
             key={label}
             className="flex items-center gap-2 font-bold p-2 hover:underline hover:cursor-pointer text-lg"
+            onClick={action ?? undefined}
         >
             <Icon size={20} />
             <span>{label}</span>

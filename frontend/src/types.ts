@@ -22,3 +22,8 @@ export interface hamProps {
     display: boolean;
     setDisplay: React.Dispatch<React.SetStateAction<boolean>>;
 }
+
+export interface NavbarProps {
+    username: string;
+    logout: () => void;
+}
