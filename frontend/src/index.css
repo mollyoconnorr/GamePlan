@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
 :root {
+  --purple: #140648;
+  --calendar-bg: #F4F4F4;
+  --calendar-border: #d5d5d5;
 
+}
+
+@theme inline {
+  /* Tailwind custom variables,
+  define them here and you can use them like 'primary' or 'calendar-bg'
+  */
+  --color-primary: var(--purple);
+  --color-calendar-bg: var(--calendar-bg);
+  --color-calendar-border: var(--calendar-border);
+
+  /* Define animation class for below keyframe */
+  --animate-slide-in: slideInFromRight 0.3s ease-in-out forwards;
+
+  /* Animation to slide in from the right */
+  @keyframes slideInFromRight {
+    0% {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0%);
+      opacity: 1;
+    }
+  }
 }
