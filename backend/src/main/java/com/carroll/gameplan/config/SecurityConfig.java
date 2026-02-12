@@ -22,12 +22,14 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health").permitAll()
+                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico").permitAll() // public files
+                        .requestMatchers("/oauth2/**", "/login/**").permitAll() // OAuth endpoints
                         .anyRequest().authenticated()
                 )
-                .oauth2Login(Customizer.withDefaults())
-                .logout(logout -> logout
-                        .logoutSuccessHandler(oidcLogoutSuccessHandler)
-                );
+                .oauth2Login(oauth -> oauth
+                        .defaultSuccessUrl("http://localhost:5173/", true)
+                )
+                .logout(logout -> logout.logoutSuccessHandler(oidcLogoutSuccessHandler));
 
         return http.build();
     }
@@ -38,11 +40,8 @@ public class SecurityConfig {
                 new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
 
         // Redirect user back to home page after logout
-        successHandler.setPostLogoutRedirectUri("http://localhost:8080/");
+        successHandler.setPostLogoutRedirectUri("http://localhost:5173/");
         return successHandler;
     }
-
-
-
 }
 
