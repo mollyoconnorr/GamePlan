@@ -25,7 +25,7 @@ export default function Navbar() {
 
     return <header>
         <nav className="bg-primary text-white w-full p-5 flex shadow-md">
-            <h1 className="font-extrabold text-5xl hover:cursor-pointer">GamePlan</h1>
+            <h1 className="font-extrabold text-3xl md:text-5xl hover:cursor-pointer">GamePlan</h1>
             <div className="hidden sm:flex h-full items-baseline space-x-10 md:space-x-20 ml-auto mr-10">
                 {navHTML}
             </div>
