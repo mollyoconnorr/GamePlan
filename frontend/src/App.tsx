@@ -3,6 +3,8 @@ import {useEffect} from "react";
 import {useAuth} from "./auth/AuthContext.tsx";
 import Navbar from "./components/Navbar.tsx";
 import Footer from "./components/Footer.tsx";
+import {Route, Routes} from "react-router-dom";
+import Home from "./pages/Home.tsx";
 
 function App() {
     const { user, loading, login, logout } = useAuth();
@@ -33,9 +35,9 @@ function App() {
             />
 
             <main className="flex-1 p-6">
-                <div className="">
-                     <h1>Hello, {user.firstName}</h1>
-                </div>
+                <Routes>
+                    <Route path="/" element={<Home user={user}/>} />
+                </Routes>
             </main>
 
             <Footer />

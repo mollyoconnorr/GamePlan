@@ -27,3 +27,7 @@ export interface NavbarProps {
     username: string;
     logout: () => void;
 }
+
+export interface PageProps {
+    user: User;
+}
