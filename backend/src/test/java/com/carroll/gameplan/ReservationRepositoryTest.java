@@ -62,7 +62,7 @@ public class ReservationRepositoryTest {
         Reservation reservation = new Reservation();
         reservation.setStartDatetime(LocalDateTime.now().plusHours(1));
         reservation.setEndDatetime(LocalDateTime.now().plusHours(2));
-        reservation.setStatus(ReservationStatus.PENDING);
+        reservation.setStatus(ReservationStatus.ACTIVE);
         reservation.setUser(testUser);
         reservation.setEquipment(testEquipment);
 
@@ -76,44 +76,55 @@ public class ReservationRepositoryTest {
 
     @Test
     void shouldFindByStatus() {
-        Reservation res1 = new Reservation();
-        res1.setStartDatetime(LocalDateTime.now().plusHours(1));
-        res1.setEndDatetime(LocalDateTime.now().plusHours(2));
-        res1.setStatus(ReservationStatus.PENDING);
-        res1.setUser(testUser);
-        res1.setEquipment(testEquipment);
-        reservationRepository.save(res1);
 
-        Reservation res2 = new Reservation();
-        res2.setStartDatetime(LocalDateTime.now().plusHours(3));
-        res2.setEndDatetime(LocalDateTime.now().plusHours(4));
-        res2.setStatus(ReservationStatus.APPROVED);
-        res2.setUser(testUser);
-        res2.setEquipment(testEquipment);
-        reservationRepository.save(res2);
+        Reservation activeRes = new Reservation();
+        activeRes.setStartDatetime(LocalDateTime.now().plusHours(1));
+        activeRes.setEndDatetime(LocalDateTime.now().plusHours(2));
+        activeRes.setStatus(ReservationStatus.ACTIVE);
+        activeRes.setUser(testUser);
+        activeRes.setEquipment(testEquipment);
+        reservationRepository.save(activeRes);
 
-        List<Reservation> pending = reservationRepository.findByStatus(ReservationStatus.PENDING);
-        List<Reservation> approved = reservationRepository.findByStatus(ReservationStatus.APPROVED);
+        Reservation cancelledRes = new Reservation();
+        cancelledRes.setStartDatetime(LocalDateTime.now().plusHours(3));
+        cancelledRes.setEndDatetime(LocalDateTime.now().plusHours(4));
+        cancelledRes.setStatus(ReservationStatus.CANCELLED);
+        cancelledRes.setUser(testUser);
+        cancelledRes.setEquipment(testEquipment);
+        reservationRepository.save(cancelledRes);
 
-        assertThat(pending).hasSize(1);
-        assertThat(approved).hasSize(1);
-        assertThat(pending.get(0).getStatus()).isEqualTo(ReservationStatus.PENDING);
-        assertThat(approved.get(0).getStatus()).isEqualTo(ReservationStatus.APPROVED);
+        List<Reservation> active = reservationRepository.findByStatus(ReservationStatus.ACTIVE);
+        List<Reservation> cancelled = reservationRepository.findByStatus(ReservationStatus.CANCELLED);
+
+        assertThat(active).hasSize(1);
+        assertThat(cancelled).hasSize(1);
+
+        assertThat(active.get(0).getStatus()).isEqualTo(ReservationStatus.ACTIVE);
+        assertThat(cancelled.get(0).getStatus()).isEqualTo(ReservationStatus.CANCELLED);
     }
 
     @Test
     void shouldFindByUserIdAndEquipmentId() {
+
         Reservation res = new Reservation();
         res.setStartDatetime(LocalDateTime.now().plusHours(1));
         res.setEndDatetime(LocalDateTime.now().plusHours(2));
-        res.setStatus(ReservationStatus.PENDING);
+        res.setStatus(ReservationStatus.ACTIVE);
         res.setUser(testUser);
         res.setEquipment(testEquipment);
         reservationRepository.save(res);
 
-        List<Reservation> byUser = reservationRepository.findByUser_Id(testUser.getId());
-        List<Reservation> byEquipment = reservationRepository.findByEquipment_Id(testEquipment.getId());
-        List<Reservation> byUserAndStatus = reservationRepository.findByUser_IdAndStatus(testUser.getId(), ReservationStatus.PENDING);
+        List<Reservation> byUser =
+                reservationRepository.findByUser_Id(testUser.getId());
+
+        List<Reservation> byEquipment =
+                reservationRepository.findByEquipment_Id(testEquipment.getId());
+
+        List<Reservation> byUserAndStatus =
+                reservationRepository.findByUser_IdAndStatus(
+                        testUser.getId(),
+                        ReservationStatus.ACTIVE
+                );
 
         assertThat(byUser).hasSize(1);
         assertThat(byEquipment).hasSize(1);

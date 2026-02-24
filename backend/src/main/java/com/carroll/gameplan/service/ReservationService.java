@@ -1,45 +1,60 @@
 package com.carroll.gameplan.service;
 
-import com.carroll.gameplan.model.Equipment;
-import com.carroll.gameplan.model.Reservation;
-import com.carroll.gameplan.model.ReservationStatus;
-import com.carroll.gameplan.model.User;
+import com.carroll.gameplan.model.*;
+import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.ReservationRepository;
+import com.carroll.gameplan.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
-/**
- * ReservationService
- *
- * This service handles all business logic related to Reservations in the GamePlan application.
- * Responsibilities include:
- *   - Creating new reservations linking a User and Equipment
- *   - Updating reservation status (PENDING, APPROVED, CANCELLED, COMPLETED)
- *   - Checking equipment availability for a given time period
- *   - Querying reservations by user, equipment, or status
- *   - Ensuring consistency with the Reservation entity and related entities
- */
 @Service
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
+    private final EquipmentRepository equipmentRepository;
+    private final UserRepository userRepository;
 
-    public ReservationService(ReservationRepository reservationRepository) {
+    public ReservationService(ReservationRepository reservationRepository,
+                              EquipmentRepository equipmentRepository,
+                              UserRepository userRepository) {
         this.reservationRepository = reservationRepository;
+        this.equipmentRepository = equipmentRepository;
+        this.userRepository = userRepository;
     }
 
-    /**
-     * Create a new reservation if equipment is available
-     */
-    public Optional<Reservation> createReservation(User user,
-                                                   Equipment equipment,
-                                                   LocalDateTime start,
-                                                   LocalDateTime end) {
-        if (!isEquipmentAvailable(equipment, start, end)) {
-            return Optional.empty(); // equipment is already reserved in this time range
+    // ✅ Create Reservation (Athlete Only)
+    public Reservation createReservation(String oidcSubject,
+                                         Long equipmentId,
+                                         LocalDateTime start,
+                                         LocalDateTime end) {
+
+        if (start.isAfter(end) || start.isEqual(end)) {
+            throw new RuntimeException("Invalid reservation time range.");
+        }
+
+        User user = userRepository.findByOidcSubject(oidcSubject)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getRole() != UserRole.ATHLETE) {
+            throw new RuntimeException("Only athletes can create reservations.");
+        }
+
+        Equipment equipment = equipmentRepository.findById(equipmentId)
+                .orElseThrow(() -> new RuntimeException("Equipment not found"));
+
+        // Check for overlapping ACTIVE reservations
+        List<Reservation> existingReservations =
+                reservationRepository.findByEquipment_Id(equipmentId);
+
+        for (Reservation r : existingReservations) {
+            if (r.getStatus() == ReservationStatus.ACTIVE &&
+                    start.isBefore(r.getEndDatetime()) &&
+                    end.isAfter(r.getStartDatetime())) {
+
+                throw new RuntimeException("Equipment not available for that time.");
+            }
         }
 
         Reservation reservation = new Reservation();
@@ -47,58 +62,39 @@ public class ReservationService {
         reservation.setEquipment(equipment);
         reservation.setStartDatetime(start);
         reservation.setEndDatetime(end);
-        reservation.setStatus(ReservationStatus.PENDING); // default status
-        return Optional.of(reservationRepository.save(reservation));
-    }
+        reservation.setStatus(ReservationStatus.ACTIVE);
 
-    /**
-     * Update the status of a reservation
-     */
-    public Reservation updateStatus(Reservation reservation, ReservationStatus status) {
-        reservation.setStatus(status);
         return reservationRepository.save(reservation);
     }
 
-    /**
-     * Check if equipment is available during a given time period
-     */
-    public boolean isEquipmentAvailable(Equipment equipment, LocalDateTime start, LocalDateTime end) {
-        List<Reservation> overlappingReservations = reservationRepository
-                .findByEquipment_Id(equipment.getId())
-                .stream()
-                .filter(r -> r.getStatus() != ReservationStatus.CANCELLED
-                        && r.getEndDatetime().isAfter(start)
-                        && r.getStartDatetime().isBefore(end))
-                .toList();
+    // ✅ Cancel Reservation (Must Own It)
+    public void cancelReservation(String oidcSubject, Long reservationId) {
 
-        return overlappingReservations.isEmpty();
+        User user = userRepository.findByOidcSubject(oidcSubject)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Reservation not found"));
+
+        // Ensure athlete owns reservation
+        if (!reservation.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only cancel your own reservations.");
+        }
+
+        if (reservation.getStatus() == ReservationStatus.COMPLETED) {
+            throw new RuntimeException("Completed reservations cannot be cancelled.");
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        reservationRepository.save(reservation);
     }
 
-    /**
-     * Find reservations by user
-     */
-    public List<Reservation> findByUser(User user) {
+    // ✅ View My Reservations
+    public List<Reservation> getMyReservations(String oidcSubject) {
+
+        User user = userRepository.findByOidcSubject(oidcSubject)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         return reservationRepository.findByUser_Id(user.getId());
-    }
-
-    /**
-     * Find reservations by equipment
-     */
-    public List<Reservation> findByEquipment(Equipment equipment) {
-        return reservationRepository.findByEquipment_Id(equipment.getId());
-    }
-
-    /**
-     * Find reservations by status
-     */
-    public List<Reservation> findByStatus(ReservationStatus status) {
-        return reservationRepository.findByStatus(status);
-    }
-
-    /**
-     * Find reservations by user and status
-     */
-    public List<Reservation> findByUserAndStatus(User user, ReservationStatus status) {
-        return reservationRepository.findByUser_IdAndStatus(user.getId(), status);
     }
 }

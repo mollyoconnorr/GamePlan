@@ -1,11 +1,14 @@
 
 package com.carroll.gameplan.service;
 
+import com.carroll.gameplan.model.Reservation;
 import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.model.UserRole;
+import com.carroll.gameplan.repository.ReservationRepository;
 import com.carroll.gameplan.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -24,11 +27,15 @@ import java.util.Optional;
 @Service
 public class UserService {
 
+    private final ReservationRepository reservationRepository;
+
     private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(ReservationRepository reservationRepository, UserRepository userRepository) {
+        this.reservationRepository = reservationRepository;
         this.userRepository = userRepository;
     }
+
 
     /**
      * Find a user by email
@@ -42,6 +49,15 @@ public class UserService {
      */
     public Optional<User> findByOidcSubject(String oidcSubject) {
         return userRepository.findByOidcSubject(oidcSubject);
+    }
+
+
+    public Optional<Reservation> findById(Long id) {
+        return reservationRepository.findById(id);
+    }
+
+    public List<Reservation> findAll() {
+        return reservationRepository.findAll(); // <-- use the instance, not class
     }
 
     /**
