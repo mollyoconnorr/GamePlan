@@ -6,6 +6,7 @@ import com.carroll.gameplan.model.EquipmentType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
@@ -18,4 +19,6 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 
     // Find by EquipmentType object
     List<Equipment> findByEquipmentType(EquipmentType equipmentType);
+
+    Optional<Equipment> findByName(String name);
 }
