@@ -1,22 +1,24 @@
 package com.carroll.gameplan.repository;
 
 import com.carroll.gameplan.model.Reservation;
-import com.carroll.gameplan.model.ReservationStatus;
 import com.carroll.gameplan.model.User;
+import com.carroll.gameplan.model.Equipment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
-    List<Reservation> findByStatus(ReservationStatus status);
+    // List all reservations for a specific user
+    List<Reservation> findByUser(User user);
 
-    List<Reservation> findByUser_Id(Long userId);
+    // Find reservations for a specific equipment that overlap a given time range
+    List<Reservation> findByEquipmentAndEndDatetimeAfterAndStartDatetimeBefore (
+            Equipment equipment, LocalDateTime end, LocalDateTime start
+    );
 
-    List<Reservation> findByEquipment_Id(Long equipmentId);
-
-    List<Reservation> findByUser_IdAndStatus(Long userId, ReservationStatus status);
 }
