@@ -41,3 +41,9 @@ export interface CalendarEvent {
     name: string;
     date: string;
 }
+
+export type ButtonProps = {
+    text: string;
+    className?: string;
+    onClick?: () => void;
+};
