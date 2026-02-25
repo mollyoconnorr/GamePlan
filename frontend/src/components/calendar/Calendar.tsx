@@ -1,31 +1,29 @@
 import type {CalendarProps} from "./CalendarTypes.ts";
 import {type JSX, useEffect, useRef, useState} from "react";
 import CalendarContent from "./CalendarContent.tsx";
-import dayjs from "dayjs";
-import {type Event} from "./CalendarTypes.ts"
+import type {CalendarEvent} from "../../types.ts";
+import {getReservations} from "../../api/Reservations.ts";
+import {parseResToEvent} from "../../util/ParseReservation.ts";
 
 export default function Calendar(props: CalendarProps) {
-    // TODO Remove once able to fetch events from backend
-    const events: Event[] = [
-        {
-            name: "Ice Bath",
-            startTime: dayjs().startOf("day").hour(8).minute(0).format("h:mm A"),
-            endTime: dayjs().startOf("day").hour(12).minute(15).format("h:mm A"),
-            date: dayjs().startOf("day").format("ddd M/D")
-        },
-        {
-            name: "Compression Boots",
-            startTime: dayjs().startOf("day").hour(10).minute(0).format("h:mm A"),
-            endTime: dayjs().startOf("day").hour(16).minute(15).format("h:mm A"),
-            date: dayjs().startOf("day").format("ddd M/D")
-        },
-        {
-            name: "Compression Boots",
-            startTime: dayjs().startOf("day").hour(10).minute(0).format("h:mm A"),
-            endTime: dayjs().startOf("day").hour(16).minute(15).format("h:mm A"),
-            date: dayjs().add(1,"days").startOf("day").format("ddd M/D")
-        }
-    ];
+    const [reservations, setReservations] = useState<CalendarEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // TODO error handling
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await getReservations();
+                setReservations(data.map(parseResToEvent));
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        load();
+    }, []);
 
     const TIME_W = 90;
     const CELL_H = 40;
@@ -140,17 +138,17 @@ export default function Calendar(props: CalendarProps) {
             </div>
 
             {/*Content on the calendar is rendered in this component*/}
-            <CalendarContent
-                top ={CELL_H + 2}
-                left ={TIME_W + 1}
-                height = {CELL_H * (numRows + 1)}
-                width = {size.width - TIME_W}
+            {!loading && <CalendarContent
+                top={CELL_H + 2}
+                left={TIME_W + 1}
+                height={CELL_H * (numRows + 1)}
+                width={size.width - TIME_W}
                 numDays={props.numDays}
                 cellHeight={CELL_H}
                 dayMap={dayMap}
                 timeMap={timeMap}
-                events={events}
-            />
+                events={reservations}
+            />}
         </div>
     );
 }

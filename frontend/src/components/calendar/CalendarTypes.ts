@@ -1,4 +1,5 @@
 import type {Dayjs} from "dayjs";
+import type {CalendarEvent} from "../../types.ts";
 
 export interface CalendarProps {
     firstDate: Dayjs;
@@ -17,12 +18,5 @@ export interface CalendarContentProps {
     numDays: number,
     dayMap: Map<string, number>,
     timeMap: Map<string, number>,
-    events: Event[]
-}
-
-export interface Event {
-    startTime: string;
-    endTime: string;
-    name: string;
-    date: string;
+    events: CalendarEvent[]
 }
