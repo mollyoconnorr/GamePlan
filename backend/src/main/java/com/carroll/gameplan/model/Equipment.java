@@ -70,9 +70,6 @@ public class Equipment {
         return name;
     }
 
-    public EquipmentType getEquipmentType() {
-        return equipmentType;
-    }
 
     public List<Reservation> getReservations() {
         return reservations;
@@ -116,11 +113,12 @@ public class Equipment {
         this.name = name;
     }
 
-    public void setEquipmentType(EquipmentType equipmentType) {
-        this.equipmentType = equipmentType;
-    }
 
     public void setReservations(List<Reservation> reservations) {
         this.reservations = reservations;
     }
+
+    public EquipmentType getEquipmentType() { return equipmentType; }
+
+    public void setEquipmentType(EquipmentType equipmentType) { this.equipmentType = equipmentType; }
 }
