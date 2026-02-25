@@ -1,6 +1,7 @@
 package com.carroll.gameplan.service;
 
 import com.carroll.gameplan.model.User;
+import com.carroll.gameplan.model.UserRole;
 import com.carroll.gameplan.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
@@ -52,7 +53,7 @@ public class CustomOidcUserService extends OidcUserService {
                     newUser.setLastName(lastName);
 
                     // Set default role for new users
-                    newUser.setRole("ATHLETE");
+                    newUser.setRole(UserRole.valueOf("ATHLETE"));
 
                     // Save and return the new user
                     return userRepository.save(newUser);
