@@ -28,6 +28,16 @@ export interface NavbarProps {
     logout: () => void;
 }
 
-export interface PageProps {
-    user: User;
+export interface Reservation {
+    id: number,
+    equipmentName: string,
+    start: string,
+    end: string
+}
+
+export interface CalendarEvent {
+    startTime: string;
+    endTime: string;
+    name: string;
+    date: string;
 }
