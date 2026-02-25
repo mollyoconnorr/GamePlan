@@ -104,7 +104,7 @@ export default function Calendar(props: CalendarProps) {
     return (
         <div className="relative bg-gray-300 rounded-sm border shadow-md overflow-x-auto overflow-y-auto" >
             {/* BODY*/}
-            <div className="max-h-[400px]">
+            <div className="max-h-[60vh]">
                 {/* HEADER ROW */}
                 {/* OBSERVER bc of ref*/}
                 <div className="sticky top-0 z-20 grid bg-gray-400" style={gridStyle} ref={divRef}>

@@ -57,11 +57,11 @@ function HamMenu({navHTML, display, setDisplay} : hamProps) {
             <div
                 // Allow user to click out of menu to hide it
                 onClick={() => setDisplay(false)}
-                className="fixed bg-black/20 top-0 left-0 w-full h-full">
+                className="fixed bg-black/20 top-0 left-0 w-full h-full z-9999">
             </div>
             <nav
                 className="bg-primary fixed top-0 right-0 flex flex-col h-full
-        border-black border-l-2 p-2 animate-slide-in space-y-5"
+        border-black border-l-2 p-2 animate-slide-in space-y-5 z-9999"
             >
                 <button onClick={() => setDisplay(false)}
                         className="ml-auto mr-2 mt-3"
