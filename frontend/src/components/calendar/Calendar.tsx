@@ -1,6 +1,32 @@
 import type {CalendarProps} from "./CalendarTypes.ts";
+import {type JSX, useEffect, useRef, useState} from "react";
+import CalendarContent from "./CalendarContent.tsx";
+import dayjs from "dayjs";
+import {type Event} from "./CalendarTypes.ts"
 
 export default function Calendar(props: CalendarProps) {
+    // TODO Remove once able to fetch events from backend
+    const events: Event[] = [
+        {
+            name: "Ice Bath",
+            startTime: dayjs().startOf("day").hour(8).minute(0).format("h:mm A"),
+            endTime: dayjs().startOf("day").hour(12).minute(15).format("h:mm A"),
+            date: dayjs().startOf("day").format("ddd M/D")
+        },
+        {
+            name: "Compression Boots",
+            startTime: dayjs().startOf("day").hour(10).minute(0).format("h:mm A"),
+            endTime: dayjs().startOf("day").hour(16).minute(15).format("h:mm A"),
+            date: dayjs().startOf("day").format("ddd M/D")
+        },
+        {
+            name: "Compression Boots",
+            startTime: dayjs().startOf("day").hour(10).minute(0).format("h:mm A"),
+            endTime: dayjs().startOf("day").hour(16).minute(15).format("h:mm A"),
+            date: dayjs().add(1,"days").startOf("day").format("ddd M/D")
+        }
+    ];
+
     const TIME_W = 90;
     const CELL_H = 40;
     const DAY_MIN_W = 140;
@@ -17,41 +43,84 @@ export default function Calendar(props: CalendarProps) {
         minWidth,
     };
 
+    // Create day headers (Shows date on top row of calendar)
+    const dayHTML: JSX.Element[] = [];
+
+    // This is passed to calendar content to determine what column to place events in
+    const dayMap: Map<string, number> = new Map();
+    for (let i = 0; i < props.numDays; i++) {
+        const currDay: string = props.firstDate.add(i, "days").format("ddd M/D");
+
+        dayHTML.push(
+            <div
+                key={i}
+                className="border-x-1 text-center p-2 font-semibold"
+            >
+                {currDay}
+            </div>
+        );
+
+        dayMap.set(currDay, i);
+    }
+
+    // Creates the time column on the left side of the calendar
+    const timeColHTML: JSX.Element[] = [];
+
+    // This is passed to calendar content to determine the size of each event
+    const timeMap: Map<string, number> = new Map();
+    for (let i = 0; i <= numRows; i++) {
+        const currTime: string =  props.startTime
+            .add(i * props.timeStepMin, "minute").format("h:mm A");
+
+        timeColHTML.push(
+            <div
+                key={i}
+                className="border-y text-center p-2"
+                style={{ width: TIME_W, height: CELL_H }}
+            >
+                {currTime}
+            </div>
+        );
+
+        timeMap.set(currTime, i);
+    }
+
+    // Used to dynamically update the size of the calendar cells based on the size of the calendar header row
+    const divRef = useRef<HTMLDivElement | null>(null);
+    const [size, setSize] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        if (!divRef.current) return;
+
+        // Updates size everytime the size of the observed object changes
+        const observer = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            setSize({ width, height });
+        });
+
+        observer.observe(divRef.current);
+
+        return () => observer.disconnect();
+    }, []);
+
     return (
-        <div className="relative bg-gray-300 rounded-sm border shadow-md overflow-x-auto">
+        <div className="relative bg-gray-300 rounded-sm border shadow-md overflow-x-auto overflow-y-auto" >
             {/* BODY*/}
-            <div className="max-h-[400px] overflow-y-auto">
+            <div className="max-h-[400px]">
                 {/* HEADER ROW */}
-                <div className="sticky top-0 z-20 grid bg-gray-400" style={gridStyle}>
+                {/* OBSERVER bc of ref*/}
+                <div className="sticky top-0 z-20 grid bg-gray-400" style={gridStyle} ref={divRef}>
                     {/* top-left corner cell */}
-                    <div className="border p-2" />
+                    <div className="p-2" />
 
                     {/* day headers */}
-                    {Array.from({ length: props.numDays }).map((_, i) => (
-                        <div key={i} className="border text-center p-2 font-semibold">
-                            {props.firstDate.add(i, "days").format("ddd M/D")}
-                        </div>
-                    ))}
+                    {dayHTML}
                 </div>
 
                 <div className="grid" style={gridStyle}>
                     {/* TIME COLUMN */}
-                    <div className="sticky left-0 flex flex-col bg-gray-400 z-11">
-                        {Array.from({ length: numRows + 1 }).map((_, i) => {
-                            const disTime = props.startTime
-                                .add(i * props.timeStepMin, "minute")
-                                .format("h:mm A");
-
-                            return (
-                                <div
-                                    key={i}
-                                    className="border text-center p-2"
-                                    style={{ width: TIME_W, height: CELL_H }}
-                                >
-                                    {disTime}
-                                </div>
-                            );
-                        })}
+                    <div className="flex flex-col bg-gray-400 z-11">
+                        {timeColHTML}
                     </div>
 
                     {/* DAY COLUMNS */}
@@ -70,7 +139,18 @@ export default function Calendar(props: CalendarProps) {
                 </div>
             </div>
 
-
+            {/*Content on the calendar is rendered in this component*/}
+            <CalendarContent
+                top ={CELL_H + 2}
+                left ={TIME_W + 1}
+                height = {CELL_H * (numRows + 1)}
+                width = {size.width - TIME_W}
+                numDays={props.numDays}
+                cellHeight={CELL_H}
+                dayMap={dayMap}
+                timeMap={timeMap}
+                events={events}
+            />
         </div>
     );
 }
