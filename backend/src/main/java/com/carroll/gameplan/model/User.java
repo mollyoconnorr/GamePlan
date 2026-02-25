@@ -2,9 +2,6 @@ package com.carroll.gameplan.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
-
-import jakarta.persistence.*;
 
 @Entity
 @Table(name = "users")
@@ -77,6 +74,6 @@ public class User {
         this.createdAt = createdAt;
     }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 }
