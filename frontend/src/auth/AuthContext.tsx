@@ -65,3 +65,16 @@ export function useAuth() {
     if (!ctx) throw new Error("useAuth must be used within the AuthProvider");
     return ctx;
 }
+
+/**
+ * Use only inside parts of the app that are behind <RequireAuth>.
+ * Returns a non-null User for correct TS typing.
+ */
+export function useAuthedUser(): User {
+    const { user } = useAuth();
+    if (!user) {
+        // This should never happen if <RequireAuth> wraps the tree.
+        throw new Error("useAuthedUser must be used within RequireAuth");
+    }
+    return user;
+}

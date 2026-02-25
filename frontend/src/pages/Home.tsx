@@ -1,9 +1,11 @@
-import type {PageProps} from "../types.ts";
 import Calendar from "../components/calendar/Calendar.tsx";
 import {useState} from "react";
 import dayjs from "dayjs";
+import {useAuthedUser} from "../auth/AuthContext.tsx";
 
-export default function Home({user} : PageProps){
+export default function Home(){
+    const user = useAuthedUser();
+
     const [firstDate] = useState(() => dayjs().startOf("day"));
 
     const startTime = dayjs().startOf("day").hour(8).minute(0);
