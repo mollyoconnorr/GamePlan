@@ -4,6 +4,8 @@ import RequireAuth from "./auth/RequireAuth";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
+import ManageReservations from "./pages/ManageReservations.tsx";
+import ReserveEquipment from "./pages/ReserveEquipment.tsx";
 
 function AppShell() {
     const { user, logout } = useAuth(); // user is guaranteed by RequireAuth
@@ -15,6 +17,8 @@ function AppShell() {
             <main className="flex-1 p-6">
                 <Routes>
                     <Route path="/" element={<Home />} />
+                    <Route path="/manageReservations" element={<ManageReservations />} />
+                    <Route path="/reserveEquipment" element={<ReserveEquipment />} />
                 </Routes>
             </main>
 
