@@ -1,4 +1,4 @@
 package com.carroll.gameplan.service;
 
-public class ReservationService {
+public class CustomOidcUserService {
 }
