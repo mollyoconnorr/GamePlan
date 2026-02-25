@@ -1,5 +1,6 @@
 import type {JSX} from "react";
 import * as React from "react";
+import type {Dayjs} from "dayjs";
 
 export type User = {
     id: string;
@@ -28,11 +29,18 @@ export interface NavbarProps {
     logout: () => void;
 }
 
-export interface Reservation {
+export interface RawReservation {
     id: number,
     equipmentName: string,
     start: string,
     end: string
+}
+
+export interface Reservation {
+    id: number,
+    name: string,
+    start: Dayjs,
+    end: Dayjs
 }
 
 export interface CalendarEvent {

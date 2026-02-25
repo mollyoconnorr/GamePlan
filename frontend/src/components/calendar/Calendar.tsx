@@ -3,7 +3,7 @@ import {type JSX, useEffect, useRef, useState} from "react";
 import CalendarContent from "./CalendarContent.tsx";
 import type {CalendarEvent} from "../../types.ts";
 import {getReservations} from "../../api/Reservations.ts";
-import {parseResToEvent} from "../../util/ParseReservation.ts";
+import {parseRawResToEvent} from "../../util/ParseReservation.ts";
 
 export default function Calendar(props: CalendarProps) {
     const [reservations, setReservations] = useState<CalendarEvent[]>([]);
@@ -14,7 +14,8 @@ export default function Calendar(props: CalendarProps) {
         const load = async () => {
             try {
                 const data = await getReservations();
-                setReservations(data.map(parseResToEvent));
+                console.log(data);
+                setReservations(data.map(parseRawResToEvent));
             } catch (err) {
                 console.error(err);
             } finally {

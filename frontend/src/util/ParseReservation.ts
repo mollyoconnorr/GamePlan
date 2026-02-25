@@ -1,7 +1,7 @@
-import type {Reservation} from "../types.ts";
+import type {RawReservation} from "../types.ts";
 import dayjs from "dayjs";
 
-export function parseResToEvent(reservation: Reservation ) {
+export function parseRawResToEvent(reservation: RawReservation ) {
     const startDate = dayjs(reservation.start);
     const endDate = dayjs(reservation.end);
 
