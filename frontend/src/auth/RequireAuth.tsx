@@ -1,17 +1,31 @@
-import { useEffect } from "react";
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import LoadingPage from "../pages/LoadingPage";
-import * as React from "react";
 
-export default function RequireAuth({ children }: { children: React.ReactNode }) {
-    const { user, loading, login } = useAuth();
+interface RequireAuthProps {
+    children: React.ReactNode;
+    redirectTo?: string;
+}
 
-    useEffect(() => {
-        if (!loading && !user) login();
-    }, [loading, user, login]);
+export default function RequireAuth({
+                                        children,
+                                        redirectTo = "/",
+                                    }: RequireAuthProps) {
+    const { user, loading } = useAuth();
+    const location = useLocation();
 
     if (loading) return <LoadingPage />;
-    if (!user) return null; // redirect already initiated
+
+    if (!user) {
+        return (
+            <Navigate
+                to={redirectTo}
+                replace
+                state={{ from: location }}
+            />
+        );
+    }
 
     return <>{children}</>;
 }
