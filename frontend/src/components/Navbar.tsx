@@ -1,48 +1,57 @@
 import {useState} from "react";
-import {Menu, X, CircleUserRound, LogOut} from "lucide-react";
+import {Menu, X, CircleUserRound, LogOut,Calendar1} from "lucide-react";
 import type {hamProps, NavbarProps} from "../types.ts";
+import {useNavigate} from "react-router-dom";
 
 export default function Navbar({username, logout}: NavbarProps) {
-    // Nav options / icons to display / actions on click of item
-    const navItems = [
-        { label: username, Icon: CircleUserRound, action: null },
-        { label: "Sign out", Icon: LogOut, action: logout},
-    ];
+    const navigate = useNavigate();
 
-    // Turn above list into HTML
-    const navHTML = navItems.map(({ label, Icon, action }) => (
-        <div
-            key={label}
-            className="flex items-center gap-2 font-bold p-2 hover:underline hover:cursor-pointer text-lg"
-            onClick={action ?? undefined}
-        >
-            <Icon size={20} />
-            <span>{label}</span>
-        </div>
-    ));
+    let navHTML;
+    if (username) {
+        // Nav options / icons to display / actions on click of item
+        const navItems = [
+            { label: "Calendar", Icon: Calendar1, action: () => navigate("/app/home")},
+            { label: username, Icon: CircleUserRound, action: null },
+            { label: "Sign out", Icon: LogOut, action: logout},
+        ];
+
+        // Turn above list into HTML
+        navHTML = navItems.map(({ label, Icon, action }) => (
+            <div
+                key={label}
+                className="flex items-center gap-2 font-bold p-2 hover:underline hover:cursor-pointer text-lg"
+                onClick={action ?? undefined}
+            >
+                <Icon size={20} />
+                <span>{label}</span>
+            </div>
+        ));
+    }
 
     // Tracks when to display hamburger menu
     const [displayHamMenu, setDisplayHamMenu] = useState(false);
 
     return <header>
         <nav className="bg-primary text-white w-full p-5 flex shadow-md">
-            <h1 className="font-extrabold text-3xl md:text-5xl hover:cursor-pointer">GamePlan</h1>
-            <div className="hidden sm:flex h-full items-baseline space-x-10 md:space-x-20 ml-auto mr-10">
+            <h1 className="font-extrabold text-3xl md:text-5xl hover:cursor-pointer"
+            onClick={() => navigate("/")}
+            >GamePlan</h1>
+            <div className="hidden lg:flex h-full items-baseline space-x-10 md:space-x-15 ml-auto mr-10">
                 {navHTML}
             </div>
             {!displayHamMenu && <button
                 onClick={() => setDisplayHamMenu(true)}
-                className="sm:hidden w-full"
+                className="lg:hidden w-full"
                 aria-label="Open navigation menu"
             >
                 {/*Hide nav menu when ham menu is displayed*/}
-                <Menu className="sm:hidden ml-auto mr-3 size-10 hover:cursor-pointer"/>
+                <Menu className="ml-auto mr-3 size-10 hover:cursor-pointer"/>
             </button>}
-            <HamMenu
+            {navHTML && <HamMenu
                 navHTML={navHTML}
-                display = {displayHamMenu}
-                setDisplay = {setDisplayHamMenu}
-            />
+                display={displayHamMenu}
+                setDisplay={setDisplayHamMenu}
+            />}
         </nav>
     </header>;
 };
