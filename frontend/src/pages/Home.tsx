@@ -43,6 +43,7 @@ export default function Home(){
                     startTime={startTime}
                     endTime={endTime}
                     timeStepMin={15}
+                    variant={"user"}
                 />
             </section>
         </>

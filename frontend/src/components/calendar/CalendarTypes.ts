@@ -7,6 +7,7 @@ export interface CalendarProps {
     startTime: Dayjs;
     endTime: Dayjs;
     timeStepMin: number
+    variant: "user" | "equip" | "trainer"
 }
 
 export interface CalendarContentProps {

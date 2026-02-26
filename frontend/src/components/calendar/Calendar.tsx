@@ -4,6 +4,7 @@ import CalendarContent from "./CalendarContent.tsx";
 import type {CalendarEvent} from "../../types.ts";
 import {getReservations} from "../../api/Reservations.ts";
 import {parseRawResToEvent} from "../../util/ParseReservation.ts";
+import Spinner from "../Spinner.tsx";
 
 export default function Calendar(props: CalendarProps) {
     const [reservations, setReservations] = useState<CalendarEvent[]>([]);
@@ -138,8 +139,10 @@ export default function Calendar(props: CalendarProps) {
                 </div>
             </div>
 
+            {loading && <Spinner/>}
+
             {/*Content on the calendar is rendered in this component*/}
-            {!loading && <CalendarContent
+            {!loading && props.variant === "user" && <CalendarContent
                 top={CELL_H + 2}
                 left={TIME_W + 1}
                 height={CELL_H * (numRows + 1)}
