@@ -26,13 +26,13 @@ export default function Home(){
                     <Button
                         text="Manage Reservations"
                         className="bg-blue-400 hover:bg-blue-300 border-green-500"
-                        onClick={() => {navigate("/manageReservations")}}
+                        onClick={() => {navigate("/app/manageReservations")}}
                     />
 
                     <Button
                         text="Reserve Equipment"
                         className="bg-green-400 hover:bg-green-300 border-green-500"
-                        onClick={() => {navigate("/reserveEquipment")}}
+                        onClick={() => {navigate("/app/reserveEquipment")}}
                     />
 
                 </div>
