@@ -27,7 +27,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth
-                        .defaultSuccessUrl("http://localhost:5173/", true)
+                        .defaultSuccessUrl("http://localhost:5173/app/home", true)
                 )
                 .logout(logout -> logout.logoutSuccessHandler(oidcLogoutSuccessHandler));
 
