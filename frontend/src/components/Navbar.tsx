@@ -1,25 +1,34 @@
 import {useState} from "react";
 import {Menu, X, CircleUserRound, LogOut,Calendar1} from "lucide-react";
 import type {hamProps, NavbarProps} from "../types.ts";
-import {useNavigate} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 
-export default function Navbar({username, logout}: NavbarProps) {
+export default function Navbar({ username, logout }: NavbarProps) {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const isHome = location.pathname === "/app/home";
+    const isProfile = location.pathname === "/app/profile";
 
     let navHTML;
     if (username) {
-        // Nav options / icons to display / actions on click of item
         const navItems = [
-            { label: "Calendar", Icon: Calendar1, action: () => navigate("/app/home")},
-            { label: username, Icon: CircleUserRound, action: null },
-            { label: "Sign out", Icon: LogOut, action: logout},
+            {
+                label: "Calendar",
+                Icon: Calendar1,
+                action: () => navigate("/app/home"),
+                underline: isHome,
+            },
+            { label: username, Icon: CircleUserRound, action: null, underline: isProfile },
+            { label: "Sign out", Icon: LogOut, action: logout, underline: false },
         ];
 
-        // Turn above list into HTML
-        navHTML = navItems.map(({ label, Icon, action }) => (
+        navHTML = navItems.map(({ label, Icon, action, underline }) => (
             <div
                 key={label}
-                className="flex items-center gap-2 font-bold p-2 hover:underline hover:cursor-pointer text-lg"
+                className={`flex items-center gap-2 font-bold p-2 hover:underline hover:cursor-pointer text-lg ${
+                    underline ? "underline" : ""
+                }`}
                 onClick={action ?? undefined}
             >
                 <Icon size={20} />
