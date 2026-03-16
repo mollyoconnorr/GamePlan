@@ -1,4 +1,7 @@
 package com.carroll.gameplan.dto;
 
-public class EquipmentTypeDTO {
-}
+public record EquipmentTypeDTO(
+        Long id,
+        String name,
+        boolean hasAttributes
+) {}
