@@ -1,17 +1,12 @@
-import Button from "../components/Button.tsx";
-import {useNavigate} from "react-router-dom";
 import {useEffect, useState} from "react";
 import type {Reservation} from "../types.ts";
 import {getReservations} from "../api/Reservations.ts";
-import Spinner from "../components/Spinner.tsx";
+import Spinner from "./Spinner.tsx";
 import {parseRawResToRes} from "../util/ParseReservationInfo.ts";
-import {safeBack} from "../util/Navigation.ts";
 import dayjs from "dayjs";
 import {SquarePen, Trash2} from "lucide-react";
 
 export default function ManageReservations() {
-    const navigate = useNavigate()
-
     const [reservations, setReservations] = useState<Reservation[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -51,15 +46,7 @@ export default function ManageReservations() {
 
     return (
         <>
-            <Button
-                text="Back"
-                className="bg-gray-300 hover:bg-gray-200"
-                onClick={() => safeBack(navigate)}
-            />
             <section className="mx-5 md:mx-30">
-
-                <h1 className="text-3xl font-bold text-gray-900">Manage Reservations</h1>
-
                 {loading && <Spinner/>}
 
                 {!loading && dayEventArr.map(({dayKey, dayLabel, events}) => (
