@@ -1,3 +1,6 @@
+// src/api/Reservations.ts
+
+// Fetch all reservations for the current user
 export async function getReservations() {
     const res = await fetch("/api/reservations", {
         method: "GET",
