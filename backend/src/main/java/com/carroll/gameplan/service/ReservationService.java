@@ -6,8 +6,8 @@ import com.carroll.gameplan.model.ReservationStatus;
 import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.ReservationRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,6 +68,9 @@ public class ReservationService {
         if (!existingReservations.isEmpty()) {
             throw new IllegalArgumentException("Equipment is already reserved for this time slot.");
         }
+        if (end.isBefore(start) || end.equals(start)) {
+            throw new IllegalArgumentException("End time must be after start time.");
+        }
 
         // Create and save the new reservation
         Reservation reservation = new Reservation();
@@ -97,6 +100,11 @@ public class ReservationService {
         return reservationRepository.save(reservation);
     }
 
+    @Transactional(readOnly = true)
+    public List<Reservation> getReservationsForEquipment(Long equipmentId) {
+        return reservationRepository.findByEquipmentId(equipmentId);
+    }
+
     // ===== Function 4: Update an existing reservation =====
 
     /**
@@ -122,6 +130,9 @@ public class ReservationService {
 
         if (!overlapping.isEmpty()) {
             throw new IllegalArgumentException("New time slot conflicts with existing reservations.");
+        }
+        if (newEnd.isBefore(newStart) || newEnd.equals(newStart)) {
+            throw new IllegalArgumentException("End time must be after start time.");
         }
 
         // Update reservation times and save
