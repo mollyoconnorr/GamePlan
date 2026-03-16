@@ -1,6 +1,6 @@
 import type {ButtonProps} from '../types.ts';
 
-export default function Button({ text, className = "", onClick }: ButtonProps) {
+export default function Button({ text, className = "", onClick, style }: ButtonProps) {
     return (
         <button
             className={`
@@ -11,6 +11,7 @@ export default function Button({ text, className = "", onClick }: ButtonProps) {
         ${className}
       `}
             onClick={onClick}
+            style={style}
         >
             {text}
         </button>
