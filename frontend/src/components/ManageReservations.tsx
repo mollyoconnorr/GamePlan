@@ -1,31 +1,14 @@
-import {useEffect, useState} from "react";
 import type {Reservation} from "../types.ts";
-import {getReservations} from "../api/Reservations.ts";
 import Spinner from "./Spinner.tsx";
-import {parseRawResToRes} from "../util/ParseReservationInfo.ts";
 import dayjs from "dayjs";
 import {SquarePen, Trash2} from "lucide-react";
 
-export default function ManageReservations() {
-    const [reservations, setReservations] = useState<Reservation[]>([]);
-    const [loading, setLoading] = useState(true);
+type ManageReservationsProps = {
+    reservations: Reservation[];
+    loading: boolean;
+};
 
-    // TODO error handling
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const data = await getReservations();
-                setReservations(data.map(parseRawResToRes));
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        load();
-    }, []);
-
+export default function ManageReservations({ reservations, loading }: ManageReservationsProps) {
     const dayEventMap: Map<string, { dayLabel: string; events: Reservation[] }> = new Map();
 
     reservations.forEach((r) => {
@@ -73,7 +56,7 @@ export default function ManageReservations() {
 function ReservationCard({startTime, endTime, name}: { startTime: string, endTime: string, name: string }) {
     return (
         <div className="flex w-full justify-between items-center border
-         shadow-md rounded-md bg-orange-400 px-2 max-w-[80%]">
+        shadow-md rounded-md bg-orange-400 px-2 max-w-[80%]">
             {/*TODO Fix hardcoded colors*/}
             <div className="flex flex-col md:flex-row space-x-1">
                 <p className="text-wrap">

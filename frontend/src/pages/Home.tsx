@@ -5,6 +5,10 @@ import {useAuthedUser} from "../auth/AuthContext.tsx";
 import Button from "../components/Button.tsx";
 import {useNavigate} from "react-router-dom";
 import ManageReservations from "../components/ManageReservations.tsx";
+import type {CalendarEvent, Reservation} from "../types.ts";
+import {getReservations} from "../api/Reservations.ts";
+import {parseRawResToEvent} from "../util/ParseReservation.ts";
+import {parseRawResToRes} from "../util/ParseReservationInfo.ts";
 
 export default function Home(){
     const user = useAuthedUser();
@@ -26,6 +30,28 @@ export default function Home(){
     useEffect(() => {
         localStorage.setItem("showCalendar", JSON.stringify(showCalendar));
     }, [showCalendar]);
+
+    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+    const [reservations, setReservations] = useState<Reservation[]>([]);
+
+    const [loading, setLoading] = useState(true);
+
+    // TODO error handling
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await getReservations();
+                setCalendarEvents(data.map(parseRawResToEvent));
+                setReservations(data.map(parseRawResToRes));
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        load();
+    }, []);
 
     return (
         <>
@@ -67,9 +93,14 @@ export default function Home(){
                     endTime={endTime}
                     timeStepMin={15}
                     variant={"user"}
+                    reservations={calendarEvents}
+                    loading={loading}
                 />}
 
-                {!showCalendar && <ManageReservations />}
+                {!showCalendar && <ManageReservations
+                    reservations={reservations}
+                    loading={loading}
+                />}
             </section>
         </>
     )

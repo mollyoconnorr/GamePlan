@@ -8,6 +8,8 @@ export interface CalendarProps {
     endTime: Dayjs;
     timeStepMin: number
     variant: "user" | "equip" | "trainer"
+    reservations: CalendarEvent[];
+    loading: boolean;
 }
 
 export interface CalendarContentProps {
