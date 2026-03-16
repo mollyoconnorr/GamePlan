@@ -67,12 +67,6 @@ public class ReservationServiceTest {
         testEquipment = new Equipment();
         testEquipment.setName("Gym Hoop #1");
         testEquipment.setStatus(EquipmentStatus.AVAILABLE);
-        testEquipment.setDefaultResLength(60); // Default reservation length in minutes
-        testEquipment.setMinResLength(30);
-        testEquipment.setMaxResLength(90);
-        testEquipment.setMinTime(5);
-        testEquipment.setMaxTime(120);
-        testEquipment.setStepMin(5);
         testEquipment.setEquipmentType(type); // associate with equipment type
         testEquipment = equipmentRepository.save(testEquipment);
     }
