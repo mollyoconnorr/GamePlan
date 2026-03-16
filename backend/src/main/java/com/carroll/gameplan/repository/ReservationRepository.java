@@ -41,4 +41,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByEquipmentAndEndDatetimeAfterAndStartDatetimeBefore(
             Equipment equipment, LocalDateTime end, LocalDateTime start
     );
+
+    List<Reservation> findByEquipmentId(Long equipmentId);
 }
