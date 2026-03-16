@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * REST controller for managing reservations.
@@ -64,6 +65,18 @@ public class ReservationController {
                 .toList();
     }
 
+    @GetMapping("/{equipmentId}")
+    public List<ReservationResponse> getEquipmentReservations(@PathVariable Long equipmentId) {
+        List<Reservation> reservations = reservationService.getReservationsForEquipment(equipmentId);
+        return reservations.stream()
+                .map(r -> new ReservationResponse(
+                        r.getId(),
+                        r.getStartDatetime().toString(),
+                        r.getEndDatetime().toString(),
+                        r.getUser().getFirstName() + " " + r.getUser().getLastName() // <-- user who reserved
+                ))
+                .collect(Collectors.toList());
+    }
     /**
      * Creates a new reservation for the currently authenticated user.
      *
