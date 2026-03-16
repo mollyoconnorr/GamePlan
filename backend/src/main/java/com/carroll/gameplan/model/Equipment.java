@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Represents a piece of equipment that can be reserved by users.
  * <p>
- * Stores information such as reservation time constraints, status,
+ * Stores information such as the equipment name, status,
  * and the type of equipment it belongs to.
  * </p>
  */
@@ -20,36 +20,6 @@ public class Equipment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    /**
-     * Minimum allowable time (in minutes) for a reservation step.
-     */
-    private Integer minTime;
-
-    /**
-     * Maximum allowable time (in minutes) for a reservation step.
-     */
-    private Integer maxTime;
-
-    /**
-     * Increment step in minutes for time selection.
-     */
-    private Integer stepMin;
-
-    /**
-     * Minimum length of a reservation in minutes.
-     */
-    private Integer minResLength;
-
-    /**
-     * Maximum length of a reservation in minutes.
-     */
-    private Integer maxResLength;
-
-    /**
-     * Default reservation length in minutes.
-     */
-    private Integer defaultResLength;
 
     /**
      * Current status of the equipment (available, reserved, etc.).
@@ -77,12 +47,17 @@ public class Equipment {
     private List<Reservation> reservations;
 
     /**
+     * Optional attributes for equipment (ex: size, color, etc.).
+     */
+    @OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL)
+    private List<EquipmentAttribute> attributes;
+
+    /**
      * Default constructor.
      */
-    public Equipment() {
-    }
+    public Equipment() {}
 
-    // ===== Getters =====
+    // ===== Getters & Setters =====
 
     public Long getId() {
         return id;
@@ -90,56 +65,6 @@ public class Equipment {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Integer getMinTime() {
-        return minTime;
-    }
-
-    public void setMinTime(Integer minTime) {
-        this.minTime = minTime;
-    }
-
-    public Integer getMaxTime() {
-        return maxTime;
-    }
-
-    public void setMaxTime(Integer maxTime) {
-        this.maxTime = maxTime;
-    }
-
-    public Integer getStepMin() {
-        return stepMin;
-    }
-
-    public void setStepMin(Integer stepMin) {
-        this.stepMin = stepMin;
-    }
-
-    public Integer getMinResLength() {
-        return minResLength;
-    }
-
-    public void setMinResLength(Integer minResLength) {
-        this.minResLength = minResLength;
-    }
-
-    public Integer getMaxResLength() {
-        return maxResLength;
-    }
-
-    // ===== Setters =====
-
-    public void setMaxResLength(Integer maxResLength) {
-        this.maxResLength = maxResLength;
-    }
-
-    public Integer getDefaultResLength() {
-        return defaultResLength;
-    }
-
-    public void setDefaultResLength(Integer defaultResLength) {
-        this.defaultResLength = defaultResLength;
     }
 
     public EquipmentStatus getStatus() {
@@ -158,6 +83,14 @@ public class Equipment {
         this.name = name;
     }
 
+    public EquipmentType getEquipmentType() {
+        return equipmentType;
+    }
+
+    public void setEquipmentType(EquipmentType equipmentType) {
+        this.equipmentType = equipmentType;
+    }
+
     public List<Reservation> getReservations() {
         return reservations;
     }
@@ -166,11 +99,11 @@ public class Equipment {
         this.reservations = reservations;
     }
 
-    public EquipmentType getEquipmentType() {
-        return equipmentType;
+    public List<EquipmentAttribute> getAttributes() {
+        return attributes;
     }
 
-    public void setEquipmentType(EquipmentType equipmentType) {
-        this.equipmentType = equipmentType;
+    public void setAttributes(List<EquipmentAttribute> attributes) {
+        this.attributes = attributes;
     }
 }
