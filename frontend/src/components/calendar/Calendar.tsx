@@ -119,7 +119,7 @@ export default function Calendar(props: CalendarProps) {
             {props.loading && <Spinner/>}
 
             {/*Content on the calendar is rendered in this component*/}
-            {!props.loading && props.variant === "user" && <CalendarContent
+            {!props.loading && props.variant === "user" && props.reservations && <CalendarContent
                 top={CELL_H + 2}
                 left={TIME_W + 1}
                 height={CELL_H * (numRows + 1)}
