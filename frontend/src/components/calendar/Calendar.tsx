@@ -82,38 +82,36 @@ export default function Calendar(props: CalendarProps) {
 
     return (
         <div className="relative bg-gray-300 rounded-sm border shadow-md overflow-x-auto overflow-y-auto" >
+            {/* HEADER ROW */}
+            {/* OBSERVER bc of ref*/}
+            <div className="sticky top-0 z-20 grid bg-gray-400" style={gridStyle} ref={divRef}>
+                {/* top-left corner cell */}
+                <div className="p-2 border-b" />
+
+                {/* day headers */}
+                {dayHTML}
+            </div>
+
             {/* BODY*/}
-            <div className="max-h-[60vh]">
-                {/* HEADER ROW */}
-                {/* OBSERVER bc of ref*/}
-                <div className="sticky top-0 z-20 grid bg-gray-400" style={gridStyle} ref={divRef}>
-                    {/* top-left corner cell */}
-                    <div className="p-2" />
-
-                    {/* day headers */}
-                    {dayHTML}
+            <div className="max-h-[60vh] grid" style={gridStyle}>
+                {/* TIME COLUMN */}
+                <div className="flex flex-col bg-gray-400 z-11">
+                    {timeColHTML}
                 </div>
 
-                <div className="grid" style={gridStyle}>
-                    {/* TIME COLUMN */}
-                    <div className="flex flex-col bg-gray-400 z-11">
-                        {timeColHTML}
+                {/* DAY COLUMNS */}
+                {Array.from({ length: props.numDays }).map((_, dayIdx) => (
+                    <div key={dayIdx} className="border">
+                        {/* CELLS */}
+                        {Array.from({ length: numRows + 1 }).map((__, rowIdx) => (
+                            <div key={rowIdx} className="border-b p-2"
+                                 style={{ height: CELL_H }}
+                            >
+
+                            </div>
+                        ))}
                     </div>
-
-                    {/* DAY COLUMNS */}
-                    {Array.from({ length: props.numDays }).map((_, dayIdx) => (
-                        <div key={dayIdx} className="border">
-                            {/* CELLS */}
-                            {Array.from({ length: numRows + 1 }).map((__, rowIdx) => (
-                                <div key={rowIdx} className="border-b p-2"
-                                     style={{ height: CELL_H }}
-                                >
-
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                </div>
+                ))}
             </div>
 
             {props.loading && <Spinner/>}
