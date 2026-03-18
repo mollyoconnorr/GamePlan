@@ -73,7 +73,12 @@ export default function CalendarCard({
             <button
                 type="button"
                 onClick={() => setShowPopup(true)}
-                className="relative border border-black w-full break-all p-1 text-left text-xs lg:text-md bg-blue-900 text-white hover:cursor-pointer hover:bg-blue-800"
+                className={`relative border w-full break-all p-1 text-left text-xs lg:text-md text-white hover:cursor-pointer
+                    ${event.temp
+                    ? "bg-blue-500/60 border-dashed border-blue-900 hover:bg-blue-500/80"
+                    : "bg-blue-900 border-black hover:bg-blue-800"
+                    //TODO: Change to given color and lighter version of it.
+                }`}
                 style={{
                     top: cellHeight * (startIndex - groupStartIndex),
                     height: cellHeight * (endIndex - startIndex) - cardMargin * 2,
@@ -112,6 +117,7 @@ export default function CalendarCard({
                                     <span className="font-semibold">Description:</span> {String(event.description)}
                                 </p>
                             )}
+                            {"temp" in event && <p className="text-red-600"><strong>Pending reservation</strong></p>}
                         </div>
 
                         {variant !== "equip" && <div className="mt-4 flex justify-between">

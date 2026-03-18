@@ -49,6 +49,7 @@ export interface CalendarEvent {
     endTime: string;
     name: string;
     date: string;
+    temp?: boolean;
 }
 
 export type ButtonProps = {
