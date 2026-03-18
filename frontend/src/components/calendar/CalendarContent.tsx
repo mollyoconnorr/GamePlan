@@ -1,11 +1,19 @@
 import type {CalendarContentProps} from "./CalendarTypes.ts";
-import {type JSX} from "react";
+import {type JSX, useEffect, useState} from "react";
 import type {CalendarEvent} from "../../types.ts";
 import dayjs from "dayjs";
 import CalendarCard from "./CalendarCard.tsx";
+import Toast from "../Toast.tsx";
 
 export default function CalendarContent(props: CalendarContentProps) {
     const cardMargin: number = 2;
+    const [toastMessage, setToastMessage] = useState("");
+
+    useEffect(() => {
+        if (!toastMessage) return;
+        const timeout = setTimeout(() => setToastMessage(""), 2500);
+        return () => clearTimeout(timeout);
+    }, [toastMessage]);
 
     // Map column / day indexes to events to render in those columns
     const dayEventMap: Map<number, CalendarEvent[]> = new Map();
@@ -116,6 +124,7 @@ export default function CalendarContent(props: CalendarContentProps) {
                             cellHeight={props.cellHeight}
                             cardMargin={cardMargin}
                             onDeleteReservation={props.onDeleteReservation}
+                            onShowToast={setToastMessage}
                         />
                     })}
                 </div>);
@@ -123,26 +132,30 @@ export default function CalendarContent(props: CalendarContentProps) {
     })
 
     return (
-        <div className="absolute z-6 h-full flex justify-between"
-             style={{
-                 top: props.top,
-                 left: props.left,
-                 height: `${props.height}px`,
-                 width: `${props.width}px`,
-                 maxWidth: `${props.width}px`,
-             }
-             }
-        >
-            {/*The # of keys in dayEventMap == props.numDays, so loop through num days to
-            render each days events
-            */}
-            {Array.from({length: props.numDays}).map((_, i) => (
-                <div key={i} className="w-full px-1 relative"
-                     style={{ height: props.cellHeight * 36 }}>
-                    {dayEventMapHTML.get(i)}
-                </div>
-            ))}
+        <>
+            <Toast message={toastMessage} />
 
-        </div>
+            <div className="absolute z-10 h-full flex justify-between"
+                 style={{
+                     top: props.top,
+                     left: props.left,
+                     height: `${props.height}px`,
+                     width: `${props.width}px`,
+                     maxWidth: `${props.width}px`,
+                 }
+                 }
+            >
+                {/*The # of keys in dayEventMap == props.numDays, so loop through num days to
+                render each days events
+                */}
+                {Array.from({length: props.numDays}).map((_, i) => (
+                    <div key={i} className="w-full px-1 relative"
+                         style={{ height: props.cellHeight * 36 }}>
+                        {dayEventMapHTML.get(i)}
+                    </div>
+                ))}
+
+            </div>
+        </>
     );
 }

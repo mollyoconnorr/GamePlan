@@ -1,8 +1,8 @@
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import type {CalendarEvent, PendingDelete} from "../../types.ts";
 import {Trash2} from "lucide-react";
-import Toast from "../Toast.tsx";
 import ConfirmDialog from "../ConfirmDialog.tsx";
+import {createPortal} from "react-dom";
 
 type CalendarCardProps = {
     event: CalendarEvent;
@@ -12,6 +12,7 @@ type CalendarCardProps = {
     cellHeight: number;
     cardMargin: number;
     onDeleteReservation?: (id: number) => Promise<void> | void;
+    onShowToast?: (message: string) => void;
 };
 
 export default function CalendarCard({
@@ -22,18 +23,12 @@ export default function CalendarCard({
                                          cellHeight,
                                          cardMargin,
                                          onDeleteReservation,
+                                         onShowToast,
                                      }: CalendarCardProps) {
     const [showPopup, setShowPopup] = useState(false);
 
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [toastMessage, setToastMessage] = useState("");
-
-    useEffect(() => {
-        if (!toastMessage) return;
-        const timeout = setTimeout(() => setToastMessage(""), 2500);
-        return () => clearTimeout(timeout);
-    }, [toastMessage]);
 
     const handleConfirmDelete = async () => {
         if (!pendingDelete) return;
@@ -42,14 +37,15 @@ export default function CalendarCard({
             setIsDeleting(true);
             if (onDeleteReservation){
                 await onDeleteReservation(pendingDelete.id);
-                setToastMessage(`Deleted reservation for ${pendingDelete.name}.`);
+                onShowToast?.(`Deleted reservation for ${pendingDelete.name}.`);
                 setPendingDelete(null);
                 setShowPopup(false);
             } else {
-                setToastMessage(`Failed to delete reservation for ${pendingDelete.name}.`);
+                onShowToast?.(`Failed to delete reservation for ${pendingDelete.name}.`);
             }
         } catch (err) {
             console.error(err);
+            onShowToast?.(`Failed to delete reservation for ${pendingDelete.name}.`);
         } finally {
             setIsDeleting(false);
         }
@@ -57,8 +53,6 @@ export default function CalendarCard({
 
     return (
         <>
-            <Toast message={toastMessage} />
-
             <ConfirmDialog
                 open={pendingDelete !== null}
                 title="Delete reservation?"
@@ -87,9 +81,9 @@ export default function CalendarCard({
                 {event.name}
             </button>
 
-            {showPopup && (
+            {showPopup && typeof document !== "undefined" && createPortal(
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                    className="fixed inset-0 z-[250] flex items-center justify-center bg-black/50"
                     onClick={() => setShowPopup(false)}
                 >
                     <div
@@ -136,7 +130,8 @@ export default function CalendarCard({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );

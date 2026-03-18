@@ -1,13 +1,16 @@
+import { createPortal } from "react-dom";
+
 type ToastProps = {
     message: string;
 };
 
 export default function Toast({ message }: ToastProps) {
-    if (!message) return null;
+    if (!message || typeof document === "undefined") return null;
 
-    return (
-        <div className="fixed top-4 right-4 z-100 rounded-md border border-green-300 bg-green-100 px-4 py-3 shadow-md">
+    return createPortal(
+        <div className="fixed top-4 right-4 z-[400] rounded-md border border-green-300 bg-green-100 px-4 py-3 shadow-md">
             <p className="text-sm font-medium text-green-800">{message}</p>
-        </div>
+        </div>,
+        document.body
     );
 }

@@ -82,7 +82,7 @@ export default function Calendar(props: CalendarProps) {
     return (
         <div className="relative bg-gray-300 rounded-sm border shadow-md overflow-x-auto overflow-y-auto">
             {/* HEADER ROW */}
-            <div className="sticky top-0 z-10 grid bg-gray-400" style={headerGridStyle} ref={divRef}>
+            <div className="sticky top-0 z-30 grid bg-gray-400" style={headerGridStyle} ref={divRef}>
                 {/* top-left corner cell */}
                 <div className="p-2 border-b" />
 
@@ -93,7 +93,7 @@ export default function Calendar(props: CalendarProps) {
             {/* BODY */}
             <div className="max-h-[60vh] flex flex-row" style={{ minWidth }}>
                 {/* TIME COLUMN */}
-                <div className="sticky left-0 flex-shrink-0 flex flex-col z-8">
+                <div className="sticky left-0 flex-shrink-0 flex flex-col z-20">
                     {timeColHTML}
                 </div>
 
