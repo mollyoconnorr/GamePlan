@@ -87,6 +87,8 @@ public class DataSeeder {
 
         // ===== BATHS =====
         Equipment coldBath = createBath("Ice Bath", "cold", bathType, er);
+        Equipment coldBath2 = createBath("Ice Bath", "cold", bathType, er);
+        Equipment coldBath3 = createBath("Ice Bath", "cold", bathType, er);
         Equipment hotBath = createBath("Hot Bath", "hot", bathType, er);
 
         // ===== WIRED BOOTS =====
@@ -98,7 +100,13 @@ public class DataSeeder {
 
         // ===== OPTIONAL: Example reservations =====
         rs.createReservation(testUser, coldBath, LocalDate.now().atTime(8,0), LocalDate.now().atTime(8,30));
+        rs.createReservation(testUser, coldBath2, LocalDate.now().atTime(8,15), LocalDate.now().atTime(9,0));
+        rs.createReservation(testUser, coldBath3, LocalDate.now().atTime(10,15), LocalDate.now().atTime(10,45));
         rs.createReservation(testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
+        rs.createReservation(testUser, coldBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
+        rs.createReservation(testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,30), LocalDate.now().plusDays(1).atTime(9,0));
+        rs.createReservation(testUser, hotBath, LocalDate.now().plusDays(1).atTime(9,0), LocalDate.now().plusDays(1).atTime(9,30));
+
     }
 
     private Equipment createBath(String name, String type, EquipmentType bathType, EquipmentRepository er) {
