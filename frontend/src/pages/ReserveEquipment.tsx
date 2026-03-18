@@ -132,39 +132,41 @@ export default function ReserveEquipment() {
       <section className="mx-5 md:mx-30 space-y-10">
         <h1 className="text-3xl font-bold text-gray-900">Reserve Equipment</h1>
 
-        {/* Equipment Type */}
-        <div>
-          <p>Select equipment type:</p>
-          <DropdownSelect
-            value={selectedType?.toString() ?? ""}
-            onChange={handleTypeChange}
-            options={equipmentTypes}
-          />
-        </div>
+          <div className="flex flex-col md:flex-row space-x-10 space-y-10">
+              {/* Equipment Type */}
+              <div>
+                  <p className="text-sm lg:text-lg">Select equipment type:</p>
+                  <DropdownSelect
+                      value={selectedType?.toString() ?? ""}
+                      onChange={handleTypeChange}
+                      options={equipmentTypes}
+                  />
+              </div>
 
-        {/* Attribute Selector */}
-        {attributes.length > 0 && (
-          <div>
-            <p>Select attribute:</p>
-            <DropdownSelect
-              value={selectedAttribute?.value ?? ""}
-              onChange={handleAttributeChange}
-              options={attributes.map(a => ({ label: a.label, value: a.value }))}
-            />
-          </div>
-        )}
+              {/* Attribute Selector */}
+              {attributes.length > 0 && (
+                  <div>
+                      <p className="text-sm lg:text-lg">Select attribute:</p>
+                      <DropdownSelect
+                          value={selectedAttribute?.value ?? ""}
+                          onChange={handleAttributeChange}
+                          options={attributes.map(a => ({ label: a.label, value: a.value }))}
+                      />
+                  </div>
+              )}
 
-        {/* Equipment Selector */}
-        {equipmentList.length > 0 && (
-          <div>
-            <p>Select equipment:</p>
-            <DropdownSelect
-              value={selectedEquipment?.toString() ?? ""}
-              onChange={(v) => setSelectedEquipment(parseInt(v))}
-              options={equipmentList}
-            />
+              {/* Equipment Selector */}
+              {equipmentList.length > 0 && (
+                  <div>
+                      <p className="text-sm lg:text-lg">Select equipment:</p>
+                      <DropdownSelect
+                          value={selectedEquipment?.toString() ?? ""}
+                          onChange={(v) => setSelectedEquipment(parseInt(v))}
+                          options={equipmentList}
+                      />
+                  </div>
+              )}
           </div>
-        )}
 
         {/* Calendar */}
         {selectedEquipment && (
