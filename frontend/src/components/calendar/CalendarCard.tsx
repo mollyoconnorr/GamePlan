@@ -13,6 +13,7 @@ type CalendarCardProps = {
     cardMargin: number;
     onDeleteReservation?: (id: number) => Promise<void> | void;
     onShowToast?: (message: string) => void;
+    variant: "user" | "equip" | "trainer"
 };
 
 export default function CalendarCard({
@@ -24,6 +25,7 @@ export default function CalendarCard({
                                          cardMargin,
                                          onDeleteReservation,
                                          onShowToast,
+                                         variant
                                      }: CalendarCardProps) {
     const [showPopup, setShowPopup] = useState(false);
 
@@ -112,13 +114,13 @@ export default function CalendarCard({
                             )}
                         </div>
 
-                        <div className="mt-4 flex justify-between">
+                        {variant !== "equip" && <div className="mt-4 flex justify-between">
                             <button
                                 className="hover:cursor-pointer"
                                 title="Delete Reservation"
-                                onClick={() => setPendingDelete({ id: event.id, name: event.name })}
+                                onClick={() => setPendingDelete({id: event.id, name: event.name})}
                             >
-                                <Trash2 />
+                                <Trash2/>
                             </button>
 
                             <button
@@ -128,7 +130,7 @@ export default function CalendarCard({
                             >
                                 Close
                             </button>
-                        </div>
+                        </div>}
                     </div>
                 </div>,
                 document.body

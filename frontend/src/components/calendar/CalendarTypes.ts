@@ -25,4 +25,5 @@ export interface CalendarContentProps {
     timeMap: Map<string, number>,
     events: CalendarEvent[],
     onDeleteReservation?: (id: number) => Promise<void> | void;
+    variant: "user" | "equip" | "trainer"
 }

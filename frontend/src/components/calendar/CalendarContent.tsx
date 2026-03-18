@@ -125,6 +125,7 @@ export default function CalendarContent(props: CalendarContentProps) {
                             cardMargin={cardMargin}
                             onDeleteReservation={props.onDeleteReservation}
                             onShowToast={setToastMessage}
+                            variant={props.variant}
                         />
                     })}
                 </div>);

@@ -114,7 +114,7 @@ export default function Calendar(props: CalendarProps) {
 
             {props.loading && <Spinner />}
 
-            {!props.loading && props.variant === "user" && props.reservations && (
+            {!props.loading && props.reservations && (
                 <CalendarContent
                     top={CELL_H}
                     left={TIME_W}
@@ -126,6 +126,7 @@ export default function Calendar(props: CalendarProps) {
                     timeMap={timeMap}
                     events={props.reservations}
                     onDeleteReservation={props.onDeleteReservation}
+                    variant={props.variant}
                 />
             )}
         </div>
