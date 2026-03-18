@@ -6,6 +6,9 @@ import com.carroll.gameplan.model.Reservation;
 import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.repository.UserRepository;
 import com.carroll.gameplan.service.ReservationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/reservations")
 public class ReservationController {
+    private final Logger logger = LoggerFactory.getLogger(ReservationController.class);
 
     private final ReservationService reservationService;
     private final UserRepository userRepository;
@@ -55,7 +59,7 @@ public class ReservationController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // Map Reservations to DTOs for response
-        return reservationService.getReservationsForUser(user).stream()
+        return reservationService.getActiveReservationsForUser(user).stream()
                 .map(r -> new ReservationResponse(
                         r.getId(),
                         r.getEquipment().getName(),
@@ -130,7 +134,9 @@ public class ReservationController {
      * @throws Exception If the reservation does not exist.
      */
     @DeleteMapping("/{id}")
-    public Reservation cancelReservation(@PathVariable Long id) throws Exception {
-        return reservationService.cancelReservation(id);
+    public ResponseEntity<Object> cancelReservation(@PathVariable Long id) throws Exception {
+        reservationService.cancelReservation(id);
+        logger.info("cancelReservation: Reservation #{} cancelled", id);
+        return ResponseEntity.noContent().build();
     }
 }

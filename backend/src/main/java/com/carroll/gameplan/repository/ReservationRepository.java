@@ -2,6 +2,7 @@ package com.carroll.gameplan.repository;
 
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.Reservation;
+import com.carroll.gameplan.model.ReservationStatus;
 import com.carroll.gameplan.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -20,12 +21,13 @@ import java.util.List;
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
     /**
-     * Retrieves all reservations for a given user.
+     * Retrieves all reservations for a given user that have the given status.
      *
      * @param user the User whose reservations should be retrieved
+     * @param status the ReservationStatus the reservation must have
      * @return a list of Reservation entities for the specified user
      */
-    List<Reservation> findByUser(User user);
+    List<Reservation> findByUserAndStatusIs(User user, ReservationStatus status);
 
     /**
      * Finds reservations for a specific equipment that overlap a given time range.

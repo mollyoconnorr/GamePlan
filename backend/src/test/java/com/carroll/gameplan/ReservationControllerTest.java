@@ -9,6 +9,8 @@ import com.carroll.gameplan.repository.UserRepository;
 import com.carroll.gameplan.service.ReservationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
@@ -83,7 +85,7 @@ public class ReservationControllerTest {
         r1.setEquipment(equipment);
 
         // Mock service to return this reservation
-        when(reservationService.getReservationsForUser(testUser)).thenReturn(List.of(r1));
+        when(reservationService.getActiveReservationsForUser(testUser)).thenReturn(List.of(r1));
 
         // Call the controller method
         List<ReservationResponse> result = controller.getReservations(authToken);
@@ -140,9 +142,9 @@ public class ReservationControllerTest {
         when(reservationService.cancelReservation(300L)).thenReturn(r);
 
         // Call controller
-        Reservation cancelled = controller.cancelReservation(300L);
+        ResponseEntity<Object> cancelled = controller.cancelReservation(300L);
 
         // ===== Assertion =====
-        assertEquals(300L, cancelled.getId(), "Cancelled reservation ID should match");
+        assertEquals(HttpStatusCode.valueOf(204), cancelled.getStatusCode(), "cancelReservation should return status 204 - No content found!");
     }
 }

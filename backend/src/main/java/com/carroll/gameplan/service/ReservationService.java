@@ -39,13 +39,13 @@ public class ReservationService {
     // ===== Function 1: Get all reservations for a user =====
 
     /**
-     * Returns all reservations for a given user.
+     * Returns all reservations for a given user that are active.
      *
      * @param user the user whose reservations to fetch
      * @return list of reservations
      */
-    public List<Reservation> getReservationsForUser(User user) {
-        return reservationRepository.findByUser(user);
+    public List<Reservation> getActiveReservationsForUser(User user) {
+        return reservationRepository.findByUserAndStatusIs(user, ReservationStatus.ACTIVE);
     }
 
     // ===== Function 2: Create a new reservation =====
