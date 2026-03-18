@@ -62,6 +62,9 @@ export default function ReserveEquipment() {
         ? [...equipmentReservations, previewReservation]
         : equipmentReservations;
 
+    const allResInfoPresent = selectedType && selectedAttribute && selectedEquipment &&
+        selectedDate && selectedStartTime && selectedEndTime && previewReservation;
+
     // Fetch equipment data whenever one is selected
     useEffect(() => {
         if (!selectedEquipment) return;
@@ -214,6 +217,18 @@ export default function ReserveEquipment() {
                         setSelectedEndTime={setSelectedEndTime}
                     />
                 </div>
+
+                {allResInfoPresent &&
+                  <div className="space-y-4">
+                    <p
+                      className="opacity-80"
+                    >Click below to reserve {previewReservation.name} for {previewReservation.date} from {previewReservation.startTime} to {previewReservation.endTime}</p>
+                    <Button
+                      text="Reserve"
+                      className="bg-green-400 hover:bg-green-300 border-green-500"
+                    />
+                  </div>
+                }
 
                 {/* Calendar */}
                 {selectedEquipment && (
