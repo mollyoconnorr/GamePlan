@@ -104,6 +104,7 @@ export default function Home(){
                     variant={"user"}
                     reservations={calendarEvents}
                     loading={loading}
+                    onDeleteReservation={handleDeleteReservation}
                 />}
 
                 {!showCalendar && <ManageReservations

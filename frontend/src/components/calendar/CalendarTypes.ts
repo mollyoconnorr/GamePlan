@@ -11,6 +11,7 @@ export interface CalendarProps {
     reservations?: CalendarEvent[];
     equipmentId?: number;
     loading: boolean;
+    onDeleteReservation?: (id: number) => Promise<void> | void;
 }
 
 export interface CalendarContentProps {
@@ -22,5 +23,6 @@ export interface CalendarContentProps {
     numDays: number,
     dayMap: Map<string, number>,
     timeMap: Map<string, number>,
-    events: CalendarEvent[]
+    events: CalendarEvent[],
+    onDeleteReservation?: (id: number) => Promise<void> | void;
 }

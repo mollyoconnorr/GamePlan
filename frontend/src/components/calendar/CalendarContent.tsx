@@ -2,6 +2,7 @@ import type {CalendarContentProps} from "./CalendarTypes.ts";
 import {type JSX} from "react";
 import type {CalendarEvent} from "../../types.ts";
 import dayjs from "dayjs";
+import CalendarCard from "./CalendarCard.tsx";
 
 export default function CalendarContent(props: CalendarContentProps) {
     const cardMargin: number = 2;
@@ -105,26 +106,24 @@ export default function CalendarContent(props: CalendarContentProps) {
                             return null;
                         }
 
-                        // Day card TODO change to a card component that can be clicked on
-                        // TODO add event ID
-                        return <p
+                        // Day card
+                        return <CalendarCard
                             key={e.name + e.date + e.startTime}
-                            className="relative border-1 border-black w-full break-all p-1 text-xs lg:text-md bg-blue-900 text-white"
-                            style={{
-                                top: props.cellHeight * (startIndex - groupStartIndex),
-                                height: props.cellHeight * (endIndex - startIndex) - (cardMargin * 2),
-                                marginTop: cardMargin,
-                            }}
-                        >
-                            {e.name}
-                        </p>
+                            event={e}
+                            startIndex={startIndex}
+                            endIndex={endIndex}
+                            groupStartIndex={groupStartIndex}
+                            cellHeight={props.cellHeight}
+                            cardMargin={cardMargin}
+                            onDeleteReservation={props.onDeleteReservation}
+                        />
                     })}
                 </div>);
         }
     })
 
     return (
-        <div className="absolute z-10 h-full flex justify-between"
+        <div className="absolute z-6 h-full flex justify-between"
              style={{
                  top: props.top,
                  left: props.left,
