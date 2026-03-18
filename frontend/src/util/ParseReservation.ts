@@ -6,6 +6,7 @@ export function parseRawResToEvent(reservation: RawReservation ) {
     const endDate = dayjs(reservation.end);
 
     return {
+        id: reservation.id,
         startTime: startDate.format("h:mm A"),
         endTime: endDate.format("h:mm A"),
         name: reservation.equipmentName,
