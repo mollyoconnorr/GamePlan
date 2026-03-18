@@ -4,6 +4,9 @@ import { safeBack } from "../util/Navigation.ts";
 import Calendar from "../components/calendar/Calendar.tsx";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
+import type {CalendarEvent} from "../types.ts";
+import {getEquipmentReservations} from "../api/Reservations.ts";
+import {parseRawResToEvent} from "../util/ParseReservation.ts";
 
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
 
@@ -23,6 +26,28 @@ export default function ReserveEquipment() {
   const [selectedType, setSelectedType] = useState<number | null>(null);
   const [selectedAttribute, setSelectedAttribute] = useState<{ label: string; value: string; name: string } | null>(null);
   const [selectedEquipment, setSelectedEquipment] = useState<number | null>(null);
+
+    const [equipmentReservations, setEquipmentReservations] = useState<CalendarEvent[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Fetch equipment data whenever one is selected
+    useEffect(() => {
+        if (!selectedEquipment) return;
+
+        setLoading(true);
+        const fetchReservations = async () => {
+            try {
+                const data = await getEquipmentReservations(selectedEquipment);
+                setEquipmentReservations(data.map(parseRawResToEvent));
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchReservations();
+    }, [selectedEquipment]);
 
   // Fetch equipment types on load
   useEffect(() => {
@@ -79,6 +104,8 @@ export default function ReserveEquipment() {
     if (!attr) return;
 
     setSelectedAttribute(attr);
+    // Reset equipment selection so user must choose after changing attribute.
+    setSelectedEquipment(null);
 
     const res = await fetch(
       `/api/equipment-types/${selectedType}/equipment?attrName=${encodeURIComponent(attr.name)}&attrValue=${encodeURIComponent(attr.value)}`,
@@ -148,8 +175,8 @@ export default function ReserveEquipment() {
             endTime={endTime}
             timeStepMin={15}
             variant={"equip"}
-            equipmentId={selectedEquipment}
-            loading={false}
+            reservations={equipmentReservations}
+            loading={loading}
           />
         )}
       </section>
