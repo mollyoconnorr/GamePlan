@@ -56,3 +56,8 @@ export type ButtonProps = {
     onClick?: () => void;
     style?: React.CSSProperties;
 };
+
+export type PendingDelete = {
+    id: number;
+    name: string;
+};

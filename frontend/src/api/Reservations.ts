@@ -14,7 +14,7 @@ export async function getReservations() {
     return res.json();
 }
 
-export async function deleteReservation(id: string) {
+export async function deleteReservation(id: number) {
     const res = await fetch(`/api/reservations/${id}`, {
         method: "DELETE",
         credentials: "include",

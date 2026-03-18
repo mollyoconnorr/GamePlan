@@ -1,14 +1,47 @@
-import type {Reservation} from "../types.ts";
+import { useEffect, useState } from "react";
+import type { Reservation, PendingDelete } from "../types.ts";
 import Spinner from "./Spinner.tsx";
 import dayjs from "dayjs";
-import {SquarePen, Trash2} from "lucide-react";
+import { SquarePen, Trash2 } from "lucide-react";
+import ConfirmDialog from "./ConfirmDialog.tsx";
+import Toast from "./Toast.tsx";
 
 type ManageReservationsProps = {
     reservations: Reservation[];
     loading: boolean;
+    onDeleteReservation: (id: number) => Promise<void> | void;
 };
 
-export default function ManageReservations({ reservations, loading }: ManageReservationsProps) {
+export default function ManageReservations({
+                                               reservations,
+                                               loading,
+                                               onDeleteReservation,
+                                           }: ManageReservationsProps) {
+    const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
+
+    useEffect(() => {
+        if (!successMessage) return;
+        const timeout = setTimeout(() => setSuccessMessage(""), 2500);
+        return () => clearTimeout(timeout);
+    }, [successMessage]);
+
+    const handleConfirmDelete = async () => {
+        if (!pendingDelete) return;
+
+        try {
+            setIsDeleting(true);
+            await onDeleteReservation(pendingDelete.id);
+            setSuccessMessage(`Deleted reservation for ${pendingDelete.name}.`);
+            setPendingDelete(null);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const dayEventMap: Map<string, { dayLabel: string; events: Reservation[] }> = new Map();
 
     reservations.forEach((r) => {
@@ -17,7 +50,7 @@ export default function ManageReservations({ reservations, loading }: ManageRese
 
         const existing = dayEventMap.get(dayKey);
         if (!existing) {
-            dayEventMap.set(dayKey, {dayLabel, events: [r]});
+            dayEventMap.set(dayKey, { dayLabel, events: [r] });
         } else {
             existing.events.push(r);
         }
@@ -25,60 +58,91 @@ export default function ManageReservations({ reservations, loading }: ManageRese
 
     const dayEventArr = [...dayEventMap.entries()]
         .sort(([a], [b]) => dayjs(a).valueOf() - dayjs(b).valueOf())
-        .map(([dayKey, {dayLabel, events}]) => ({dayKey, dayLabel, events}));
+        .map(([dayKey, { dayLabel, events }]) => ({ dayKey, dayLabel, events }));
 
     return (
         <>
+            <Toast message={successMessage} />
+
+            <ConfirmDialog
+                open={pendingDelete !== null}
+                title="Delete reservation?"
+                message={
+                    pendingDelete
+                        ? `Are you sure you want to delete the reservation for ${pendingDelete.name}?`
+                        : ""
+                }
+                confirmText="Delete"
+                cancelText="Cancel"
+                loading={isDeleting}
+                onCancel={() => setPendingDelete(null)}
+                onConfirm={handleConfirmDelete}
+            />
+
             <section className="mx-5 md:mx-30">
-                {loading && <Spinner/>}
+                {loading && <Spinner />}
 
-                {!loading && dayEventArr.map(({dayKey, dayLabel, events}) => (
-                    <div key={dayKey}
-                         className="flex flex-col bg-calendar-bg border-calendar-border shadow-md p-5 space-y-5 items-center">
-                        <h2 className="text-2xl font-medium ml-5 mr-auto">{dayLabel}</h2>
+                {!loading &&
+                    dayEventArr.map(({ dayKey, dayLabel, events }) => (
+                        <div
+                            key={dayKey}
+                            className="flex flex-col bg-calendar-bg border-calendar-border shadow-md p-5 space-y-5 items-center"
+                        >
+                            <h2 className="text-2xl font-medium ml-5 mr-auto">{dayLabel}</h2>
 
-                        {events.map((e) => (
-                            <ReservationCard
-                                key={e.id}
-                                startTime={e.start.format("h:mm A")}
-                                endTime={e.end.format("h:mm A")}
-                                name={e.name}/>
-                        ))}
+                            {events.map((e) => (
+                                <ReservationCard
+                                    key={e.id}
+                                    startTime={e.start.format("h:mm A")}
+                                    endTime={e.end.format("h:mm A")}
+                                    name={e.name}
+                                    id={e.id}
+                                    onRequestDelete={(id, name) => setPendingDelete({ id, name })}
+                                />
+                            ))}
 
-                        <hr className="m-5 border w-full"/>
-                    </div>
-                ))}
+                            <hr className="m-5 border w-full" />
+                        </div>
+                    ))}
             </section>
         </>
     );
 }
 
-function ReservationCard({startTime, endTime, name}: { startTime: string, endTime: string, name: string }) {
+function ReservationCard({
+                             startTime,
+                             endTime,
+                             name,
+                             id,
+                             onRequestDelete,
+                         }: {
+    startTime: string;
+    endTime: string;
+    name: string;
+    id: number;
+    onRequestDelete: (id: number, name: string) => void;
+}) {
     return (
-        <div className="flex w-full justify-between items-center border
-        shadow-md rounded-md bg-orange-400 px-2 max-w-[80%]">
-            {/*TODO Fix hardcoded colors*/}
+        <div className="flex w-full justify-between items-center border shadow-md rounded-md bg-orange-400 px-2 max-w-[80%]">
             <div className="flex flex-col md:flex-row space-x-1">
-                <p className="text-wrap">
-                    {startTime} -
-                </p>
+                <p>{startTime} -</p>
                 <p>{endTime}</p>
             </div>
+
             <p>{name}</p>
+
             <div className="flex flex-col p-2 space-y-6">
-                <button
-                    className="hover:cursor-pointer"
-                    title="Edit Reservation"
-                >
-                    <SquarePen/>
+                <button className="hover:cursor-pointer" title="Edit Reservation">
+                    <SquarePen />
                 </button>
                 <button
                     className="hover:cursor-pointer"
                     title="Delete Reservation"
+                    onClick={() => onRequestDelete(id, name)}
                 >
-                    <Trash2/>
+                    <Trash2 />
                 </button>
             </div>
         </div>
-    )
+    );
 }

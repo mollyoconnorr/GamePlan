@@ -6,7 +6,7 @@ import Button from "../components/Button.tsx";
 import {useNavigate} from "react-router-dom";
 import ManageReservations from "../components/ManageReservations.tsx";
 import type {CalendarEvent, Reservation} from "../types.ts";
-import {getReservations} from "../api/Reservations.ts";
+import {deleteReservation, getReservations} from "../api/Reservations.ts";
 import {parseRawResToEvent} from "../util/ParseReservation.ts";
 import {parseRawResToRes} from "../util/ParseReservationInfo.ts";
 
@@ -37,21 +37,30 @@ export default function Home(){
     const [loading, setLoading] = useState(true);
 
     // TODO error handling
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const data = await getReservations();
-                setCalendarEvents(data.map(parseRawResToEvent));
-                setReservations(data.map(parseRawResToRes));
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const loadReservations = async () => {
+        try {
+            const data = await getReservations();
+            setCalendarEvents(data.map(parseRawResToEvent));
+            setReservations(data.map(parseRawResToRes));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        load();
+    useEffect(() => {
+        loadReservations();
     }, []);
+
+    const handleDeleteReservation = async (id: number) => {
+        try {
+            await deleteReservation(id);
+            await loadReservations();
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
     return (
         <>
@@ -100,6 +109,7 @@ export default function Home(){
                 {!showCalendar && <ManageReservations
                     reservations={reservations}
                     loading={loading}
+                    onDeleteReservation={handleDeleteReservation}
                 />}
             </section>
         </>
