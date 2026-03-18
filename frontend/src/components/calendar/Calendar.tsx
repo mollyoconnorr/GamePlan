@@ -116,8 +116,8 @@ export default function Calendar(props: CalendarProps) {
 
             {!props.loading && props.variant === "user" && props.reservations && (
                 <CalendarContent
-                    top={CELL_H + 2}
-                    left={TIME_W + 1}
+                    top={CELL_H}
+                    left={TIME_W}
                     height={CELL_H * (numRows + 1)}
                     width={size.width - TIME_W}
                     numDays={props.numDays}

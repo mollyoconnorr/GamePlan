@@ -4,6 +4,8 @@ import type {CalendarEvent} from "../../types.ts";
 import dayjs from "dayjs";
 
 export default function CalendarContent(props: CalendarContentProps) {
+    const cardMargin: number = 2;
+
     // Map column / day indexes to events to render in those columns
     const dayEventMap: Map<number, CalendarEvent[]> = new Map();
 
@@ -107,10 +109,11 @@ export default function CalendarContent(props: CalendarContentProps) {
                         // TODO add event ID
                         return <p
                             key={e.name + e.date + e.startTime}
-                            className="relative bg-blue-900 border-1 w-full break-all p-1 text-xs lg:text-md"
+                            className="relative border-1 border-black w-full break-all p-1 text-xs lg:text-md bg-blue-900 text-white"
                             style={{
                                 top: props.cellHeight * (startIndex - groupStartIndex),
-                                height: props.cellHeight * (endIndex - startIndex),
+                                height: props.cellHeight * (endIndex - startIndex) - (cardMargin * 2),
+                                marginTop: cardMargin,
                             }}
                         >
                             {e.name}
@@ -121,7 +124,7 @@ export default function CalendarContent(props: CalendarContentProps) {
     })
 
     return (
-        <div className="absolute z-10  h-full opacity-60 flex justify-between"
+        <div className="absolute z-10 h-full flex justify-between"
              style={{
                  top: props.top,
                  left: props.left,
