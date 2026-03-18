@@ -13,3 +13,16 @@ export async function getReservations() {
 
     return res.json();
 }
+
+export async function deleteReservation(id: string) {
+    const res = await fetch(`/api/reservations/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to delete reservation");
+    }
+
+    console.log(`Reservation ${id} deleted`);
+}
