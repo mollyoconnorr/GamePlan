@@ -1,6 +1,7 @@
 package com.carroll.gameplan;
 
 import com.carroll.gameplan.controller.ReservationController;
+import com.carroll.gameplan.dto.ReservationRequest;
 import com.carroll.gameplan.dto.ReservationResponse;
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.Reservation;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -115,11 +117,14 @@ public class ReservationControllerTest {
                 any(LocalDateTime.class)))
                 .thenReturn(r);
 
+        ReservationRequest request = new ReservationRequest();
+        request.setStart(Instant.parse("2026-02-25T21:30:00.000Z"));
+        request.setEnd(Instant.parse("2026-02-25T22:30:00.000Z"));
+
         // Call controller
-        Reservation updated = controller.updateReservation(
+        ReservationResponse updated = controller.updateReservation(
                 200L,
-                "2026-02-25T14:30:00",
-                "2026-02-25T15:30:00"
+                request
         );
 
         // ===== Assertion =====

@@ -13,7 +13,6 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -132,20 +131,29 @@ public class ReservationController {
     /**
      * Updates an existing reservation's start and end times.
      *
-     * @param id    The reservation ID.
-     * @param start The new start time in ISO_LOCAL_DATE_TIME format.
-     * @param end   The new end time in ISO_LOCAL_DATE_TIME format.
-     * @return The updated {@link Reservation}.
+     * @param id      The reservation ID.
+     * @param request The update payload containing start/end in ISO-8601 UTC format.
+     * @return The updated {@link ReservationResponse}.
      */
     @PutMapping("/{id}")
-    public Reservation updateReservation(@PathVariable Long id,
-                                         @RequestParam String start,
-                                         @RequestParam String end) {
+    public ReservationResponse updateReservation(@PathVariable Long id,
+                                                 @RequestBody ReservationRequest request) {
 
-        return reservationService.updateReservation(
+        Reservation updated = reservationService.updateReservation(
                 id,
-                LocalDateTime.parse(start),
-                LocalDateTime.parse(end)
+                request.getStart()
+                        .atZone(ZoneId.of("America/Denver"))
+                        .toLocalDateTime(),
+                request.getEnd()
+                        .atZone(ZoneId.of("America/Denver"))
+                        .toLocalDateTime()
+        );
+
+        return new ReservationResponse(
+                updated.getId(),
+                updated.getEquipment().getName(),
+                updated.getStartDatetime().toString(),
+                updated.getEndDatetime().toString()
         );
     }
 
