@@ -1,6 +1,7 @@
 package com.carroll.gameplan.model;
 
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 /**
@@ -14,42 +15,47 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 public class User {
 
-    /** Primary key for the user entity */
+    /**
+     * Primary key for the user entity
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Unique identifier from the OIDC provider */
+    /**
+     * Unique identifier from the OIDC provider
+     */
     @Column(unique = true)
     private String oidcUserId;
 
-    /** Role of the user in the system; defaults to ATHLETE */
+    /**
+     * Role of the user in the system; defaults to ATHLETE
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role = UserRole.ATHLETE;
 
-    /** Email of the user */
+    /**
+     * Email of the user
+     */
     private String email;
 
-    /** First name of the user */
+    /**
+     * First name of the user
+     */
     private String firstName;
 
-    /** Last name of the user */
+    /**
+     * Last name of the user
+     */
     private String lastName;
 
-    /** Timestamp for when the user was created */
+    /**
+     * Timestamp for when the user was created
+     */
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // =================== GETTERS & SETTERS ===================
-
-    /**
-     * Sets the database ID of the user.
-     *
-     * @param id database-generated user ID
-     */
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     /**
      * Returns the database ID of the user.
@@ -58,6 +64,15 @@ public class User {
      */
     public Long getId() {
         return id;
+    }
+
+    /**
+     * Sets the database ID of the user.
+     *
+     * @param id database-generated user ID
+     */
+    public void setId(Long id) {
+        this.id = id;
     }
 
     /**

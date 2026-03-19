@@ -4,6 +4,7 @@ import RequireAuth from "./auth/RequireAuth";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
+import ManageReservations from "./components/ManageReservations.tsx";
 import ReserveEquipment from "./pages/ReserveEquipment.tsx";
 import Welcome from "./pages/Welcome.tsx";
 import Login from "./pages/Login.tsx";
@@ -14,6 +15,9 @@ import {useEffect, useMemo, useState} from "react";
 import type {Reservation} from "./types.ts";
 import {getReservations} from "./api/Reservations.ts";
 import {parseRawResToRes, parseResToEvent} from "./util/ParseReservation.ts";
+import CreateEquipment from "./pages/CreateEquipment";
+import EquipmentTypes from "./pages/EquipmentTypes";
+import AllEquipment from "./pages/AllEquipment";
 
 function AppShell() {
     // user is guaranteed by RequireAuth
@@ -61,6 +65,10 @@ function AppShell() {
                     />} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="*" element={<NotFound compact />} />
+                    <Route path="equipmentTypes" element={<EquipmentTypes />} />
+                    {/*<Route path="manageReservations" element={<ManageReservations />} />*/}
+                    <Route path="createEquipment" element={<CreateEquipment />} />
+                    <Route path="allEquipment" element={<AllEquipment />} />
                 </Routes>
             </main>
 

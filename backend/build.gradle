@@ -27,6 +27,8 @@ dependencies {
     testImplementation 'com.h2database:h2'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.21.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
