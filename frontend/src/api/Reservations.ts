@@ -23,6 +23,26 @@ export async function deleteReservation(id: number) {
     }
 }
 
+interface UpdateReservationRequest {
+    start: string;
+    end: string;
+}
+
+export async function updateReservation(id: number, request: UpdateReservationRequest) {
+    const res = await fetch(`/api/reservations/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to update reservation");
+    }
+}
+
 export async function getEquipmentReservations(id: number) {
     const res = await fetch(`/api/reservations/${id}`, {
         method: "GET",
