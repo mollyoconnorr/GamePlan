@@ -9,6 +9,16 @@ export default function Navbar({ username, logout }: NavbarProps) {
 
     const isHome = location.pathname === "/app/home";
     const isProfile = location.pathname === "/app/profile";
+    const handleSignOut = () => {
+        // Prefer client-side route so the styled /logout page renders first
+        if (location.pathname !== "/logout") {
+            navigate("/logout");
+            return;
+        }
+
+        // Fallback to direct backend logout if already on logout route
+        logout();
+    };
 
     let navHTML;
     if (username) {
@@ -20,7 +30,7 @@ export default function Navbar({ username, logout }: NavbarProps) {
                 underline: isHome,
             },
             { label: username, Icon: CircleUserRound, action: () => navigate("/app/profile"), underline: isProfile },
-            { label: "Sign out", Icon: LogOut, action: logout, underline: false },
+            { label: "Sign out", Icon: LogOut, action: handleSignOut, underline: false },
         ];
 
         navHTML = navItems.map(({ label, Icon, action, underline }) => (
