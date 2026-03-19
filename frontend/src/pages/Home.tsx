@@ -6,7 +6,7 @@ import Button from "../components/Button.tsx";
 import {useLocation, useNavigate} from "react-router-dom";
 import ManageReservations from "../components/ManageReservations.tsx";
 import type {CalendarEvent, Reservation} from "../types.ts";
-import {deleteReservation} from "../api/Reservations.ts";
+import {deleteReservation, updateReservation} from "../api/Reservations.ts";
 import Toast from "../components/Toast.tsx";
 
 type HomeProps = {
@@ -64,6 +64,23 @@ export default function Home(
         }
     }
 
+    const handleEditReservation = async (
+        id: number,
+        start: Reservation["start"],
+        end: Reservation["end"]
+    ) => {
+        try {
+            await updateReservation(id, {
+                start: start.toISOString(),
+                end: end.toISOString(),
+            });
+            await loadReservations();
+        } catch (err) {
+            console.error(err);
+            throw err;
+        }
+    }
+
     return (
         <>
             <Toast message={toastMessage} />
@@ -117,6 +134,7 @@ export default function Home(
                     startTime={startTime}
                     endTime={endTime}
                     timeStepMin={15}
+                    onEditReservation={handleEditReservation}
                     onDeleteReservation={handleDeleteReservation}
                 />}
             </section>

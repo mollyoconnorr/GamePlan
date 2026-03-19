@@ -14,6 +14,7 @@ type ManageReservationsProps = {
     startTime: Dayjs;
     endTime: Dayjs;
     timeStepMin: number;
+    onEditReservation: (id: number, start: Dayjs, end: Dayjs) => Promise<void> | void;
     onDeleteReservation: (id: number) => Promise<void> | void;
 };
 
@@ -23,15 +24,16 @@ export default function ManageReservations({
     startTime,
     endTime,
     timeStepMin,
+    onEditReservation,
     onDeleteReservation,
 }: ManageReservationsProps) {
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
     const [pendingEdit, setPendingEdit] = useState<Reservation | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
     const [selectedStartTime, setSelectedStartTime] = useState("");
     const [selectedEndTime, setSelectedEndTime] = useState("");
-    const [localEdits, setLocalEdits] = useState<Record<number, { start: Dayjs; end: Dayjs }>>({});
 
     useEffect(() => {
         if (!successMessage) return;
@@ -56,20 +58,6 @@ export default function ManageReservations({
 
         return options;
     }, [startTime, endTime, timeStepMin]);
-
-    // Keep edits local in this view for now until the update API is wired in
-    const reservationsWithLocalEdits = useMemo(() => {
-        return reservations.map((reservation) => {
-            const localEdit = localEdits[reservation.id];
-            if (!localEdit) return reservation;
-
-            return {
-                ...reservation,
-                start: localEdit.start,
-                end: localEdit.end,
-            };
-        });
-    }, [reservations, localEdits]);
 
     const endTimeOptions = useMemo(() => {
         if (!selectedStartTime) return [];
@@ -111,12 +99,13 @@ export default function ManageReservations({
     };
 
     const handleCloseEdit = () => {
+        if (isEditing) return;
         setPendingEdit(null);
         setSelectedStartTime("");
         setSelectedEndTime("");
     };
 
-    const handleSaveEdit = () => {
+    const handleSaveEdit = async () => {
         if (!pendingEdit || !selectedStartTime || !selectedEndTime) return;
 
         const [startHour, startMinute] = selectedStartTime.split(":").map((value) => Number(value));
@@ -143,24 +132,26 @@ export default function ManageReservations({
             .second(0)
             .millisecond(0);
 
-        // Save only to local state
-        setLocalEdits((prev) => ({
-            ...prev,
-            [pendingEdit.id]: {
-                start: updatedStart,
-                end: updatedEnd,
-            },
-        }));
-        setSuccessMessage(`Updated reservation time for ${pendingEdit.name}.`);
-        handleCloseEdit();
+        try {
+            setIsEditing(true);
+            await onEditReservation(pendingEdit.id, updatedStart, updatedEnd);
+            setSuccessMessage(`Updated reservation time for ${pendingEdit.name}.`);
+            setPendingEdit(null);
+            setSelectedStartTime("");
+            setSelectedEndTime("");
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsEditing(false);
+        }
     };
 
     const editSaveDisabled =
-        !pendingEdit || !selectedStartTime || !selectedEndTime || selectedEndTime <= selectedStartTime;
+        isEditing || !pendingEdit || !selectedStartTime || !selectedEndTime || selectedEndTime <= selectedStartTime;
 
     const dayEventMap: Map<string, { dayLabel: string; events: Reservation[] }> = new Map();
 
-    reservationsWithLocalEdits.forEach((r) => {
+    reservations.forEach((r) => {
         const dayKey = r.start.startOf("day").format("YYYY-MM-DD");
         const dayLabel = r.start.format("dddd, MMMM D");
 
@@ -253,20 +244,21 @@ export default function ManageReservations({
                             </div>
 
                             <div className="mt-6 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    className="rounded-md border px-4 py-2 hover:cursor-pointer"
-                                    onClick={handleCloseEdit}
-                                >
-                                    Cancel
-                                </button>
+                                    <button
+                                        type="button"
+                                        className="rounded-md border px-4 py-2 hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                        onClick={handleCloseEdit}
+                                        disabled={isEditing}
+                                    >
+                                        Cancel
+                                    </button>
                                 <button
                                     type="button"
                                     className="rounded-md bg-blue-900 px-4 py-2 text-white hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                     onClick={handleSaveEdit}
                                     disabled={editSaveDisabled}
                                 >
-                                    Save
+                                    {isEditing ? "Saving..." : "Save"}
                                 </button>
                             </div>
                         </div>
