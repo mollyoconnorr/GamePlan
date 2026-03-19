@@ -1,4 +1,4 @@
-import {Routes, Route, Navigate} from "react-router-dom";
+import {Routes, Route} from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import RequireAuth from "./auth/RequireAuth";
 import Navbar from "./components/Navbar";
@@ -7,6 +7,8 @@ import Home from "./pages/Home";
 import ReserveEquipment from "./pages/ReserveEquipment.tsx";
 import Welcome from "./pages/Welcome.tsx";
 import Login from "./pages/Login.tsx";
+import Logout from "./pages/Logout.tsx";
+import NotFound from "./pages/NotFound.tsx";
 import Profile from "./pages/Profile.tsx";
 import {useEffect, useMemo, useState} from "react";
 import type {Reservation} from "./types.ts";
@@ -58,6 +60,7 @@ function AppShell() {
                         setReservations={setReservations}
                     />} />
                     <Route path="profile" element={<Profile />} />
+                    <Route path="*" element={<NotFound compact />} />
                 </Routes>
             </main>
 
@@ -72,6 +75,7 @@ export default function App() {
             {/* Public landing / redirect target */}
             <Route path="/" element={<Welcome />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/logout" element={<Logout />} />
 
             {/* Everything under /app is protected */}
             <Route
@@ -84,7 +88,7 @@ export default function App() {
             />
 
             {/* unknown routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
         </Routes>
     );
 }
