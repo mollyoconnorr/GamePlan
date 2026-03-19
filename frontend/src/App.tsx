@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import ReserveEquipment from "./pages/ReserveEquipment.tsx";
 import Welcome from "./pages/Welcome.tsx";
 import Login from "./pages/Login.tsx";
+import Profile from "./pages/Profile.tsx";
 import {useEffect, useMemo, useState} from "react";
 import type {Reservation} from "./types.ts";
 import {getReservations} from "./api/Reservations.ts";
@@ -56,6 +57,7 @@ function AppShell() {
                         reservations={reservations}
                         setReservations={setReservations}
                     />} />
+                    <Route path="profile" element={<Profile />} />
                 </Routes>
             </main>
 

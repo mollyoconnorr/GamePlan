@@ -19,7 +19,7 @@ export default function Navbar({ username, logout }: NavbarProps) {
                 action: () => navigate("/app/home"),
                 underline: isHome,
             },
-            { label: username, Icon: CircleUserRound, action: null, underline: isProfile },
+            { label: username, Icon: CircleUserRound, action: () => navigate("/app/profile"), underline: isProfile },
             { label: "Sign out", Icon: LogOut, action: logout, underline: false },
         ];
 
