@@ -17,7 +17,8 @@ import java.util.stream.Collectors;
  * REST controller for managing reservations.
  * <p>
  * Provides endpoints to view, create, update, and cancel reservations
- * for the currently authenticated user.
+ * for the currently authenticated user, as well as viewing reservations
+ * for specific equipment.
  * </p>
  */
 @RestController
@@ -40,10 +41,12 @@ public class ReservationController {
     }
 
     /**
+     * GET /api/reservations
+     * <p>
      * Retrieves all reservations for the currently authenticated user.
      *
      * @param authentication The OAuth2 authentication token of the user.
-     * @return A list of {@link ReservationResponse} objects.
+     * @return A list of {@link ReservationResponse} objects representing the user's reservations.
      */
     @GetMapping
     public List<ReservationResponse> getReservations(OAuth2AuthenticationToken authentication) {
@@ -65,6 +68,14 @@ public class ReservationController {
                 .toList();
     }
 
+    /**
+     * GET /api/reservations/{equipmentId}
+     * <p>
+     * Retrieves all reservations for a specific equipment.
+     *
+     * @param equipmentId The ID of the equipment.
+     * @return A list of {@link ReservationResponse} objects, including the user who reserved.
+     */
     @GetMapping("/{equipmentId}")
     public List<ReservationResponse> getEquipmentReservations(@PathVariable Long equipmentId) {
         List<Reservation> reservations = reservationService.getReservationsForEquipment(equipmentId);
@@ -73,15 +84,18 @@ public class ReservationController {
                         r.getId(),
                         r.getStartDatetime().toString(),
                         r.getEndDatetime().toString(),
-                        r.getUser().getFirstName() + " " + r.getUser().getLastName() // <-- user who reserved
+                        r.getUser().getFirstName() + " " + r.getUser().getLastName()
                 ))
                 .collect(Collectors.toList());
     }
+
     /**
+     * POST /api/reservations
+     * <p>
      * Creates a new reservation for the currently authenticated user.
      *
      * @param authentication The OAuth2 authentication token of the user.
-     * @param request        The reservation details (equipment, start, end).
+     * @param request        The reservation details (equipment ID, start, end).
      * @return The created {@link Reservation} entity.
      */
     @PostMapping
@@ -103,7 +117,9 @@ public class ReservationController {
     }
 
     /**
-     * Updates an existing reservation's start and end times.
+     * PUT /api/reservations/{id}
+     * <p>
+     * Updates the start and end times of an existing reservation.
      *
      * @param id    The reservation ID.
      * @param start The new start time in ISO_LOCAL_DATE_TIME format.
@@ -123,6 +139,8 @@ public class ReservationController {
     }
 
     /**
+     * DELETE /api/reservations/{id}
+     * <p>
      * Cancels an existing reservation.
      *
      * @param id The reservation ID.
