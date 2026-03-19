@@ -12,7 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -75,35 +77,56 @@ public class ReservationController {
         return reservations.stream()
                 .map(r -> new ReservationResponse(
                         r.getId(),
+                        r.getEquipment().getName(),
                         r.getStartDatetime().toString(),
-                        r.getEndDatetime().toString(),
-                        r.getUser().getFirstName() + " " + r.getUser().getLastName() // <-- user who reserved
+                        r.getEndDatetime().toString()
+                        // TODO: Add user name if matches OIDC user or is trainer reserving it, else add reserved
+//                        r.getUser().getFirstName() + " " + r.getUser().getLastName() // <-- user who reserved
                 ))
                 .collect(Collectors.toList());
     }
+
     /**
      * Creates a new reservation for the currently authenticated user.
      *
      * @param authentication The OAuth2 authentication token of the user.
-     * @param request        The reservation details (equipment, start, end).
-     * @return The created {@link Reservation} entity.
+     * @param request        The reservation details (equipmentId, start, end as ISO-8601).
+     * @return A {@link ResponseEntity} containing the created {@link ReservationResponse}
+     *         with HTTP status 201 (Created) and a Location header.
      */
     @PostMapping
-    public Reservation createReservation(
+    public ResponseEntity<ReservationResponse> createReservation(
             OAuth2AuthenticationToken authentication,
             @RequestBody ReservationRequest request) {
 
-        String oidcUserId = authentication.getPrincipal().getAttribute("sub");
+        final String oidcUserId = authentication.getPrincipal().getAttribute("sub");
 
-        User user = userRepository.findByOidcUserId(oidcUserId)
+        final User user = userRepository.findByOidcUserId(oidcUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return reservationService.createReservation(
+        final Reservation newRes = reservationService.createReservation(
                 user,
                 reservationService.getEquipmentById(request.getEquipmentId()),
-                LocalDateTime.parse(request.getStart()),
-                LocalDateTime.parse(request.getEnd())
+                request.getStart()
+                        .atZone(ZoneId.of("America/Denver"))
+                        .toLocalDateTime(),
+                request.getEnd()
+                        .atZone(ZoneId.of("America/Denver"))
+                        .toLocalDateTime()
         );
+
+        final ReservationResponse response = new ReservationResponse(
+                newRes.getId(),
+                newRes.getEquipment().getName(),
+                newRes.getStartDatetime().toString(),
+                newRes.getEndDatetime().toString()
+        );
+
+        final URI location = URI.create("/api/reservations/" + newRes.getId());
+
+        return ResponseEntity
+                .created(location)
+                .body(response);
     }
 
     /**

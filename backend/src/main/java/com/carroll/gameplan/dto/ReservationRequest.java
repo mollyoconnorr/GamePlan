@@ -1,5 +1,7 @@
 package com.carroll.gameplan.dto;
 
+import java.time.Instant;
+
 /**
  * Data Transfer Object (DTO) for creating or updating a reservation.
  * <p>
@@ -17,12 +19,12 @@ public class ReservationRequest {
     /**
      * The start datetime of the reservation, as a string (ISO-8601 format).
      */
-    private String start;
+    private Instant start;
 
     /**
      * The end datetime of the reservation, as a string (ISO-8601 format).
      */
-    private String end;
+    private Instant end;
     /**
      * Gets the equipment ID.
      *
@@ -46,7 +48,7 @@ public class ReservationRequest {
      *
      * @return The start datetime as a string.
      */
-    public String getStart() {
+    public Instant getStart() {
         return start;
     }
 
@@ -55,7 +57,7 @@ public class ReservationRequest {
      *
      * @param start The start datetime as a string (ISO-8601 format).
      */
-    public void setStart(String start) {
+    public void setStart(Instant start) {
         this.start = start;
     }
 
@@ -64,7 +66,7 @@ public class ReservationRequest {
      *
      * @return The end datetime as a string.
      */
-    public String getEnd() {
+    public Instant getEnd() {
         return end;
     }
 
@@ -73,7 +75,7 @@ public class ReservationRequest {
      *
      * @param end The end datetime as a string (ISO-8601 format).
      */
-    public void setEnd(String end) {
+    public void setEnd(Instant end) {
         this.end = end;
     }
 }
