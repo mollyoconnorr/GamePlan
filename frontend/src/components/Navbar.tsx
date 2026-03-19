@@ -30,10 +30,6 @@ export default function Navbar({ username, logout }: NavbarProps) {
                 action: () => navigate("/app/home"),
                 underline: isHome,
             },
-            { label: "Create Equipment", Icon: Calendar1, action: () => navigate("/app/createEquipment")},
-            { label: "Equipment", Icon: Calendar1, action: () => navigate("/app/allEquipment")},
-            { label: "Equipment Types", Icon: Calendar1, action: () => navigate("/app/equipmentTypes")},
-            { label: "Calendar", Icon: Calendar1, action: () => navigate("/app/home")},
             { label: username, Icon: CircleUserRound, action: () => navigate("/app/profile"), underline: isProfile },
             { label: "Sign out", Icon: LogOut, action: handleSignOut, underline: false }
         ];

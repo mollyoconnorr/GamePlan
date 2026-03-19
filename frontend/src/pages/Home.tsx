@@ -91,12 +91,33 @@ export default function Home(
                 >Hello, {user.firstName}</h1>
 
                 <div className="ml-auto mr-0 space-x-10">
+                    {/*TODO: Display if user*/}
                     <Button
                         text="Reserve Equipment"
                         className="bg-green-400 hover:bg-green-300 border-green-500"
                         onClick={() => {navigate("/app/reserveEquipment")}}
                     />
+
+                    {/*TODO: Display these if trainer*/}
+                    <Button
+                        text="View Equipment Types"
+                        className="bg-primary text-white hover:bg-primary-hover border-black"
+                        onClick={() => {navigate("/app/equipmentTypes")}}
+                    />
+
+                    <Button
+                        text="View Equipment"
+                        className="bg-primary text-white hover:bg-primary-hover border-black"
+                        onClick={() => {navigate("/app/allEquipment")}}
+                    />
+
+                    <Button
+                        text="Create Equipment"
+                        className="bg-primary text-white hover:bg-primary-hover border-black"
+                        onClick={() => {navigate("/app/createEquipment")}}
+                    />
                 </div>
+
 
                 {/*Toggle for calendar view*/}
                 <div className="flex w-48 border rounded-sm shadow-md">
