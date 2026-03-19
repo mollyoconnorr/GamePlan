@@ -11,10 +11,15 @@ export interface CalendarProps {
     reservations?: CalendarEvent[];
     equipmentId?: number;
     loading: boolean;
+    onEditReservation?: (id: number, start: Dayjs, end: Dayjs) => Promise<void> | void;
     onDeleteReservation?: (id: number) => Promise<void> | void;
 }
 
 export interface CalendarContentProps {
+    firstDate: Dayjs,
+    startTime: Dayjs,
+    endTime: Dayjs,
+    timeStepMin: number,
     top: number,
     left: number,
     height: number,
@@ -24,6 +29,7 @@ export interface CalendarContentProps {
     dayMap: Map<string, number>,
     timeMap: Map<string, number>,
     events: CalendarEvent[],
+    onEditReservation?: (id: number, start: Dayjs, end: Dayjs) => Promise<void> | void;
     onDeleteReservation?: (id: number) => Promise<void> | void;
     variant: "user" | "equip" | "trainer"
 }

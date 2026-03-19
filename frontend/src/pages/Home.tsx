@@ -125,6 +125,7 @@ export default function Home(
                     variant={"user"}
                     reservations={calendarEvents}
                     loading={loading}
+                    onEditReservation={handleEditReservation}
                     onDeleteReservation={handleDeleteReservation}
                 />}
 

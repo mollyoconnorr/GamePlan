@@ -118,11 +118,16 @@ export default function CalendarContent(props: CalendarContentProps) {
                         return <CalendarCard
                             key={e.name + e.date + e.startTime}
                             event={e}
+                            eventDay={props.firstDate.add(key, "day")}
+                            startTime={props.startTime}
+                            endTime={props.endTime}
+                            timeStepMin={props.timeStepMin}
                             startIndex={startIndex}
                             endIndex={endIndex}
                             groupStartIndex={groupStartIndex}
                             cellHeight={props.cellHeight}
                             cardMargin={cardMargin}
+                            onEditReservation={props.onEditReservation}
                             onDeleteReservation={props.onDeleteReservation}
                             onShowToast={setToastMessage}
                             variant={props.variant}

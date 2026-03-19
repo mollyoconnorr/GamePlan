@@ -116,6 +116,10 @@ export default function Calendar(props: CalendarProps) {
 
             {!props.loading && props.reservations && (
                 <CalendarContent
+                    firstDate={props.firstDate}
+                    startTime={props.startTime}
+                    endTime={props.endTime}
+                    timeStepMin={props.timeStepMin}
                     top={CELL_H}
                     left={TIME_W}
                     height={CELL_H * (numRows + 1)}
@@ -125,6 +129,7 @@ export default function Calendar(props: CalendarProps) {
                     dayMap={dayMap}
                     timeMap={timeMap}
                     events={props.reservations}
+                    onEditReservation={props.onEditReservation}
                     onDeleteReservation={props.onDeleteReservation}
                     variant={props.variant}
                 />
