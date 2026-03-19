@@ -114,6 +114,9 @@ export default function Home(
                 {!showCalendar && <ManageReservations
                     reservations={reservations}
                     loading={loading}
+                    startTime={startTime}
+                    endTime={endTime}
+                    timeStepMin={15}
                     onDeleteReservation={handleDeleteReservation}
                 />}
             </section>

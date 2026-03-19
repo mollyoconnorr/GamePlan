@@ -1,31 +1,80 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { Dayjs } from "dayjs";
 import type { Reservation, PendingDelete } from "../types.ts";
 import Spinner from "./Spinner.tsx";
 import dayjs from "dayjs";
 import { SquarePen, Trash2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog.tsx";
 import Toast from "./Toast.tsx";
+import { createPortal } from "react-dom";
 
 type ManageReservationsProps = {
     reservations: Reservation[];
     loading: boolean;
+    startTime: Dayjs;
+    endTime: Dayjs;
+    timeStepMin: number;
     onDeleteReservation: (id: number) => Promise<void> | void;
 };
 
 export default function ManageReservations({
-                                               reservations,
-                                               loading,
-                                               onDeleteReservation,
-                                           }: ManageReservationsProps) {
+    reservations,
+    loading,
+    startTime,
+    endTime,
+    timeStepMin,
+    onDeleteReservation,
+}: ManageReservationsProps) {
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
+    const [pendingEdit, setPendingEdit] = useState<Reservation | null>(null);
+    const [selectedStartTime, setSelectedStartTime] = useState("");
+    const [selectedEndTime, setSelectedEndTime] = useState("");
+    const [localEdits, setLocalEdits] = useState<Record<number, { start: Dayjs; end: Dayjs }>>({});
 
     useEffect(() => {
         if (!successMessage) return;
         const timeout = setTimeout(() => setSuccessMessage(""), 2500);
         return () => clearTimeout(timeout);
     }, [successMessage]);
+
+    // Build selectable times from the same bounds/step used by Calendar.
+    const timeOptions = useMemo(() => {
+        if (timeStepMin <= 0 || endTime.isBefore(startTime)) return [];
+
+        const options: { value: string; label: string }[] = [];
+        let current = startTime;
+
+        while (current.isBefore(endTime) || current.isSame(endTime)) {
+            options.push({
+                value: current.format("HH:mm"),
+                label: current.format("h:mm A"),
+            });
+            current = current.add(timeStepMin, "minute");
+        }
+
+        return options;
+    }, [startTime, endTime, timeStepMin]);
+
+    // Keep edits local in this view for now until the update API is wired in
+    const reservationsWithLocalEdits = useMemo(() => {
+        return reservations.map((reservation) => {
+            const localEdit = localEdits[reservation.id];
+            if (!localEdit) return reservation;
+
+            return {
+                ...reservation,
+                start: localEdit.start,
+                end: localEdit.end,
+            };
+        });
+    }, [reservations, localEdits]);
+
+    const endTimeOptions = useMemo(() => {
+        if (!selectedStartTime) return [];
+        return timeOptions.filter((option) => option.value > selectedStartTime);
+    }, [selectedStartTime, timeOptions]);
 
     const handleConfirmDelete = async () => {
         if (!pendingDelete) return;
@@ -42,9 +91,76 @@ export default function ManageReservations({
         }
     };
 
+    const handleOpenEdit = (reservation: Reservation) => {
+        const reservationStart = reservation.start.format("HH:mm");
+        const reservationEnd = reservation.end.format("HH:mm");
+
+        // If current values fall outside allowed bounds, clamp to the first valid option
+        const boundedStartTime = timeOptions.some((option) => option.value === reservationStart)
+            ? reservationStart
+            : (timeOptions[0]?.value ?? "");
+
+        const boundedEndTimeOptions = timeOptions.filter((option) => option.value > boundedStartTime);
+        const boundedEndTime = boundedEndTimeOptions.some((option) => option.value === reservationEnd)
+            ? reservationEnd
+            : (boundedEndTimeOptions[0]?.value ?? "");
+
+        setPendingEdit(reservation);
+        setSelectedStartTime(boundedStartTime);
+        setSelectedEndTime(boundedEndTime);
+    };
+
+    const handleCloseEdit = () => {
+        setPendingEdit(null);
+        setSelectedStartTime("");
+        setSelectedEndTime("");
+    };
+
+    const handleSaveEdit = () => {
+        if (!pendingEdit || !selectedStartTime || !selectedEndTime) return;
+
+        const [startHour, startMinute] = selectedStartTime.split(":").map((value) => Number(value));
+        const [endHour, endMinute] = selectedEndTime.split(":").map((value) => Number(value));
+
+        if (
+            Number.isNaN(startHour) ||
+            Number.isNaN(startMinute) ||
+            Number.isNaN(endHour) ||
+            Number.isNaN(endMinute)
+        ) {
+            return;
+        }
+
+        const updatedStart = pendingEdit.start
+            .hour(startHour)
+            .minute(startMinute)
+            .second(0)
+            .millisecond(0);
+
+        const updatedEnd = pendingEdit.start
+            .hour(endHour)
+            .minute(endMinute)
+            .second(0)
+            .millisecond(0);
+
+        // Save only to local state
+        setLocalEdits((prev) => ({
+            ...prev,
+            [pendingEdit.id]: {
+                start: updatedStart,
+                end: updatedEnd,
+            },
+        }));
+        setSuccessMessage(`Updated reservation time for ${pendingEdit.name}.`);
+        handleCloseEdit();
+    };
+
+    const editSaveDisabled =
+        !pendingEdit || !selectedStartTime || !selectedEndTime || selectedEndTime <= selectedStartTime;
+
     const dayEventMap: Map<string, { dayLabel: string; events: Reservation[] }> = new Map();
 
-    reservations.forEach((r) => {
+    reservationsWithLocalEdits.forEach((r) => {
         const dayKey = r.start.startOf("day").format("YYYY-MM-DD");
         const dayLabel = r.start.format("dddd, MMMM D");
 
@@ -79,6 +195,85 @@ export default function ManageReservations({
                 onConfirm={handleConfirmDelete}
             />
 
+            {pendingEdit !== null &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div
+                        className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 px-4"
+                        onClick={handleCloseEdit}
+                    >
+                        <div
+                            className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h2 className="text-xl font-semibold">Edit reservation time</h2>
+                            <p className="mt-1 text-sm text-gray-700">{pendingEdit.name}</p>
+                            <p className="mt-1 text-sm text-gray-700">{pendingEdit.start.format("dddd, MMMM D")}</p>
+
+                            <div className="mt-5 grid gap-4 md:grid-cols-2">
+                                <label className="flex flex-col gap-1 text-sm font-medium">
+                                    Start time
+                                    <select
+                                        value={selectedStartTime}
+                                        onChange={(e) => {
+                                            const nextStartTime = e.target.value;
+                                            setSelectedStartTime(nextStartTime);
+
+                                            if (selectedEndTime && selectedEndTime <= nextStartTime) {
+                                                setSelectedEndTime("");
+                                            }
+                                        }}
+                                        className="rounded-md border px-3 py-2 font-normal"
+                                    >
+                                        <option value="">Select start time</option>
+                                        {timeOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+
+                                <label className="flex flex-col gap-1 text-sm font-medium">
+                                    End time
+                                    <select
+                                        value={selectedEndTime}
+                                        onChange={(e) => setSelectedEndTime(e.target.value)}
+                                        disabled={!selectedStartTime}
+                                        className="rounded-md border px-3 py-2 font-normal disabled:bg-gray-100 disabled:text-gray-400"
+                                    >
+                                        <option value="">Select end time</option>
+                                        {endTimeOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    className="rounded-md border px-4 py-2 hover:cursor-pointer"
+                                    onClick={handleCloseEdit}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="rounded-md bg-blue-900 px-4 py-2 text-white hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                    onClick={handleSaveEdit}
+                                    disabled={editSaveDisabled}
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
             <section className="mx-5 md:mx-30">
                 {loading && <Spinner />}
 
@@ -97,6 +292,7 @@ export default function ManageReservations({
                                     endTime={e.end.format("h:mm A")}
                                     name={e.name}
                                     id={e.id}
+                                    onRequestEdit={() => handleOpenEdit(e)}
                                     onRequestDelete={(id, name) => setPendingDelete({ id, name })}
                                 />
                             ))}
@@ -110,16 +306,18 @@ export default function ManageReservations({
 }
 
 function ReservationCard({
-                             startTime,
-                             endTime,
-                             name,
-                             id,
-                             onRequestDelete,
-                         }: {
+    startTime,
+    endTime,
+    name,
+    id,
+    onRequestEdit,
+    onRequestDelete,
+}: {
     startTime: string;
     endTime: string;
     name: string;
     id: number;
+    onRequestEdit: () => void;
     onRequestDelete: (id: number, name: string) => void;
 }) {
     return (
@@ -132,10 +330,16 @@ function ReservationCard({
             <p>{name}</p>
 
             <div className="flex flex-col p-2 space-y-6">
-                <button className="hover:cursor-pointer" title="Edit Reservation">
+                <button
+                    type="button"
+                    className="hover:cursor-pointer"
+                    title="Edit Reservation"
+                    onClick={onRequestEdit}
+                >
                     <SquarePen />
                 </button>
                 <button
+                    type="button"
                     className="hover:cursor-pointer"
                     title="Delete Reservation"
                     onClick={() => onRequestDelete(id, name)}
