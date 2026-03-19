@@ -5,14 +5,23 @@ import Calendar from "../components/calendar/Calendar.tsx";
 import {useState, useEffect} from "react";
 import dayjs from "dayjs";
 import type {CalendarEvent} from "../types.ts";
-import {getEquipmentReservations} from "../api/Reservations.ts";
+import {getEquipmentReservations, makeReservation} from "../api/Reservations.ts";
 import {parseRawResToEvent} from "../util/ParseReservation.ts";
 import ReservationDateTimePicker from "../components/ReservationDateTimePicker.tsx";
+import Toast from "../components/Toast.tsx";
 
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
 
 export default function ReserveEquipment() {
     const navigate = useNavigate();
+
+    const [message, setMessage] = useState("");
+
+    useEffect(() => {
+        if (!message) return;
+        const timeout = setTimeout(() => setMessage(""), 2500);
+        return () => clearTimeout(timeout);
+    }, [message]);
 
     const [firstDate] = useState(() => dayjs().startOf("day"));
     const startTime = dayjs().startOf("day").hour(8).minute(0);
@@ -156,8 +165,35 @@ export default function ReserveEquipment() {
         );
     };
 
+    const handleMakeReservation = async () => {
+        if (!allResInfoPresent) return;
+
+        setLoading(true);
+
+        const payload = {
+            equipmentId: selectedEquipment,
+            start: dayjs(`${selectedDate} ${selectedStartTime}`).toISOString(),
+            end: dayjs(`${selectedDate} ${selectedEndTime}`).toISOString(),
+        };
+
+        try {
+            const data = await makeReservation(payload);
+            console.log(data);
+
+            setMessage("Reservation created!");
+
+
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <>
+            <Toast message={message} />
+
             <Button
                 text="Back"
                 className="bg-gray-300 hover:bg-gray-200"
@@ -226,6 +262,7 @@ export default function ReserveEquipment() {
                     <Button
                       text="Reserve"
                       className="bg-green-400 hover:bg-green-300 border-green-500"
+                      onClick={handleMakeReservation}
                     />
                   </div>
                 }
