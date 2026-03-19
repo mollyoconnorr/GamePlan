@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import {useNavigate} from "react-router-dom";
+import Button from "../components/Button.tsx";
+import {safeBack} from "../util/Navigation.ts";
 
 export default function CreateEquipment() {
-  // =====================
-  // Equipment Type State
-  // =====================
+    const navigate = useNavigate();
   const [types, setTypes] = useState<any[]>([]);
   const [typeName, setTypeName] = useState("");
   const [typeColor, setTypeColor] = useState("#000000");
@@ -36,26 +37,20 @@ const buildSchema = () => {
   return JSON.stringify(schema);
 };
 
-  // =====================
   // New Equipment State
-  // =====================
   const [selectedType, setSelectedType] = useState<any>(null);
   const [equipmentName, setEquipmentName] = useState("");
   const [attributes, setAttributes] = useState<{ name: string; value: string }[]>([]);
   const [selectedAttribute, setSelectedAttribute] = useState<{ name: string; value: string } | null>(null);
 
-  // =====================
   // Fetch Equipment Types
-  // =====================
   useEffect(() => {
     fetch("/api/equipment-types")
       .then(res => res.json())
       .then(data => setTypes(data));
   }, []);
 
-  // =====================
   // Create New Equipment Type
-  // =====================
   const createEquipmentType = async () => {
     await fetch("/api/equipment-types", {
       method: "POST",
@@ -68,9 +63,7 @@ const buildSchema = () => {
     setTypeName("");
   };
 
-  // =====================
   // Handle Type Selection for New Equipment
-  // =====================
   const handleTypeChange = async (typeId: number) => {
     const type = types.find(t => t.id === typeId);
     setSelectedType(type);
@@ -83,7 +76,6 @@ const buildSchema = () => {
     setAttributes(data);
   };
 
-  // =====================
   // Handle Attribute Selection
     const handleAttributeChange = (selectedValue: string) => {
       let selected = null;
@@ -96,9 +88,7 @@ const buildSchema = () => {
       setSelectedAttribute(selected);
     };
 
-  // =====================
   // Create New Equipment
-  // =====================
   const createEquipment = async () => {
     if (!selectedType || !equipmentName) return;
 
@@ -124,122 +114,127 @@ const buildSchema = () => {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Manage Equipment</h1>
-
-      {/* ===================== */}
-      {/* CREATE EQUIPMENT TYPE */}
-      {/* ===================== */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold mb-2">Create Equipment Type</h2>
-        <input
-          placeholder="Type name"
-          value={typeName}
-          onChange={(e) => setTypeName(e.target.value)}
-          className="border p-2 mr-2"
+    <>
+        <Button
+            text="Back"
+            className="bg-gray-300 hover:bg-gray-200"
+            onClick={() => safeBack(navigate)}
         />
-        <input
-          type="color"
-          value={typeColor}
-          onChange={(e) => setTypeColor(e.target.value)}
-          className="mr-2"
-        />
-            {/* ===================== */}
-            {/* ADD EQUIPMENT ATTRIBUTE TO TYPE */}
-            {/* ===================== */}
-            {attributesSchema.map((attr, index) => (
-              <div key={index} className="mb-2">
-                <input
-                  placeholder="Attribute name (e.g. size)"
-                  value={attr.name}
-                  onChange={(e) => {
-                    const updated = [...attributesSchema];
-                    updated[index].name = e.target.value;
-                    setAttributesSchema(updated);
-                  }}
-                  className="border p-1 mr-2"
-                />
+        <section className="mx-5 md:mx-30 space-y-10">
+          <h1 className="text-2xl font-bold mb-6">Manage Equipment</h1>
 
-                <input
-                  placeholder="Options (comma separated)"
-                  value={attr.options}
-                  onChange={(e) => {
-                    const updated = [...attributesSchema];
-                    updated[index].options = e.target.value;
-                    setAttributesSchema(updated);
-                  }}
-                  className="border p-1"
-                />
-              </div>
-            ))}
+          {/* CREATE EQUIPMENT TYPE */}
+          <div className="mb-10">
+            <h2 className="text-xl font-semibold mb-2">Create Equipment Type</h2>
+            <input
+              placeholder="Type name"
+              value={typeName}
+              onChange={(e) => setTypeName(e.target.value)}
+              className="border p-2 mr-2"
+            />
+            <input
+              type="color"
+              value={typeColor}
+              onChange={(e) => setTypeColor(e.target.value)}
+              className="mr-2"
+            />
+                {/* ===================== */}
+                {/* ADD EQUIPMENT ATTRIBUTE TO TYPE */}
+                {/* ===================== */}
+                {attributesSchema.map((attr, index) => (
+                  <div key={index} className="mb-2">
+                    <input
+                      placeholder="Attribute name (e.g. size)"
+                      value={attr.name}
+                      onChange={(e) => {
+                        const updated = [...attributesSchema];
+                        updated[index].name = e.target.value;
+                        setAttributesSchema(updated);
+                      }}
+                      className="border p-1 mr-2"
+                    />
 
-        <button onClick={createEquipmentType} className="bg-blue-600 text-white px-4 py-2">
-          Create
-        </button>
-      </div>
+                    <input
+                      placeholder="Options (comma separated)"
+                      value={attr.options}
+                      onChange={(e) => {
+                        const updated = [...attributesSchema];
+                        updated[index].options = e.target.value;
+                        setAttributesSchema(updated);
+                      }}
+                      className="border p-1"
+                    />
+                  </div>
+                ))}
 
-
-    <button onClick={addAttribute} className="bg-gray-300 px-2 py-1 mt-2">
-      + Add Attribute
-    </button>
-
-      {/* ===================== */}
-      {/* CREATE EQUIPMENT */}
-      {/* ===================== */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold mb-2">Create Equipment</h2>
-
-        {/* Select Equipment Type */}
-        <select
-          className="border p-2 mb-4"
-          value={selectedType?.id || ""}
-          onChange={(e) => handleTypeChange(Number(e.target.value))}
-        >
-          <option value="">Select Type</option>
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-
-        {/* Equipment Name */}
-        <div className="mb-4">
-          <input
-            placeholder="Equipment name"
-            value={equipmentName}
-            onChange={(e) => setEquipmentName(e.target.value)}
-            className="border p-2"
-          />
-        </div>
-
-        {/* Attribute Dropdown */}
-        {attributes.length > 0 && (
-          <div className="mb-4">
-            <label>Select Attribute:</label>
-            <select
-              value={selectedAttribute?.value ?? ""}
-              onChange={(e) => handleAttributeChange(e.target.value)}
-              className="border p-2 ml-2"
-            >
-              <option value="">Select</option>
-              {attributes.map(attr =>
-                attr.options?.map(opt => ( // optional chaining
-                  <option key={`${attr.name}-${opt}`} value={opt}>
-                    {attr.name}: {opt}
-                  </option>
-                ))
-              )}
-            </select>
+            <button onClick={createEquipmentType} className="bg-blue-600 text-white px-4 py-2">
+              Create
+            </button>
           </div>
-        )}
 
 
-
-        <button onClick={createEquipment} className="bg-green-600 text-white px-4 py-2 mt-2">
-          Create Equipment
+        <button onClick={addAttribute} className="bg-gray-300 px-2 py-1 mt-2">
+          + Add Attribute
         </button>
-      </div>
-    </div>
+
+          {/* ===================== */}
+          {/* CREATE EQUIPMENT */}
+          {/* ===================== */}
+          <div className="mb-10">
+            <h2 className="text-xl font-semibold mb-2">Create Equipment</h2>
+
+            {/* Select Equipment Type */}
+            <select
+              className="border p-2 mb-4"
+              value={selectedType?.id || ""}
+              onChange={(e) => handleTypeChange(Number(e.target.value))}
+            >
+              <option value="">Select Type</option>
+              {types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Equipment Name */}
+            <div className="mb-4">
+              <input
+                placeholder="Equipment name"
+                value={equipmentName}
+                onChange={(e) => setEquipmentName(e.target.value)}
+                className="border p-2"
+              />
+            </div>
+
+            {/* Attribute Dropdown */}
+            {attributes.length > 0 && (
+              <div className="mb-4">
+                <label>Select Attribute:</label>
+                <select
+                  value={selectedAttribute?.value ?? ""}
+                  onChange={(e) => handleAttributeChange(e.target.value)}
+                  className="border p-2 ml-2"
+                >
+                  <option value="">Select</option>
+                  {attributes.map(attr =>
+                    attr.options?.map(opt => ( // optional chaining
+                      <option key={`${attr.name}-${opt}`} value={opt}>
+                        {attr.name}: {opt}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            )}
+
+
+
+            <button onClick={createEquipment} className="bg-green-600 text-white px-4 py-2 mt-2">
+              Create Equipment
+            </button>
+          </div>
+        </section>
+    </>
   );
 }
