@@ -35,3 +35,26 @@ export async function getEquipmentReservations(id: number) {
 
     return res.json();
 }
+
+interface MakeReservationRequest {
+    equipmentId: number;
+    start: string;
+    end: string;
+}
+
+export async function makeReservation(request: MakeReservationRequest) {
+    const res = await fetch("/api/reservations", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to create reservation");
+    }
+
+    return res.json();
+}
