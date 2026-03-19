@@ -2,6 +2,7 @@
 
 :root {
   --purple: #140648;
+  --purple-hover: #2a116e;
   --calendar-bg: #F4F4F4;
   --calendar-border: #d5d5d5;
 
@@ -12,6 +13,7 @@
   define them here and you can use them like 'primary' or 'calendar-bg'
   */
   --color-primary: var(--purple);
+  --color-primary-hover: var(--purple-hover);
   --color-calendar-bg: var(--calendar-bg);
   --color-calendar-border: var(--calendar-border);
 
