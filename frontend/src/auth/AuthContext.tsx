@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             loading,
             refresh,
             login: () => {window.location.href = "/oauth2/authorization/okta";},
-            logout: () => {window.location.href = "/logout";}
+            logout: () => {window.location.href = "/api/logout";}
         }),
         [user, loading]
     );
