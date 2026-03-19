@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 /**
  * Helper method to access auth data (User, loading, refresh, login, logout)
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error("useAuth must be used within the AuthProvider");
@@ -70,6 +71,7 @@ export function useAuth() {
  * Use only inside parts of the app that are behind <RequireAuth>.
  * Returns a non-null User for correct TS typing.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuthedUser(): User {
     const { user } = useAuth();
     if (!user) {

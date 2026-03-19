@@ -15,6 +15,9 @@ type ReserveEquipmentProps = {
 }
 
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
+type EquipmentTypeResponse = { id: number; name: string };
+type EquipmentResponse = { id: number; name: string };
+type EquipmentAttributeResponse = { name: string; value: string };
 
 export default function ReserveEquipment({reservations, setReservations} : ReserveEquipmentProps) {
     const navigate = useNavigate();
@@ -94,7 +97,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
         fetch("/api/equipment-types", {credentials: "include"})
             .then(res => res.json())
             .then(data => {
-                const formatted = data.map((t: any) => ({
+                const formatted = (data as EquipmentTypeResponse[]).map((t) => ({
                     label: t.name,
                     value: t.id.toString(),
                 }));
@@ -120,7 +123,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
             const eqData = await eqRes.json();
 
             setEquipmentList(
-                eqData.map((e: any) => ({
+                (eqData as EquipmentResponse[]).map((e) => ({
                     label: e.name,
                     value: e.id.toString(),
                 }))
@@ -128,7 +131,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
         } else {
             // Map attributes including name & value
             setAttributes(
-                data.map((a: any) => ({
+                (data as EquipmentAttributeResponse[]).map((a) => ({
                     label: a.name + ": " + a.value, // display for user
                     value: a.value,                // actual value to send to backend
                     name: a.name                    // name key for backend query
@@ -154,7 +157,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
         const data = await res.json();
 
         setEquipmentList(
-            data.map((e: any) => ({
+            (data as EquipmentResponse[]).map((e) => ({
                 label: e.name,
                 value: e.id.toString(),
             }))
