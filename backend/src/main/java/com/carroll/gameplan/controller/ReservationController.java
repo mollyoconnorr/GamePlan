@@ -73,7 +73,7 @@ public class ReservationController {
 
     @GetMapping("/{equipmentId}")
     public List<ReservationResponse> getEquipmentReservations(@PathVariable Long equipmentId) {
-        List<Reservation> reservations = reservationService.getReservationsForEquipment(equipmentId);
+        List<Reservation> reservations = reservationService.getActiveReservationsForEquipment(equipmentId);
         return reservations.stream()
                 .map(r -> new ReservationResponse(
                         r.getId(),

@@ -101,8 +101,8 @@ public class ReservationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Reservation> getReservationsForEquipment(Long equipmentId) {
-        return reservationRepository.findByEquipmentId(equipmentId);
+    public List<Reservation> getActiveReservationsForEquipment(Long equipmentId) {
+        return reservationRepository.findByEquipmentIdAndStatusIs(equipmentId, ReservationStatus.ACTIVE);
     }
 
     // ===== Function 4: Update an existing reservation =====
