@@ -2,26 +2,22 @@ import {useNavigate} from "react-router-dom";
 import Button from "../components/Button.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import Calendar from "../components/calendar/Calendar.tsx";
-import {useState, useEffect} from "react";
+import {useState, useEffect, type Dispatch, type SetStateAction} from "react";
 import dayjs from "dayjs";
-import type {CalendarEvent} from "../types.ts";
+import type {CalendarEvent, Reservation} from "../types.ts";
 import {getEquipmentReservations, makeReservation} from "../api/Reservations.ts";
-import {parseRawResToEvent} from "../util/ParseReservation.ts";
+import {parseRawResToEvent, parseRawResToRes} from "../util/ParseReservation.ts";
 import ReservationDateTimePicker from "../components/ReservationDateTimePicker.tsx";
-import Toast from "../components/Toast.tsx";
+
+type ReserveEquipmentProps = {
+    reservations: Reservation[];
+    setReservations: Dispatch<SetStateAction<Reservation[]>>;
+}
 
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
 
-export default function ReserveEquipment() {
+export default function ReserveEquipment({reservations, setReservations} : ReserveEquipmentProps) {
     const navigate = useNavigate();
-
-    const [message, setMessage] = useState("");
-
-    useEffect(() => {
-        if (!message) return;
-        const timeout = setTimeout(() => setMessage(""), 2500);
-        return () => clearTimeout(timeout);
-    }, [message]);
 
     const [firstDate] = useState(() => dayjs().startOf("day"));
     const startTime = dayjs().startOf("day").hour(8).minute(0);
@@ -178,10 +174,10 @@ export default function ReserveEquipment() {
 
         try {
             const data = await makeReservation(payload);
-            console.log(data);
 
-            setMessage("Reservation created!");
+            setReservations([...reservations, parseRawResToRes(data)])
 
+            navigate("/app/home", {state: {toastMessage: "Reservation created!"}});
 
         } catch (err) {
             console.error(err);
@@ -192,8 +188,6 @@ export default function ReserveEquipment() {
 
     return (
         <>
-            <Toast message={message} />
-
             <Button
                 text="Back"
                 className="bg-gray-300 hover:bg-gray-200"

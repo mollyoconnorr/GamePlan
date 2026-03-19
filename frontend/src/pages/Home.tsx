@@ -3,19 +3,35 @@ import {useEffect, useState} from "react";
 import dayjs from "dayjs";
 import {useAuthedUser} from "../auth/AuthContext.tsx";
 import Button from "../components/Button.tsx";
-import {useNavigate} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 import ManageReservations from "../components/ManageReservations.tsx";
 import type {CalendarEvent, Reservation} from "../types.ts";
-import {deleteReservation, getReservations} from "../api/Reservations.ts";
-import {parseRawResToEvent} from "../util/ParseReservation.ts";
-import {parseRawResToRes} from "../util/ParseReservationInfo.ts";
+import {deleteReservation} from "../api/Reservations.ts";
+import Toast from "../components/Toast.tsx";
 
-export default function Home(){
+type HomeProps = {
+    reservations: Reservation[];
+    calendarEvents: CalendarEvent[];
+    loadReservations: () => Promise<void>;
+    loading: boolean;
+}
+
+type HomeLocationState = {
+    toastMessage?: string;
+}
+
+export default function Home(
+    {reservations, calendarEvents, loadReservations, loading}: HomeProps
+
+){
     const user = useAuthedUser();
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [firstDate] = useState(() => dayjs().startOf("day"));
+    const locationState = location.state as HomeLocationState | null;
+    const toastMessage = locationState?.toastMessage ?? "";
 
     const startTime = dayjs().startOf("day").hour(8).minute(0);
     const endTime   = dayjs().startOf("day").hour(17).minute(0);
@@ -31,27 +47,13 @@ export default function Home(){
         localStorage.setItem("showCalendar", JSON.stringify(showCalendar));
     }, [showCalendar]);
 
-    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-    const [reservations, setReservations] = useState<Reservation[]>([]);
-
-    const [loading, setLoading] = useState(true);
-
-    // TODO error handling
-    const loadReservations = async () => {
-        try {
-            const data = await getReservations();
-            setCalendarEvents(data.map(parseRawResToEvent));
-            setReservations(data.map(parseRawResToRes));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        loadReservations();
-    }, []);
+        if (!toastMessage) return;
+        const timeout = setTimeout(() => {
+            navigate(location.pathname, {replace: true, state: null});
+        }, 2500);
+        return () => clearTimeout(timeout);
+    }, [location.pathname, navigate, toastMessage]);
 
     const handleDeleteReservation = async (id: number) => {
         try {
@@ -64,6 +66,8 @@ export default function Home(){
 
     return (
         <>
+            <Toast message={toastMessage} />
+
             <section className="mx-5 md:mx-30 flex flex-col space-y-7">
                 <h1
                     className="text-3xl font-bold text-gray-900"
