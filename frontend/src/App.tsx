@@ -8,6 +8,9 @@ import ManageReservations from "./pages/ManageReservations.tsx";
 import ReserveEquipment from "./pages/ReserveEquipment.tsx";
 import Welcome from "./pages/Welcome.tsx";
 import Login from "./pages/Login.tsx";
+import CreateEquipment from "./pages/CreateEquipment";
+import EquipmentTypes from "./pages/EquipmentTypes";
+import AllEquipment from "./pages/AllEquipment";
 
 function AppShell() {
     // user is guaranteed by RequireAuth
@@ -20,8 +23,11 @@ function AppShell() {
             <main className="flex-1 p-6">
                 <Routes>
                     <Route path="home" element={<Home />} />
+                    <Route path="equipmentTypes" element={<EquipmentTypes />} />
                     <Route path="manageReservations" element={<ManageReservations />} />
                     <Route path="reserveEquipment" element={<ReserveEquipment />} />
+                    <Route path="createEquipment" element={<CreateEquipment />} />
+                    <Route path="allEquipment" element={<AllEquipment />} />
                 </Routes>
             </main>
 

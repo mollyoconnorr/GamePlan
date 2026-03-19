@@ -10,6 +10,9 @@ export default function Navbar({username, logout}: NavbarProps) {
     if (username) {
         // Nav options / icons to display / actions on click of item
         const navItems = [
+            { label: "Create Equipment", Icon: Calendar1, action: () => navigate("/app/createEquipment")},
+            { label: "Equipment", Icon: Calendar1, action: () => navigate("/app/allEquipment")},
+            { label: "Equipment Types", Icon: Calendar1, action: () => navigate("/app/equipmentTypes")},
             { label: "Calendar", Icon: Calendar1, action: () => navigate("/app/home")},
             { label: username, Icon: CircleUserRound, action: null },
             { label: "Sign out", Icon: LogOut, action: logout},
