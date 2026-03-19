@@ -1,36 +1,14 @@
-import Button from "../components/Button.tsx";
-import {useNavigate} from "react-router-dom";
-import {useEffect, useState} from "react";
 import type {Reservation} from "../types.ts";
-import {getReservations} from "../api/Reservations.ts";
-import Spinner from "../components/Spinner.tsx";
-import {parseRawResToRes} from "../util/ParseReservationInfo.ts";
-import {safeBack} from "../util/Navigation.ts";
+import Spinner from "./Spinner.tsx";
 import dayjs from "dayjs";
 import {SquarePen, Trash2} from "lucide-react";
 
-export default function ManageReservations() {
-    const navigate = useNavigate()
+type ManageReservationsProps = {
+    reservations: Reservation[];
+    loading: boolean;
+};
 
-    const [reservations, setReservations] = useState<Reservation[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    // TODO error handling
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const data = await getReservations();
-                setReservations(data.map(parseRawResToRes));
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        load();
-    }, []);
-
+export default function ManageReservations({ reservations, loading }: ManageReservationsProps) {
     const dayEventMap: Map<string, { dayLabel: string; events: Reservation[] }> = new Map();
 
     reservations.forEach((r) => {
@@ -51,15 +29,7 @@ export default function ManageReservations() {
 
     return (
         <>
-            <Button
-                text="Back"
-                className="bg-gray-300 hover:bg-gray-200"
-                onClick={() => safeBack(navigate)}
-            />
             <section className="mx-5 md:mx-30">
-
-                <h1 className="text-3xl font-bold text-gray-900">Manage Reservations</h1>
-
                 {loading && <Spinner/>}
 
                 {!loading && dayEventArr.map(({dayKey, dayLabel, events}) => (
@@ -86,7 +56,7 @@ export default function ManageReservations() {
 function ReservationCard({startTime, endTime, name}: { startTime: string, endTime: string, name: string }) {
     return (
         <div className="flex w-full justify-between items-center border
-         shadow-md rounded-md bg-orange-400 px-2 max-w-[80%]">
+        shadow-md rounded-md bg-orange-400 px-2 max-w-[80%]">
             {/*TODO Fix hardcoded colors*/}
             <div className="flex flex-col md:flex-row space-x-1">
                 <p className="text-wrap">

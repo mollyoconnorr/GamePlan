@@ -1,32 +1,9 @@
 import type {CalendarProps} from "./CalendarTypes.ts";
-import {type JSX, useEffect, useRef, useState} from "react";
+import React, {type JSX, useEffect, useRef, useState} from "react";
 import CalendarContent from "./CalendarContent.tsx";
-import type {CalendarEvent} from "../../types.ts";
-import {getReservations} from "../../api/Reservations.ts";
-import {parseRawResToEvent} from "../../util/ParseReservation.ts";
 import Spinner from "../Spinner.tsx";
 
 export default function Calendar(props: CalendarProps) {
-    const [reservations, setReservations] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    // TODO error handling
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const data = await getReservations();
-                console.log(data);
-                setReservations(data.map(parseRawResToEvent));
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        load();
-    }, []);
-
     const TIME_W = 90;
     const CELL_H = 40;
     const DAY_MIN_W = 140;
@@ -139,10 +116,10 @@ export default function Calendar(props: CalendarProps) {
                 </div>
             </div>
 
-            {loading && <Spinner/>}
+            {props.loading && <Spinner/>}
 
             {/*Content on the calendar is rendered in this component*/}
-            {!loading && props.variant === "user" && <CalendarContent
+            {!props.loading && props.variant === "user" && props.reservations && <CalendarContent
                 top={CELL_H + 2}
                 left={TIME_W + 1}
                 height={CELL_H * (numRows + 1)}
@@ -151,7 +128,7 @@ export default function Calendar(props: CalendarProps) {
                 cellHeight={CELL_H}
                 dayMap={dayMap}
                 timeMap={timeMap}
-                events={reservations}
+                events={props.reservations}
             />}
         </div>
     );

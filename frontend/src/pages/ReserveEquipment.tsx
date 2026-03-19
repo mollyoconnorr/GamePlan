@@ -149,6 +149,7 @@ export default function ReserveEquipment() {
             timeStepMin={15}
             variant={"equip"}
             equipmentId={selectedEquipment}
+            loading={false}
           />
         )}
       </section>
