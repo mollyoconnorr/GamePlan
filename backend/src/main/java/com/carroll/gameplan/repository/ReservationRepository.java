@@ -40,8 +40,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * @param start     the end of the time range (exclusive)
      * @return a list of overlapping reservations
      */
-    List<Reservation> findByEquipmentAndEndDatetimeAfterAndStartDatetimeBefore(
-            Equipment equipment, LocalDateTime end, LocalDateTime start
+    List<Reservation> findByEquipmentAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
+            Equipment equipment, LocalDateTime end, LocalDateTime start, ReservationStatus status
     );
 
     List<Reservation> findByEquipmentIdAndStatusIs(Long equipmentId, ReservationStatus status);

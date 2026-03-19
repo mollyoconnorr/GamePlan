@@ -62,8 +62,8 @@ public class ReservationService {
      */
     public Reservation createReservation(User user, Equipment equipment, LocalDateTime start, LocalDateTime end) {
         // Check if equipment is already reserved for overlapping time slots
-        List<Reservation> existingReservations = reservationRepository
-                .findByEquipmentAndEndDatetimeAfterAndStartDatetimeBefore(equipment, start, end);
+        final List<Reservation> existingReservations = reservationRepository
+                .findByEquipmentAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(equipment, start, end, ReservationStatus.ACTIVE);
 
         if (!existingReservations.isEmpty()) {
             throw new IllegalArgumentException("Equipment is already reserved for this time slot.");
@@ -123,7 +123,8 @@ public class ReservationService {
 
         // Check for overlapping reservations for the same equipment
         List<Reservation> overlapping = reservationRepository
-                .findByEquipmentAndEndDatetimeAfterAndStartDatetimeBefore(reservation.getEquipment(), newStart, newEnd);
+                .findByEquipmentAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
+                        reservation.getEquipment(), newStart, newEnd, ReservationStatus.ACTIVE);
 
         // Remove the current reservation from overlapping list if present
         overlapping.removeIf(r -> r.getId().equals(reservationId));
