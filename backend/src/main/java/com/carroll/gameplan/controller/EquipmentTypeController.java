@@ -1,6 +1,8 @@
 package com.carroll.gameplan.controller;
 
-import com.carroll.gameplan.dto.*;
+import com.carroll.gameplan.dto.request.CreateEquipmentTypeRequest;
+import com.carroll.gameplan.dto.request.EquipmentTypeUpdateRequest;
+import com.carroll.gameplan.dto.response.*;
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.EquipmentType;
 import com.carroll.gameplan.model.User;

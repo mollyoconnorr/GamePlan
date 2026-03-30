@@ -1,6 +1,6 @@
 package com.carroll.gameplan.controller;
 
-import com.carroll.gameplan.dto.UserDto;
+import com.carroll.gameplan.dto.response.UserDto;
 import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.model.UserRole;
 import com.carroll.gameplan.service.UserService;

@@ -1,6 +1,6 @@
 package com.carroll.gameplan.service;
 
-import com.carroll.gameplan.dto.EquipmentTypeAttributeDTO;
+import com.carroll.gameplan.dto.response.EquipmentTypeAttributeDTO;
 import com.carroll.gameplan.model.EquipmentType;
 import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.EquipmentTypeRepository;

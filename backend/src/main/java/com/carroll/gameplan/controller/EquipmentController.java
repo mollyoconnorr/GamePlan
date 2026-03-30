@@ -1,10 +1,10 @@
 package com.carroll.gameplan.controller;
 
-import com.carroll.gameplan.dto.CreateEquipmentRequest;
-import com.carroll.gameplan.dto.EquipmentDTO;
-import com.carroll.gameplan.dto.EquipmentStatusUpdateRequest;
-import com.carroll.gameplan.dto.EquipmentStatusUpdateResponse;
-import com.carroll.gameplan.dto.EquipmentUpdateRequest;
+import com.carroll.gameplan.dto.request.CreateEquipmentRequest;
+import com.carroll.gameplan.dto.response.EquipmentDTO;
+import com.carroll.gameplan.dto.request.EquipmentStatusUpdateRequest;
+import com.carroll.gameplan.dto.response.EquipmentStatusUpdateResponse;
+import com.carroll.gameplan.dto.request.EquipmentUpdateRequest;
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.EquipmentAttribute;
 import com.carroll.gameplan.model.EquipmentStatus;

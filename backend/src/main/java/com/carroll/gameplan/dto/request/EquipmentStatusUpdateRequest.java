@@ -1,4 +1,4 @@
-package com.carroll.gameplan.dto;
+package com.carroll.gameplan.dto.request;
 
 /**
  * Payload used for updating the status of an equipment item.

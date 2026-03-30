@@ -1,8 +1,8 @@
 package com.carroll.gameplan;
 
 import com.carroll.gameplan.controller.ReservationController;
-import com.carroll.gameplan.dto.ReservationRequest;
-import com.carroll.gameplan.dto.ReservationResponse;
+import com.carroll.gameplan.dto.request.ReservationRequest;
+import com.carroll.gameplan.dto.response.ReservationResponse;
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.Reservation;
 import com.carroll.gameplan.model.User;

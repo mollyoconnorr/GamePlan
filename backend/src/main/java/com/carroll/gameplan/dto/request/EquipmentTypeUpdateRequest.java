@@ -1,4 +1,4 @@
-package com.carroll.gameplan.dto;
+package com.carroll.gameplan.dto.request;
 
 public class EquipmentTypeUpdateRequest {
     private String name;

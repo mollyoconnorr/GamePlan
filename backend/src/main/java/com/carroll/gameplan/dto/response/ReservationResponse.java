@@ -1,4 +1,4 @@
-package com.carroll.gameplan.dto;
+package com.carroll.gameplan.dto.response;
 
 /**
  * Data Transfer Object (DTO) representing a reservation.

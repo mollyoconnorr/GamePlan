@@ -1,6 +1,6 @@
 package com.carroll.gameplan.controller;
 
-import com.carroll.gameplan.dto.NotificationResponse;
+import com.carroll.gameplan.dto.response.NotificationResponse;
 import com.carroll.gameplan.model.Notification;
 import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.service.NotificationService;

@@ -1,7 +1,7 @@
 package com.carroll.gameplan;
 
 import com.carroll.gameplan.controller.EquipmentController;
-import com.carroll.gameplan.dto.EquipmentStatusUpdateRequest;
+import com.carroll.gameplan.dto.request.EquipmentStatusUpdateRequest;
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.EquipmentStatus;
 import com.carroll.gameplan.model.EquipmentType;
@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 

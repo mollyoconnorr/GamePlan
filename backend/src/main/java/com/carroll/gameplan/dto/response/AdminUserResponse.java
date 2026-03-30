@@ -1,4 +1,4 @@
-package com.carroll.gameplan.dto;
+package com.carroll.gameplan.dto.response;
 
 public record AdminUserResponse(
         Long id,

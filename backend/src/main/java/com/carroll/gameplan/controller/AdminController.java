@@ -1,8 +1,8 @@
 package com.carroll.gameplan.controller;
 
-import com.carroll.gameplan.dto.AdminUserResponse;
-import com.carroll.gameplan.dto.CreateUserRequest;
-import com.carroll.gameplan.dto.UserRoleUpdateRequest;
+import com.carroll.gameplan.dto.response.AdminUserResponse;
+import com.carroll.gameplan.dto.request.CreateUserRequest;
+import com.carroll.gameplan.dto.request.UserRoleUpdateRequest;
 import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.model.UserRole;
 import com.carroll.gameplan.service.UserService;
