@@ -21,4 +21,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return an Optional containing the User if found, or empty if not
      */
     Optional<User> findByOidcUserId(String oidcUserId);
+
+    /**
+     * Finds a User by their email address (case insensitive).
+     *
+     * @param email the user email to search for
+     * @return an Optional containing the User if found
+     */
+    Optional<User> findByEmailIgnoreCase(String email);
+
+    /**
+     * Checks if a user exists with the given email (case insensitive).
+     *
+     * @param email the email to check
+     * @return true if a user exists with this email
+     */
+    boolean existsByEmailIgnoreCase(String email);
 }

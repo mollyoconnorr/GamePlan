@@ -3,18 +3,29 @@ package com.carroll.gameplan.model;
 /**
  * Enum representing the roles a User can have in the system.
  * <p>
- * - AT: (Optional/placeholder role, e.g., Admin/Trainer)
- * - ATHLETE: Default role for regular users/players
+ * - ADMIN: System administrator with full access.
+ * - AT: Trainer/athletic trainer who manages reservations and equipment.
+ * - ATHLETE: Default user role used for athletes.
  * </p>
  */
 public enum UserRole {
     /**
-     * Placeholder role (e.g., Admin or Trainer)
+     * Admin with the highest level of access.
+     */
+    ADMIN,
+
+    /**
+     * Athletic trainer who can manage reservations and equipment.
      */
     AT,
 
     /**
-     * Default role for a standard user/athlete
+     * Default athlete role.
      */
-    ATHLETE
+    ATHLETE,
+
+    /**
+     * Newly signed-up user waiting for approval.
+     */
+    STUDENT
 }

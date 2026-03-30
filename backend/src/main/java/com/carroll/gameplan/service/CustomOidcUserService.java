@@ -36,30 +36,35 @@ public class CustomOidcUserService extends OidcUserService {
         // Load the user info from the OIDC provider
         OidcUser oidcUser = super.loadUser(userRequest);
 
-        // Extract unique user info
         String oidcUserId = oidcUser.getSubject();
         String email = oidcUser.getEmail();
         String firstName = oidcUser.getGivenName();
         String lastName = oidcUser.getFamilyName();
 
-        // Check if user already exists in database
-        userRepository.findByOidcUserId(oidcUserId)
+        User user = userRepository.findByOidcUserId(oidcUserId)
                 .orElseGet(() -> {
-                    // If user does not exist, create a new one
+                    User precreated = null;
+                    if (email != null) {
+                        precreated = userRepository.findByEmailIgnoreCase(email).orElse(null);
+                    }
+                    if (precreated != null) {
+                        precreated.setOidcUserId(oidcUserId);
+                        return precreated;
+                    }
                     User newUser = new User();
                     newUser.setOidcUserId(oidcUserId);
                     newUser.setEmail(email);
-                    newUser.setFirstName(firstName);
-                    newUser.setLastName(lastName);
-
-                    // Set default role for new users
-                    newUser.setRole(UserRole.valueOf("ATHLETE"));
-
-                    // Save and return the new user
-                    return userRepository.save(newUser);
+                    newUser.setRole(UserRole.STUDENT);
+                    return newUser;
                 });
 
-        // Return the OIDC user object for Spring Security
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        if (user.getOidcUserId() == null) {
+            user.setOidcUserId(oidcUserId);
+        }
+
+        userRepository.save(user);
         return oidcUser;
     }
 }

@@ -7,17 +7,24 @@ import com.carroll.gameplan.repository.ReservationRepository;
 import com.carroll.gameplan.repository.UserRepository;
 import com.carroll.gameplan.service.ReservationService;
 
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
 public class DataSeeder {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataSeeder.class);
 
     @Bean
     CommandLineRunner seed(UserRepository ur,
@@ -44,7 +51,7 @@ public class DataSeeder {
             testUser.setFirstName("test");
             testUser.setLastName("user");
             testUser.setOidcUserId("00uzv9ab25xQEHKRc697");
-            testUser.setRole(UserRole.ATHLETE);
+            testUser.setRole(UserRole.STUDENT);
             ur.save(testUser);
         }
 
@@ -59,6 +66,7 @@ public class DataSeeder {
                     }
                 }
                 """);
+        wiredBootsType.setColor("#fb923c");
         etr.save(wiredBootsType);
 
         EquipmentType wirelessBootsType = new EquipmentType();
@@ -71,6 +79,7 @@ public class DataSeeder {
                     }
                 }
                 """);
+        wirelessBootsType.setColor("#a855f7");
         etr.save(wirelessBootsType);
 
         EquipmentType bathType = new EquipmentType();
@@ -83,6 +92,7 @@ public class DataSeeder {
                     }
                 }
                 """);
+        bathType.setColor("#38bdf8");
         etr.save(bathType);
 
         // ===== BATHS =====
@@ -99,13 +109,13 @@ public class DataSeeder {
         List<Equipment> mediumWirelessBoots = createBoots("Medium Wireless Boots", "M", wirelessBootsType, er, 2);
 
         // ===== OPTIONAL: Example reservations =====
-        rs.createReservation(testUser, coldBath, LocalDate.now().atTime(8,0), LocalDate.now().atTime(8,30));
-        rs.createReservation(testUser, coldBath2, LocalDate.now().atTime(8,15), LocalDate.now().atTime(9,0));
-        rs.createReservation(testUser, coldBath3, LocalDate.now().atTime(10,15), LocalDate.now().atTime(10,45));
-        rs.createReservation(testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
-        rs.createReservation(testUser, coldBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
-        rs.createReservation(testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,30), LocalDate.now().plusDays(1).atTime(9,0));
-        rs.createReservation(testUser, hotBath, LocalDate.now().plusDays(1).atTime(9,0), LocalDate.now().plusDays(1).atTime(9,30));
+        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().atTime(8,0), LocalDate.now().atTime(8,30));
+        createReservationIfPossible(rs, testUser, coldBath2, LocalDate.now().atTime(8,15), LocalDate.now().atTime(9,0));
+        createReservationIfPossible(rs, testUser, coldBath3, LocalDate.now().atTime(10,15), LocalDate.now().atTime(10,45));
+        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
+        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
+        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,30), LocalDate.now().plusDays(1).atTime(9,0));
+        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(9,0), LocalDate.now().plusDays(1).atTime(9,30));
 
     }
 
@@ -143,5 +153,18 @@ public class DataSeeder {
             bootsList.add(boots);
         }
         return bootsList;
+    }
+
+    private void createReservationIfPossible(ReservationService rs,
+                                             User user,
+                                             Equipment equipment,
+                                             LocalDateTime start,
+                                             LocalDateTime end) {
+        try {
+            rs.createReservation(user, equipment, start, end);
+        } catch (IllegalArgumentException e) {
+            Logger logger = LoggerFactory.getLogger(DataSeeder.class);
+            logger.debug("Skipping reservation during seed: {}", e.getMessage());
+        }
     }
 }
