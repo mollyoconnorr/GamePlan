@@ -23,10 +23,15 @@ export default function AllEquipment() {
     const [equipmentList, setEquipmentList] = useState<EquipmentDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
+    const [toastMessage, setToastMessage] = useState("");
+
+    useEffect(() => {
+        if (!toastMessage) return;
+        const timeout = setTimeout(() => setToastMessage(""), 2500);
+        return () => clearTimeout(timeout);
+    }, [toastMessage]);
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm("Are you sure you want to delete this equipment?")) return;
-
         try {
             const response = await fetch(`/api/equipment/${id}`, {
                 method: "DELETE",
@@ -37,11 +42,11 @@ export default function AllEquipment() {
                 // Remove from state so table updates immediately
                 setEquipmentList((prev) => prev.filter((eq) => eq.id !== id));
             } else {
-                alert("Failed to delete equipment");
+                setToastMessage("Failed to delete equipment");
             }
         } catch (error) {
             console.error(error);
-            alert("Error deleting equipment");
+            setToastMessage("Error deleting equipment");
         }
     };
 

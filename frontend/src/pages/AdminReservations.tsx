@@ -39,9 +39,6 @@ export default function AdminReservations() {
     }, []);
 
     const handleCancelReservation = async (id: number) => {
-        if (!window.confirm("Cancel this reservation for the athlete?")) {
-            return;
-        }
         try {
             await deleteReservation(id);
             await loadReservations();
