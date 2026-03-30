@@ -22,6 +22,9 @@ export type EquipmentDTO = {
 };
 
 export type EquipmentStatusUpdateResponse = {
+    id: number;
+    name: string;
+    status: string | null;
     equipment: EquipmentDTO;
     canceledReservations: number;
 };
@@ -60,7 +63,7 @@ export async function getEquipmentTypes() {
         throw new Error("Failed to fetch equipment types");
     }
 
-    return res.json() as Promise<EquipmentType[]>;
+    return await res.json() as Promise<EquipmentType[]>;
 }
 
 export async function createEquipmentType(request: CreateEquipmentTypeRequest) {
@@ -92,7 +95,7 @@ export async function updateEquipmentType(id: number, request: UpdateEquipmentTy
         throw new Error("Failed to update equipment type");
     }
 
-    return res.json() as Promise<EquipmentType>;
+    return await res.json() as Promise<EquipmentType>;
 }
 
 export async function getEquipmentTypeAttributes(typeId: number) {
@@ -105,7 +108,7 @@ export async function getEquipmentTypeAttributes(typeId: number) {
         throw new Error("Failed to fetch equipment type attributes");
     }
 
-    return res.json() as Promise<EquipmentTypeAttributeResponse[]>;
+    return await res.json() as Promise<EquipmentTypeAttributeResponse[]>;
 }
 
 export async function createEquipment(request: CreateEquipmentRequest) {
@@ -133,7 +136,7 @@ export async function getEquipment(id: number) {
         throw new Error("Failed to load equipment");
     }
 
-    return res.json() as Promise<EquipmentDTO>;
+    return await res.json() as Promise<EquipmentDTO>;
 }
 
 export async function updateEquipment(id: number, request: EquipmentUpdateRequest) {
@@ -150,7 +153,7 @@ export async function updateEquipment(id: number, request: EquipmentUpdateReques
         throw new Error("Failed to update equipment");
     }
 
-    return res.json() as Promise<EquipmentDTO>;
+    return await res.json() as Promise<EquipmentDTO>;
 }
 
 export async function deleteEquipment(id: number) {
@@ -178,5 +181,5 @@ export async function updateEquipmentStatus(id: number, status: string) {
         throw new Error("Failed to update equipment status");
     }
 
-    return res.json() as Promise<EquipmentStatusUpdateResponse>;
+    return await res.json() as Promise<EquipmentStatusUpdateResponse>;
 }

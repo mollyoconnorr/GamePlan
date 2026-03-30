@@ -2,7 +2,7 @@ import {useEffect, useState} from "react";
 import {safeBack} from "../util/Navigation.ts";
 import Button from "../components/Button.tsx";
 import {useNavigate} from "react-router-dom";
-import type {EquipmentDTO, EquipmentStatusUpdateResponse} from "../api/Equipment.ts";
+import type {EquipmentDTO} from "../api/Equipment.ts";
 import {updateEquipmentStatus} from "../api/Equipment.ts";
 
 type StatusOption = {
@@ -129,7 +129,7 @@ export default function AllEquipment() {
                                     </select>
                                 </td>
                                 <td className="border px-4 py-2">
-                                    {eq.attributes?.length > 0
+                                    {eq.attributes && eq.attributes.length > 0
                                         ? eq.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(", ")
                                         : 'No attributes'}
                                 </td>
