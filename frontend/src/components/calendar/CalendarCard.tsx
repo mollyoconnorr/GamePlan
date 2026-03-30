@@ -4,6 +4,7 @@ import type {CalendarEvent, PendingDelete} from "../../types.ts";
 import {SquarePen, Trash2} from "lucide-react";
 import ConfirmDialog from "../ConfirmDialog.tsx";
 import {createPortal} from "react-dom";
+import {getFriendlyReservationErrorMessage} from "../../util/ReservationErrorMessages.ts";
 
 type CalendarCardProps = {
     event: CalendarEvent;
@@ -154,7 +155,8 @@ export default function CalendarCard({
             setSelectedEndTime("");
         } catch (err) {
             console.error(err);
-            onShowToast?.(`Failed to update reservation for ${event.name}.`);
+            const rawMessage = err instanceof Error ? err.message : `Failed to update reservation for ${event.name}.`;
+            onShowToast?.(getFriendlyReservationErrorMessage(rawMessage));
         } finally {
             setIsEditing(false);
         }
@@ -258,23 +260,30 @@ export default function CalendarCard({
                 document.body
             )}
 
-            <button
-                type="button"
-                onClick={() => setShowPopup(true)}
-                className={`relative border w-full break-all p-1 text-left text-xs lg:text-md text-white hover:cursor-pointer
-                    ${event.temp
-                    ? "bg-blue-500/60 border-dashed border-blue-900 hover:bg-blue-500/80"
-                    : "bg-blue-900 border-black hover:bg-blue-800"
-                    //TODO: Change to given color and lighter version of it.
-                }`}
-                style={{
-                    top: cellHeight * (startIndex - groupStartIndex),
-                    height: cellHeight * (endIndex - startIndex) - cardMargin * 2,
-                    marginTop: cardMargin,
-                }}
-            >
-                {event.name}
-            </button>
+            {(() => {
+                const baseBackground = event.color ?? "#1d4ed8";
+                const computedBackground = event.conflict ? "#dc2626" : baseBackground;
+                const borderColor = event.borderColor ?? (event.conflict ? "#991b1b" : "black");
+                const textColor = event.textColor ?? "#ffffff";
+
+                return (
+                    <button
+                        type="button"
+                        onClick={() => setShowPopup(true)}
+                        className="relative border w-full break-all p-1 text-left text-xs lg:text-md hover:cursor-pointer transition duration-150 ease-in-out"
+                        style={{
+                            top: cellHeight * (startIndex - groupStartIndex),
+                            height: cellHeight * (endIndex - startIndex) - cardMargin * 2,
+                            marginTop: cardMargin,
+                            backgroundColor: computedBackground,
+                            borderColor,
+                            color: textColor,
+                        }}
+                    >
+                        {event.name}
+                    </button>
+                );
+            })()}
 
             {showPopup && typeof document !== "undefined" && createPortal(
                 <div
@@ -309,7 +318,15 @@ export default function CalendarCard({
                         </div>
 
                         <div className="mt-4 flex justify-between">
-                            {variant !== "equip" ? (
+                            {variant === "trainer" ? (
+                                <button
+                                    type="button"
+                                    className="rounded bg-red-600 px-3 py-1 text-sm font-semibold text-white hover:bg-red-500"
+                                    onClick={() => setPendingDelete({ id: event.id, name: event.name })}
+                                >
+                                    Cancel reservation
+                                </button>
+                            ) : variant !== "equip" ? (
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"

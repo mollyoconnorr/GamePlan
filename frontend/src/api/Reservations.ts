@@ -1,3 +1,23 @@
+import type {RawAdminReservation} from "../types.ts";
+
+async function extractErrorMessage(response: Response, fallback: string) {
+    const body = await response.text();
+    if (!body) {
+        return fallback;
+    }
+
+    try {
+        const data = JSON.parse(body);
+        if (data?.message) {
+            return data.message;
+        }
+    } catch {
+        // not JSON, ignore
+    }
+
+    return body.trim();
+}
+
 // Fetch all reservations for the current user
 export async function getReservations() {
     const res = await fetch("/api/reservations", {
@@ -10,6 +30,19 @@ export async function getReservations() {
     }
 
     return res.json();
+}
+
+export async function getActiveReservationsForAdmin() {
+    const res = await fetch("/api/reservations/admin", {
+        method: "GET",
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to fetch admin reservations");
+    }
+
+    return res.json() as Promise<RawAdminReservation[]>;
 }
 
 export async function deleteReservation(id: number) {
@@ -39,7 +72,8 @@ export async function updateReservation(id: number, request: UpdateReservationRe
     });
 
     if (!res.ok) {
-        throw new Error("Failed to update reservation");
+        const message = await extractErrorMessage(res, "Failed to update reservation");
+        throw new Error(message);
     }
 }
 
@@ -73,7 +107,8 @@ export async function makeReservation(request: MakeReservationRequest) {
     });
 
     if (!res.ok) {
-        throw new Error("Failed to create reservation");
+        const message = await extractErrorMessage(res, "Failed to create reservation");
+        throw new Error(message);
     }
 
     return res.json();

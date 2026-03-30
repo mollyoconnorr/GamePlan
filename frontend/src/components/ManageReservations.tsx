@@ -7,6 +7,7 @@ import { SquarePen, Trash2 } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog.tsx";
 import Toast from "./Toast.tsx";
 import { createPortal } from "react-dom";
+import { getFriendlyReservationErrorMessage } from "../util/ReservationErrorMessages.ts";
 
 type ManageReservationsProps = {
     reservations: Reservation[];
@@ -30,6 +31,7 @@ export default function ManageReservations({
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
+    const [editErrorMessage, setEditErrorMessage] = useState("");
     const [pendingEdit, setPendingEdit] = useState<Reservation | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [selectedStartTime, setSelectedStartTime] = useState("");
@@ -96,6 +98,7 @@ export default function ManageReservations({
         setPendingEdit(reservation);
         setSelectedStartTime(boundedStartTime);
         setSelectedEndTime(boundedEndTime);
+        setEditErrorMessage("");
     };
 
     const handleCloseEdit = () => {
@@ -103,7 +106,49 @@ export default function ManageReservations({
         setPendingEdit(null);
         setSelectedStartTime("");
         setSelectedEndTime("");
+        setEditErrorMessage("");
     };
+
+    const editedRange = useMemo(() => {
+        if (!pendingEdit || !selectedStartTime || !selectedEndTime) {
+            return null;
+        }
+
+        const [startHour, startMinute] = selectedStartTime.split(":").map((value) => Number(value));
+        const [endHour, endMinute] = selectedEndTime.split(":").map((value) => Number(value));
+
+        if (
+            Number.isNaN(startHour) ||
+            Number.isNaN(startMinute) ||
+            Number.isNaN(endHour) ||
+            Number.isNaN(endMinute)
+        ) {
+            return null;
+        }
+
+        return {
+            start: pendingEdit.start
+                .hour(startHour)
+                .minute(startMinute)
+                .second(0)
+                .millisecond(0),
+            end: pendingEdit.start
+                .hour(endHour)
+                .minute(endMinute)
+                .second(0)
+                .millisecond(0),
+        };
+    }, [pendingEdit, selectedStartTime, selectedEndTime]);
+
+    const editHasConflict = useMemo(() => {
+        if (!editedRange) return false;
+        return reservations.some((res) => {
+            if (!pendingEdit || res.id === pendingEdit.id) {
+                return false;
+            }
+            return editedRange.start.isBefore(res.end) && res.start.isBefore(editedRange.end);
+        });
+    }, [editedRange, reservations, pendingEdit]);
 
     const handleSaveEdit = async () => {
         if (!pendingEdit || !selectedStartTime || !selectedEndTime) return;
@@ -139,15 +184,23 @@ export default function ManageReservations({
             setPendingEdit(null);
             setSelectedStartTime("");
             setSelectedEndTime("");
+            setEditErrorMessage("");
         } catch (err) {
             console.error(err);
+            const message = err instanceof Error ? err.message : "Failed to update reservation.";
+            setEditErrorMessage(getFriendlyReservationErrorMessage(message));
         } finally {
             setIsEditing(false);
         }
     };
 
     const editSaveDisabled =
-        isEditing || !pendingEdit || !selectedStartTime || !selectedEndTime || selectedEndTime <= selectedStartTime;
+        isEditing ||
+        !pendingEdit ||
+        !selectedStartTime ||
+        !selectedEndTime ||
+        selectedEndTime <= selectedStartTime ||
+        editHasConflict;
 
     const dayEventMap: Map<string, { dayLabel: string; events: Reservation[] }> = new Map();
 
@@ -242,6 +295,17 @@ export default function ManageReservations({
                                     </select>
                                 </label>
                             </div>
+
+                            {editHasConflict && (
+                                <p className="mt-3 text-sm text-red-600">
+                                    The selected time overlaps one of your other reservations. Delete that booking first or pick a different time.
+                                </p>
+                            )}
+                            {editErrorMessage && !editHasConflict && (
+                                <p className="mt-3 text-sm text-red-600">
+                                    {editErrorMessage}
+                                </p>
+                            )}
 
                             <div className="mt-6 flex justify-end gap-3">
                                     <button

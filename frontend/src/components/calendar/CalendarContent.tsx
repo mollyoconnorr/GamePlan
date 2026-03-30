@@ -95,8 +95,11 @@ export default function CalendarContent(props: CalendarContentProps) {
             const groupEndIndex = Math.max(...indexedEvents.map((e) => e.endIndex));
 
             // Push group to days array (Key is col index, each col represents a day)
+            const groupKey = `${key}-${groupStartIndex}-${groupEndIndex}-${indexedEvents.map((e) => e.event.id).join("-")}`;
+
             dayEventMapHTML.get(key)!.push(
                 <div
+                    key={groupKey}
                     className="absolute flex flex-row justify-between space-x-1 mx-1"
                     style={{
                         top: props.cellHeight * groupStartIndex,
