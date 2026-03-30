@@ -130,14 +130,19 @@ export default function Home(
                     )}
 
                     {isAdmin && (
-                        <>
+                        <div className="ml-auto flex flex-wrap items-center gap-2">
                             <Button
-                                text="View Equipment Types"
+                                text="Manage users"
+                                className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                                onClick={() => navigate("/app/admin/users")}
+                            />
+                            <Button
+                                text="Equipment Types"
                                 className="bg-primary text-white hover:bg-primary-hover border-black"
                                 onClick={() => navigate("/app/equipmentTypes")}
                             />
                             <Button
-                                text="View Equipment"
+                                text="All Equipment"
                                 className="bg-primary text-white hover:bg-primary-hover border-black"
                                 onClick={() => navigate("/app/allEquipment")}
                             />
@@ -146,12 +151,7 @@ export default function Home(
                                 className="bg-primary text-white hover:bg-primary-hover border-black"
                                 onClick={() => navigate("/app/createEquipment")}
                             />
-                            <Button
-                                text="Admin reservations"
-                                className="bg-red-500 text-white hover:bg-red-400 border-black"
-                                onClick={() => navigate("/app/admin/reservations")}
-                            />
-                        </>
+                        </div>
                     )}
                 </div>
 
