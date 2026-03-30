@@ -1,4 +1,4 @@
-import {Routes, Route} from "react-router-dom";
+import {Routes, Route, Navigate} from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import RequireAuth from "./auth/RequireAuth";
 import Navbar from "./components/Navbar";
@@ -10,6 +10,8 @@ import Login from "./pages/Login.tsx";
 import Logout from "./pages/Logout.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Profile from "./pages/Profile.tsx";
+import AdminReservations from "./pages/AdminReservations.tsx";
+import AdminUsers from "./pages/AdminUsers.tsx";
 import {useEffect, useMemo, useState} from "react";
 import type {Reservation} from "./types.ts";
 import {getReservations} from "./api/Reservations.ts";
@@ -17,10 +19,20 @@ import {parseRawResToRes, parseResToEvent} from "./util/ParseReservation.ts";
 import CreateEquipment from "./pages/CreateEquipment";
 import EquipmentTypes from "./pages/EquipmentTypes";
 import AllEquipment from "./pages/AllEquipment";
+import EditEquipment from "./pages/EditEquipment.tsx";
 
 function AppShell() {
     // user is guaranteed by RequireAuth
     const { user, logout } = useAuth();
+
+    const hasPrivilegedAccess = user.role === "AT" || user.role === "ADMIN";
+
+    const renderForPrivileged = (element: JSX.Element) => {
+        if (hasPrivilegedAccess) {
+            return element;
+        }
+        return <Navigate to="/app/home" replace />;
+    };
 
     const [reservations, setReservations] = useState<Reservation[]>([]);
 
@@ -48,25 +60,55 @@ function AppShell() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Navbar username={user!.username} logout={logout} />
+            <Navbar username={user!.email} logout={logout} />
 
             <main className="flex-1 p-6">
                 <Routes>
-                    <Route path="home" element={<Home
-                        reservations={reservations}
-                        calendarEvents={calendarEvents}
-                        loadReservations={loadReservations}
-                        loading={loading}
-                    />} />
-                    <Route path="reserveEquipment" element={<ReserveEquipment
-                        reservations={reservations}
-                        setReservations={setReservations}
-                    />} />
+                    <Route
+                        index
+                        element={
+                            <Navigate
+                                to={hasPrivilegedAccess ? "/app/admin/reservations" : "/app/home"}
+                                replace
+                            />
+                        }
+                    />
+                    <Route
+                        path="home"
+                        element={
+                            hasPrivilegedAccess ? (
+                                <Navigate to="/app/admin/reservations" replace />
+                            ) : (
+                                <Home
+                                    reservations={reservations}
+                                    calendarEvents={calendarEvents}
+                                    loadReservations={loadReservations}
+                                    loading={loading}
+                                />
+                            )
+                        }
+                    />
+                    <Route
+                        path="reserveEquipment"
+                        element={
+                            hasPrivilegedAccess ? (
+                                <Navigate to="/app/admin/reservations" replace />
+                            ) : (
+                                <ReserveEquipment
+                                    reservations={reservations}
+                                    setReservations={setReservations}
+                                />
+                            )
+                        }
+                    />
+                    <Route path="admin/reservations" element={renderForPrivileged(<AdminReservations />)} />
+                    <Route path="admin/users" element={renderForPrivileged(<AdminUsers />)} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="*" element={<NotFound compact />} />
-                    <Route path="equipmentTypes" element={<EquipmentTypes />} />
-                    <Route path="createEquipment" element={<CreateEquipment />} />
-                    <Route path="allEquipment" element={<AllEquipment />} />
+                    <Route path="equipmentTypes" element={renderForPrivileged(<EquipmentTypes />)} />
+                    <Route path="createEquipment" element={renderForPrivileged(<CreateEquipment />)} />
+                    <Route path="allEquipment" element={renderForPrivileged(<AllEquipment />)} />
+                    <Route path="equipment/:equipmentId/edit" element={renderForPrivileged(<EditEquipment />)} />
                 </Routes>
             </main>
 

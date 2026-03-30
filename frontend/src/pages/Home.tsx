@@ -18,6 +18,7 @@ type HomeProps = {
 
 type HomeLocationState = {
     toastMessage?: string;
+    view?: "calendar" | "list";
 }
 
 export default function Home(
@@ -25,6 +26,8 @@ export default function Home(
 
 ){
     const user = useAuthedUser();
+    const isAdmin = user.role === "AT";
+    const isStudent = user.role === "STUDENT";
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -32,6 +35,7 @@ export default function Home(
     const [firstDate] = useState(() => dayjs().startOf("day"));
     const locationState = location.state as HomeLocationState | null;
     const toastMessage = locationState?.toastMessage ?? "";
+    const preferredView = locationState?.view;
 
     const startTime = dayjs().startOf("day").hour(8).minute(0);
     const endTime   = dayjs().startOf("day").hour(17).minute(0);
@@ -46,6 +50,11 @@ export default function Home(
     useEffect(() => {
         localStorage.setItem("showCalendar", JSON.stringify(showCalendar));
     }, [showCalendar]);
+
+    useEffect(() => {
+        if (!preferredView) return;
+        setShowCalendar(preferredView === "calendar");
+    }, [preferredView]);
 
     useEffect(() => {
         if (!toastMessage) return;
@@ -81,6 +90,27 @@ export default function Home(
         }
     }
 
+    if (isStudent) {
+        return (
+            <>
+                <Toast message={toastMessage} />
+                <section className="mx-5 md:mx-30 space-y-6">
+                    <h1 className="text-3xl font-bold text-gray-900">Hi, {user.firstName}</h1>
+                    <div className="rounded border bg-white p-6 shadow-sm">
+                        <p className="text-lg font-medium text-gray-900">Thanks for signing up!</p>
+                        <p className="mt-2 text-sm text-gray-600">
+                            Your account is currently marked as a student request. A trainer or admin will
+                            review your request and promote you to an athlete as soon as they verify you.
+                        </p>
+                        <p className="mt-2 text-sm text-gray-500">
+                            Once approved you will see the reservation calendar and reservation buttons appear here.
+                        </p>
+                    </div>
+                </section>
+            </>
+        );
+    }
+
     return (
         <>
             <Toast message={toastMessage} />
@@ -91,31 +121,38 @@ export default function Home(
                 >Hello, {user.firstName}</h1>
 
                 <div className="ml-auto mr-0 space-x-10">
-                    {/*TODO: Display if user*/}
-                    <Button
-                        text="Reserve Equipment"
-                        className="bg-green-400 hover:bg-green-300 border-green-500"
-                        onClick={() => {navigate("/app/reserveEquipment")}}
-                    />
+                    {!isAdmin && (
+                        <Button
+                            text="Reserve Equipment"
+                            className="bg-green-400 hover:bg-green-300 border-green-500"
+                            onClick={() => navigate("/app/reserveEquipment")}
+                        />
+                    )}
 
-                    {/*TODO: Display these if trainer*/}
-                    <Button
-                        text="View Equipment Types"
-                        className="bg-primary text-white hover:bg-primary-hover border-black"
-                        onClick={() => {navigate("/app/equipmentTypes")}}
-                    />
-
-                    <Button
-                        text="View Equipment"
-                        className="bg-primary text-white hover:bg-primary-hover border-black"
-                        onClick={() => {navigate("/app/allEquipment")}}
-                    />
-
-                    <Button
-                        text="Create Equipment"
-                        className="bg-primary text-white hover:bg-primary-hover border-black"
-                        onClick={() => {navigate("/app/createEquipment")}}
-                    />
+                    {isAdmin && (
+                        <>
+                            <Button
+                                text="View Equipment Types"
+                                className="bg-primary text-white hover:bg-primary-hover border-black"
+                                onClick={() => navigate("/app/equipmentTypes")}
+                            />
+                            <Button
+                                text="View Equipment"
+                                className="bg-primary text-white hover:bg-primary-hover border-black"
+                                onClick={() => navigate("/app/allEquipment")}
+                            />
+                            <Button
+                                text="Create Equipment"
+                                className="bg-primary text-white hover:bg-primary-hover border-black"
+                                onClick={() => navigate("/app/createEquipment")}
+                            />
+                            <Button
+                                text="Admin reservations"
+                                className="bg-red-500 text-white hover:bg-red-400 border-black"
+                                onClick={() => navigate("/app/admin/reservations")}
+                            />
+                        </>
+                    )}
                 </div>
 
 
