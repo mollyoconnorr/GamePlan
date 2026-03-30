@@ -12,7 +12,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Profile from "./pages/Profile.tsx";
 import AdminReservations from "./pages/AdminReservations.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
-import {useEffect, useMemo, useState} from "react";
+import {type JSX, useEffect, useMemo, useState} from "react";
 import type {Reservation} from "./types.ts";
 import {getReservations} from "./api/Reservations.ts";
 import {parseRawResToRes, parseResToEvent} from "./util/ParseReservation.ts";
@@ -25,7 +25,7 @@ function AppShell() {
     // user is guaranteed by RequireAuth
     const { user, logout } = useAuth();
 
-    const hasPrivilegedAccess = user.role === "AT" || user.role === "ADMIN";
+    const hasPrivilegedAccess = user!.role === "AT" || user!.role === "ADMIN";
 
     const renderForPrivileged = (element: JSX.Element) => {
         if (hasPrivilegedAccess) {
