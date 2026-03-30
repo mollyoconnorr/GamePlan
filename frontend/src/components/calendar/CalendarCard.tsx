@@ -311,7 +311,7 @@ export default function CalendarCard({
                             {"endTime" in event && <p><span className="font-semibold">End:</span> {String(event.endTime)}</p>}
                             {"description" in event && (
                                 <p>
-                                    <span className="font-semibold">Description:</span> {String(event.description)}
+                                    <span className="font-semibold">Reserved by:</span> {String(event.description)}
                                 </p>
                             )}
                             {"temp" in event && <p className="text-red-600"><strong>Pending reservation</strong></p>}
@@ -321,7 +321,7 @@ export default function CalendarCard({
                             {variant === "trainer" ? (
                                 <button
                                     type="button"
-                                    className="rounded bg-red-600 px-3 py-1 text-sm font-semibold text-white hover:bg-red-500"
+                                    className="rounded bg-red-600 px-3 py-1 text-sm font-semibold text-white hover:bg-red-500 hover:cursor-pointer"
                                     onClick={() => setPendingDelete({ id: event.id, name: event.name })}
                                 >
                                     Cancel reservation
