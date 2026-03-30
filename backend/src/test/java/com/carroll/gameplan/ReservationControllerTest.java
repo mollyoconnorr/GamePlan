@@ -6,8 +6,8 @@ import com.carroll.gameplan.dto.ReservationResponse;
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.Reservation;
 import com.carroll.gameplan.model.User;
-import com.carroll.gameplan.repository.UserRepository;
 import com.carroll.gameplan.service.ReservationService;
+import com.carroll.gameplan.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatusCode;
@@ -18,7 +18,6 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -27,14 +26,14 @@ import static org.mockito.Mockito.*;
  * Unit tests for the {@link ReservationController}.
  *
  * <p>
- * This test class uses Mockito to mock dependencies such as the {@link ReservationService} and {@link UserRepository}.
+ * This test class uses Mockito to mock dependencies such as the {@link ReservationService} and {@link UserService}.
  * It tests the controller methods for fetching, updating, and canceling reservations.
  * </p>
  */
 public class ReservationControllerTest {
 
     private ReservationService reservationService;   // Mocked service layer
-    private UserRepository userRepository;           // Mocked repository
+    private UserService userService;                 // Mocked helper
     private ReservationController controller;        // Controller under test
     private OAuth2AuthenticationToken authToken;     // Mocked authentication token
     private User testUser;                            // Test user entity
@@ -45,8 +44,8 @@ public class ReservationControllerTest {
     @BeforeEach
     void setUp() {
         reservationService = mock(ReservationService.class);
-        userRepository = mock(UserRepository.class);
-        controller = new ReservationController(reservationService, userRepository);
+        userService = mock(UserService.class);
+        controller = new ReservationController(reservationService, userService);
 
         // ===== Mock authentication token =====
         authToken = mock(OAuth2AuthenticationToken.class);
@@ -64,8 +63,8 @@ public class ReservationControllerTest {
         testUser.setFirstName("Test");
         testUser.setLastName("User");
 
-        // Mock repository to return this user
-        when(userRepository.findByOidcUserId("user-123")).thenReturn(Optional.of(testUser));
+        // Mock helper to return this user
+        when(userService.resolveCurrentUser(authToken)).thenReturn(testUser);
     }
 
     /**
@@ -110,11 +109,16 @@ public class ReservationControllerTest {
         r.setId(200L);
         r.setStartDatetime(LocalDateTime.of(2026, 2, 25, 14, 0));
         r.setEndDatetime(LocalDateTime.of(2026, 2, 25, 15, 0));
+        Equipment updatedEquipment = new Equipment();
+        updatedEquipment.setId(11L);
+        updatedEquipment.setName("Updated Equipment");
+        r.setEquipment(updatedEquipment);
 
         // Mock service update method
         when(reservationService.updateReservation(eq(200L),
                 any(LocalDateTime.class),
-                any(LocalDateTime.class)))
+                any(LocalDateTime.class),
+                eq(testUser)))
                 .thenReturn(r);
 
         ReservationRequest request = new ReservationRequest();
@@ -124,6 +128,7 @@ public class ReservationControllerTest {
         // Call controller
         ReservationResponse updated = controller.updateReservation(
                 200L,
+                authToken,
                 request
         );
 
@@ -144,10 +149,10 @@ public class ReservationControllerTest {
         r.setId(300L);
 
         // Mock service cancel method
-        when(reservationService.cancelReservation(300L)).thenReturn(r);
+        when(reservationService.cancelReservation(300L, testUser)).thenReturn(r);
 
         // Call controller
-        ResponseEntity<Object> cancelled = controller.cancelReservation(300L);
+        ResponseEntity<Object> cancelled = controller.cancelReservation(300L, authToken);
 
         // ===== Assertion =====
         assertEquals(HttpStatusCode.valueOf(204), cancelled.getStatusCode(), "cancelReservation should return status 204 - No content found!");

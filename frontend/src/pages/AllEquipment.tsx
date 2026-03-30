@@ -2,22 +2,27 @@ import {useEffect, useState} from "react";
 import {safeBack} from "../util/Navigation.ts";
 import Button from "../components/Button.tsx";
 import {useNavigate} from "react-router-dom";
+import type {EquipmentDTO, EquipmentStatusUpdateResponse} from "../api/Equipment.ts";
+import {updateEquipmentStatus} from "../api/Equipment.ts";
 
-interface Equipment {
-    id: number;
-    name: string;
-    status: string;
-    equipmentType: {
-        id: number;
-        name: string;
-    };
-    attributes: { name: string; value: string }[];
-}
+type StatusOption = {
+    value: string;
+    label: string;
+    disabled?: boolean;
+};
+
+const equipmentStatusOptions: StatusOption[] = [
+    { value: "AVAILABLE", label: "Available" },
+    { value: "MAINTENANCE", label: "Maintenance" },
+    { value: "RESERVED", label: "Reserved", disabled: true },
+    { value: "OUT_OF_SERVICE", label: "Out of service", disabled: true },
+];
 
 export default function AllEquipment() {
     const navigate = useNavigate();
-    const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+    const [equipmentList, setEquipmentList] = useState<EquipmentDTO[]>([]);
     const [loading, setLoading] = useState(true);
+    const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 
     const handleDelete = async (id: number) => {
         if (!window.confirm("Are you sure you want to delete this equipment?")) return;
@@ -25,6 +30,7 @@ export default function AllEquipment() {
         try {
             const response = await fetch(`/api/equipment/${id}`, {
                 method: "DELETE",
+                credentials: "include",
             });
 
             if (response.ok) {
@@ -39,8 +45,23 @@ export default function AllEquipment() {
         }
     };
 
+    const handleStatusChange = async (id: number, nextStatus: string) => {
+        setStatusUpdatingId(id);
+        try {
+            const updated = await updateEquipmentStatus(id, nextStatus);
+            setEquipmentList((prev) =>
+                prev.map((eq) => (eq.id === updated.id ? updated : eq))
+            );
+        } catch (error) {
+            console.error("Failed to update equipment status:", error);
+            alert("Failed to update equipment status");
+        } finally {
+            setStatusUpdatingId(null);
+        }
+    };
+
     useEffect(() => {
-        fetch("/api/equipment")
+        fetch("/api/equipment", { credentials: "include" })
             .then((res) => res.json())
             .then((data) => {
                 setEquipmentList(data);
@@ -74,6 +95,7 @@ export default function AllEquipment() {
                             <th className="border px-4 py-2">Type</th>
                             <th className="border px-4 py-2">Status</th>
                             <th className="border px-4 py-2">Attributes</th>
+                            <th className="border px-4 py-2">Actions</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -81,22 +103,45 @@ export default function AllEquipment() {
                             <tr key={eq.id} className="hover:bg-gray-100">
                                 <td className="border px-4 py-2">{eq.id}</td>
                                 <td className="border px-4 py-2">{eq.name}</td>
-                                {/*TODO: Add type name to Equipment*/}
-                                <td className="border px-4 py-2">{eq.typeName ?? 'No type'}</td>
+                                <td className="border px-4 py-2">{eq.typeName ?? "No type"}</td>
                                 {/* safe */}
-                                <td className="border px-4 py-2">{eq.status}</td>
+                                <td className="border px-4 py-2">
+                                    <select
+                                        value={eq.status ?? "AVAILABLE"}
+                                        onChange={(event) => handleStatusChange(eq.id, event.target.value)}
+                                        disabled={statusUpdatingId === eq.id}
+                                        className="w-full rounded border px-2 py-1 text-sm"
+                                    >
+                                        {equipmentStatusOptions.map((statusOption) => (
+                                            <option
+                                                key={statusOption.value}
+                                                value={statusOption.value}
+                                                disabled={statusOption.disabled}
+                                            >
+                                                {statusOption.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </td>
                                 <td className="border px-4 py-2">
                                     {eq.attributes?.length > 0
                                         ? eq.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(", ")
                                         : 'No attributes'}
                                 </td>
                                 <td className="border px-4 py-2">
-                                    <button
-                                        onClick={() => handleDelete(eq.id)}
-                                        className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded"
-                                    >
-                                        Delete
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            text="Edit"
+                                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
+                                            onClick={() => navigate(`/app/equipment/${eq.id}/edit`)}
+                                        />
+                                        <button
+                                            onClick={() => handleDelete(eq.id)}
+                                            className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

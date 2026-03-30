@@ -103,7 +103,7 @@ public class ReservationServiceTest {
         Reservation reservation = reservationService.createReservation(testUser, testEquipment, start, end);
 
         // Cancel the reservation
-        Reservation cancelled = reservationService.cancelReservation(reservation.getId());
+        Reservation cancelled = reservationService.cancelReservation(reservation.getId(), testUser);
 
         // Assert the status has changed
         assertEquals(ReservationStatus.CANCELLED, cancelled.getStatus(), "Reservation should be CANCELLED");
@@ -125,7 +125,7 @@ public class ReservationServiceTest {
         LocalDateTime newEnd = end.plusMinutes(10);
 
         // Update reservation
-        Reservation updated = reservationService.updateReservation(reservation.getId(), newStart, newEnd);
+        Reservation updated = reservationService.updateReservation(reservation.getId(), newStart, newEnd, testUser);
 
         // Assertions
         assertEquals(newStart, updated.getStartDatetime(), "Reservation start time should be updated");

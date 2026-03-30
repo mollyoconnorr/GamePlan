@@ -2,11 +2,11 @@ import {useNavigate} from "react-router-dom";
 import Button from "../components/Button.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import Calendar from "../components/calendar/Calendar.tsx";
-import {useState, useEffect, type Dispatch, type SetStateAction} from "react";
+import {useState, useEffect, useMemo, type Dispatch, type SetStateAction} from "react";
 import dayjs from "dayjs";
-import type {CalendarEvent, Reservation} from "../types.ts";
+import type {CalendarEvent, Reservation, EquipmentWithReservations, EquipmentAttribute} from "../types.ts";
 import {getEquipmentReservations, makeReservation} from "../api/Reservations.ts";
-import {parseRawResToEvent, parseRawResToRes} from "../util/ParseReservation.ts";
+import {parseRawResToEvent, parseRawResToRes, parseResToEvent} from "../util/ParseReservation.ts";
 import ReservationDateTimePicker from "../components/ReservationDateTimePicker.tsx";
 
 type ReserveEquipmentProps = {
@@ -16,8 +16,6 @@ type ReserveEquipmentProps = {
 
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
 type EquipmentTypeResponse = { id: number; name: string };
-type EquipmentResponse = { id: number; name: string };
-type EquipmentAttributeResponse = { name: string; value: string };
 
 export default function ReserveEquipment({reservations, setReservations} : ReserveEquipmentProps) {
     const navigate = useNavigate();
@@ -29,7 +27,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
     // Backend data
     const [equipmentTypes, setEquipmentTypes] = useState<Option[]>([]);
     const [attributes, setAttributes] = useState<{ label: string; value: string; name: string }[]>([]);
-    const [equipmentList, setEquipmentList] = useState<Option[]>([]);
+    const [equipmentOptions, setEquipmentOptions] = useState<EquipmentWithReservations[]>([]);
 
     // Selections
     const [selectedType, setSelectedType] = useState<number | null>(null);
@@ -48,29 +46,99 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
     const [selectedStartTime, setSelectedStartTime] = useState("");
     const [selectedEndTime, setSelectedEndTime] = useState("");
 
+    const previewStart = selectedDate && selectedStartTime
+        ? dayjs(`${selectedDate} ${selectedStartTime}`, "YYYY-MM-DD HH:mm")
+        : null;
+    const previewEnd = selectedDate && selectedEndTime
+        ? dayjs(`${selectedDate} ${selectedEndTime}`, "YYYY-MM-DD HH:mm")
+        : null;
+
     const previewReservation =
-        selectedDate &&
-        selectedStartTime &&
-        selectedEndTime &&
+        previewStart &&
+        previewEnd &&
         selectedEquipment != null
             ? {
                 id: selectedEquipment,
-                startTime: dayjs(`${selectedDate} ${selectedStartTime}`, " YYYY-mm-dd HH:mm").format("h:mm A"),
-                endTime: dayjs(`${selectedDate} ${selectedEndTime}`, " YYYY-mm-dd HH:mm").format("h:mm A"),
-                name:
-                    equipmentList.find(
-                        (e) => parseInt(e.value) === selectedEquipment
-                    )?.label ?? "",
-                date: dayjs(selectedDate).format("ddd M/D"),
+                startTime: previewStart.format("h:mm A"),
+                endTime: previewEnd.format("h:mm A"),
+                name: equipmentOptions.find((option) => option.id === selectedEquipment)?.name ?? "",
+                date: previewStart.format("ddd M/D"),
                 temp: true
             }
             : null;
 
-    const displayedReservations = previewReservation
-        ? [...equipmentReservations, previewReservation]
-        : equipmentReservations;
+    const equipmentReservationsWithConflict = useMemo(() => {
+        return equipmentReservations.map((event) => {
+            if (!previewStart || !previewEnd || !event.startIso || !event.endIso) {
+                return { ...event, conflict: false };
+            }
 
-    const allResInfoPresent = selectedType && selectedAttribute && selectedEquipment &&
+            const eventStart = dayjs(event.startIso);
+            const eventEnd = dayjs(event.endIso);
+            const overlaps = previewStart.isBefore(eventEnd) && eventStart.isBefore(previewEnd);
+
+            return { ...event, conflict: overlaps };
+        });
+    }, [equipmentReservations, previewStart, previewEnd]);
+
+    const userReservationConflict = useMemo(() => {
+        if (!previewStart || !previewEnd) return false;
+        return reservations.some((reservation) => {
+            return previewStart.isBefore(reservation.end) && reservation.start.isBefore(previewEnd);
+        });
+    }, [previewStart, previewEnd, reservations]);
+    const userReservationIds = useMemo(
+        () => new Set(reservations.map((reservation) => reservation.id)),
+        [reservations]
+    );
+
+    const userCalendarEvents = useMemo(
+        () =>
+            reservations.map((reservation) => ({
+                ...parseResToEvent(reservation),
+                color: "#fbbf24",
+                borderColor: "#d97706",
+                textColor: "#1f2937",
+            })),
+        [reservations]
+    );
+
+    const equipmentOtherReservations = useMemo(
+        () =>
+            equipmentReservationsWithConflict
+                .filter((event) => !userReservationIds.has(event.id))
+                .map((event) => ({
+                    ...event,
+                    color: "#dc2626",
+                    borderColor: "#b91c1c",
+                })),
+        [equipmentReservationsWithConflict, userReservationIds]
+    );
+
+    const previewReservationWithColor = previewReservation
+        ? {
+            ...previewReservation,
+            color: "#2563eb",
+            borderColor: "#1d4ed8",
+            textColor: "#ffffff",
+        }
+        : null;
+
+    const displayedReservations = [
+        ...equipmentOtherReservations,
+        ...userCalendarEvents,
+        ...(previewReservationWithColor ? [previewReservationWithColor] : []),
+    ];
+
+    const hasConflict = equipmentReservationsWithConflict.some((event) => event.conflict) || userReservationConflict;
+    const conflictMessage = userReservationConflict
+        ? "This overlaps another one of your reservations. Delete or adjust that reservation before booking again."
+        : "Someone else already has that equipment at this time; delete this pending reservation and try again or pick a different slot.";
+
+    const needsAttribute = attributes.length > 0;
+    const attributeSelected = needsAttribute ? Boolean(selectedAttribute) : true;
+
+    const allResInfoPresent = selectedType && attributeSelected && selectedEquipment &&
         selectedDate && selectedStartTime && selectedEndTime && previewReservation;
 
     // Fetch equipment data whenever one is selected
@@ -112,7 +180,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
         setSelectedAttribute(null);
         setSelectedEquipment(null);
         setAttributes([]);
-        setEquipmentList([]);
+        setEquipmentOptions([]);
 
         const res = await fetch(`/api/equipment-types/${typeId}/attributes`, {credentials: "include"});
         const data = await res.json();
@@ -122,16 +190,11 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
             const eqRes = await fetch(`/api/equipment-types/${typeId}/equipment`, {credentials: "include"});
             const eqData = await eqRes.json();
 
-            setEquipmentList(
-                (eqData as EquipmentResponse[]).map((e) => ({
-                    label: e.name,
-                    value: e.id.toString(),
-                }))
-            );
+            setEquipmentOptions(eqData as EquipmentWithReservations[]);
         } else {
             // Map attributes including name & value
             setAttributes(
-                (data as EquipmentAttributeResponse[]).map((a) => ({
+                (data as EquipmentAttribute[]).map((a) => ({
                     label: a.name + ": " + a.value, // display for user
                     value: a.value,                // actual value to send to backend
                     name: a.name                    // name key for backend query
@@ -149,6 +212,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
         setSelectedAttribute(attr);
         // Reset equipment selection so user must choose after changing attribute.
         setSelectedEquipment(null);
+        setEquipmentOptions([]);
 
         const res = await fetch(
             `/api/equipment-types/${selectedType}/equipment?attrName=${encodeURIComponent(attr.name)}&attrValue=${encodeURIComponent(attr.value)}`,
@@ -156,12 +220,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
         );
         const data = await res.json();
 
-        setEquipmentList(
-            (data as EquipmentResponse[]).map((e) => ({
-                label: e.name,
-                value: e.id.toString(),
-            }))
-        );
+        setEquipmentOptions(data as EquipmentWithReservations[]);
     };
 
     const handleMakeReservation = async () => {
@@ -180,7 +239,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
 
             setReservations([...reservations, parseRawResToRes(data)])
 
-            navigate("/app/home", {state: {toastMessage: "Reservation created!"}});
+            navigate("/app/home", {state: {toastMessage: "Reservation created!", view: "list"}});
 
         } catch (err) {
             console.error(err);
@@ -224,14 +283,54 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
                     )}
 
                     {/* Equipment Selector */}
-                    {equipmentList.length > 0 && (
+                    {equipmentOptions.length > 0 && (
                         <div>
                             <p className="text-sm lg:text-lg">Select equipment:</p>
-                            <DropdownSelect
-                                value={selectedEquipment?.toString() ?? ""}
-                                onChange={(v) => setSelectedEquipment(parseInt(v))}
-                                options={equipmentList}
-                            />
+                            <div className="mt-2 grid gap-3 md:grid-cols-2">
+                                {equipmentOptions.map((equipment) => {
+                                    const isSelected = equipment.id === selectedEquipment;
+                                    return (
+                                        <button
+                                            key={equipment.id}
+                                            type="button"
+                                            className={`rounded-lg border p-4 text-left transition duration-150 ${
+                                                isSelected
+                                                    ? "border-primary bg-primary/10"
+                                                    : "border-gray-200 bg-white hover:border-primary/70"
+                                            }`}
+                                            onClick={() => setSelectedEquipment(equipment.id)}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="font-semibold">{equipment.name}</span>
+                                                <span className="text-xs text-gray-500">
+                                                    {equipment.reservations.length} booked
+                                                </span>
+                                            </div>
+                                            {equipment.attributes.length > 0 && (
+                                                <div className="mt-1 text-xs text-gray-600">
+                                                    {equipment.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(" · ")}
+                                                </div>
+                                            )}
+                                            <div className="mt-3 flex flex-col gap-1 text-xs text-gray-500">
+                                                {equipment.reservations.length === 0 ? (
+                                                    <span className="text-green-600">No upcoming bookings</span>
+                                                ) : (
+                                                    <>
+                                                        {equipment.reservations.slice(0, 2).map((res) => (
+                                                            <span key={res.id}>
+                                                                {dayjs(res.start).format("ddd h:mm A")} — {dayjs(res.end).format("h:mm A")}
+                                                            </span>
+                                                        ))}
+                                                        {equipment.reservations.length > 2 && (
+                                                            <span>+ {equipment.reservations.length - 2} more bookings</span>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -251,34 +350,58 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
                     />
                 </div>
 
-                {allResInfoPresent &&
-                  <div className="space-y-4">
-                    <p
-                      className="opacity-80"
-                    >Click below to reserve {previewReservation.name} for {previewReservation.date} from {previewReservation.startTime} to {previewReservation.endTime}</p>
+                {allResInfoPresent && (
+                  <div className="space-y-3">
+                    <p className="opacity-80">
+                      Click below to reserve {previewReservation.name} for {previewReservation.date} from {previewReservation.startTime} to {previewReservation.endTime}
+                    </p>
+                    {hasConflict && (
+                        <p className="text-sm font-semibold text-red-600">
+                            {conflictMessage}
+                        </p>
+                    )}
                     <Button
                       text="Reserve"
                       className="bg-green-400 hover:bg-green-300 border-green-500"
                       onClick={handleMakeReservation}
+                      disabled={hasConflict}
                     />
                   </div>
-                }
+                )}
 
                 {/* Calendar */}
                 {selectedEquipment && (
-                    <Calendar
-                        firstDate={firstDate}
-                        numDays={7}
-                        startTime={startTime}
-                        endTime={endTime}
-                        timeStepMin={15}
-                        variant={"equip"}
-                        reservations={displayedReservations}
-                        loading={loading}
-                    />
+                    <>
+                        <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                            <LegendItem color="#fbbf24" label="Your existing reservations" />
+                            <LegendItem color="#dc2626" label="Other athletes' bookings" />
+                        </div>
+                        <Calendar
+                            firstDate={firstDate}
+                            numDays={7}
+                            startTime={startTime}
+                            endTime={endTime}
+                            timeStepMin={15}
+                            variant={"equip"}
+                            reservations={displayedReservations}
+                            loading={loading}
+                        />
+                    </>
                 )}
             </section>
         </>
+    );
+}
+
+function LegendItem({ color, label }: { color: string; label: string }) {
+    return (
+        <div className="flex items-center gap-2">
+            <span
+                className="inline-block h-4 w-4 rounded-sm border"
+                style={{ backgroundColor: color, borderColor: "#000" }}
+            />
+            <span>{label}</span>
+        </div>
     );
 }
 
