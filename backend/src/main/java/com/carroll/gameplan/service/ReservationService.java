@@ -4,8 +4,10 @@ import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.Reservation;
 import com.carroll.gameplan.model.ReservationStatus;
 import com.carroll.gameplan.model.User;
+import com.carroll.gameplan.model.UserRole;
 import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.ReservationRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,6 +70,13 @@ public class ReservationService {
         if (!existingReservations.isEmpty()) {
             throw new IllegalArgumentException("Equipment is already reserved for this time slot.");
         }
+
+        List<Reservation> userConflicts = reservationRepository
+                .findByUserAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(user, start, end, ReservationStatus.ACTIVE);
+
+        if (!userConflicts.isEmpty()) {
+            throw new IllegalArgumentException("You already have a reservation during that time.");
+        }
         if (end.isBefore(start) || end.equals(start)) {
             throw new IllegalArgumentException("End time must be after start time.");
         }
@@ -87,15 +96,25 @@ public class ReservationService {
 
     /**
      * Cancels an existing reservation by setting its status to CANCELLED.
-     * Uses @Transactional to ensure the update is persisted.
+     * The cancellation is only allowed if the requesting user owns the reservation
+     * or if they are an admin/trainer overriding an athlete booking.
      *
      * @param reservationId ID of the reservation to cancel
+     * @param actingUser    User requesting the cancellation
      * @return the updated reservation
      */
     @Transactional
-    public Reservation cancelReservation(Long reservationId) {
+    public Reservation cancelReservation(Long reservationId, User actingUser) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found: " + reservationId));
+
+        boolean isOwner = reservation.getUser().getId().equals(actingUser.getId());
+        boolean isAdmin = UserRole.AT.equals(actingUser.getRole());
+
+        if (!isOwner && !isAdmin) {
+            throw new AccessDeniedException("Only the reservation owner or an admin can cancel this reservation.");
+        }
+
         reservation.setStatus(ReservationStatus.CANCELLED);
         return reservationRepository.save(reservation);
     }
@@ -105,21 +124,40 @@ public class ReservationService {
         return reservationRepository.findByEquipmentIdAndStatusIs(equipmentId, ReservationStatus.ACTIVE);
     }
 
+    /**
+     * Returns all reservations currently marked as ACTIVE.
+     *
+     * @return list of active reservations
+     */
+    @Transactional(readOnly = true)
+    public List<Reservation> getActiveReservations() {
+        return reservationRepository.findByStatus(ReservationStatus.ACTIVE);
+    }
+
     // ===== Function 4: Update an existing reservation =====
 
     /**
      * Updates the start and end times of an existing reservation.
+     * Only the owner or an admin can edit a reservation.
      * Throws an exception if the new time slot conflicts with other reservations.
      *
      * @param reservationId ID of the reservation to update
      * @param newStart      new start time
      * @param newEnd        new end time
+     * @param actingUser    User requesting the update
      * @return the updated reservation
      */
-    public Reservation updateReservation(Long reservationId, LocalDateTime newStart, LocalDateTime newEnd) {
+    public Reservation updateReservation(Long reservationId, LocalDateTime newStart, LocalDateTime newEnd, User actingUser) {
         // Fetch the reservation
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
+
+        boolean isOwner = reservation.getUser().getId().equals(actingUser.getId());
+        boolean isAdmin = UserRole.AT.equals(actingUser.getRole());
+
+        if (!isOwner && !isAdmin) {
+            throw new AccessDeniedException("Only the reservation owner or an admin can edit this reservation.");
+        }
 
         // Check for overlapping reservations for the same equipment
         List<Reservation> overlapping = reservationRepository
@@ -131,6 +169,14 @@ public class ReservationService {
 
         if (!overlapping.isEmpty()) {
             throw new IllegalArgumentException("New time slot conflicts with existing reservations.");
+        }
+        List<Reservation> userConflicts = reservationRepository
+                .findByUserAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
+                        actingUser, newStart, newEnd, ReservationStatus.ACTIVE);
+        userConflicts.removeIf(r -> r.getId().equals(reservationId));
+
+        if (!userConflicts.isEmpty()) {
+            throw new IllegalArgumentException("You already have another reservation during that time.");
         }
         if (newEnd.isBefore(newStart) || newEnd.equals(newStart)) {
             throw new IllegalArgumentException("End time must be after start time.");

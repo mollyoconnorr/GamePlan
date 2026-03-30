@@ -1,11 +1,13 @@
 package com.carroll.gameplan.controller;
 
+import com.carroll.gameplan.dto.AdminReservationResponse;
 import com.carroll.gameplan.dto.ReservationRequest;
 import com.carroll.gameplan.dto.ReservationResponse;
 import com.carroll.gameplan.model.Reservation;
 import com.carroll.gameplan.model.User;
-import com.carroll.gameplan.repository.UserRepository;
+import com.carroll.gameplan.model.UserRole;
 import com.carroll.gameplan.service.ReservationService;
+import com.carroll.gameplan.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -28,21 +30,30 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/reservations")
 public class ReservationController {
-    private final Logger logger = LoggerFactory.getLogger(ReservationController.class);
-
     private final ReservationService reservationService;
-    private final UserRepository userRepository;
+    private final UserService userService;
+    private final Logger logger = LoggerFactory.getLogger(ReservationController.class);
 
     /**
      * Constructor for dependency injection.
      *
      * @param reservationService The service handling reservation logic.
-     * @param userRepository     The repository for accessing user data.
+     * @param userService        Helper for resolving and validating the authenticated user.
      */
     public ReservationController(ReservationService reservationService,
-                                 UserRepository userRepository) {
+                                 UserService userService) {
         this.reservationService = reservationService;
-        this.userRepository = userRepository;
+        this.userService = userService;
+    }
+
+    private String resolveEquipmentColor(Reservation reservation) {
+        if (reservation == null ||
+                reservation.getEquipment() == null ||
+                reservation.getEquipment().getEquipmentType() == null) {
+            return null;
+        }
+
+        return reservation.getEquipment().getEquipmentType().getColor();
     }
 
     /**
@@ -55,12 +66,7 @@ public class ReservationController {
      */
     @GetMapping
     public List<ReservationResponse> getReservations(OAuth2AuthenticationToken authentication) {
-        // Get user's unique OIDC ID
-        String oidcUserId = authentication.getPrincipal().getAttribute("sub");
-
-        // Fetch the User entity
-        User user = userRepository.findByOidcUserId(oidcUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.resolveCurrentUser(authentication);
 
         // Map Reservations to DTOs for response
         return reservationService.getActiveReservationsForUser(user).stream()
@@ -68,7 +74,8 @@ public class ReservationController {
                         r.getId(),
                         r.getEquipment().getName(),
                         r.getStartDatetime().toString(),
-                        r.getEndDatetime().toString()
+                        r.getEndDatetime().toString(),
+                        resolveEquipmentColor(r)
                 ))
                 .toList();
     }
@@ -89,9 +96,8 @@ public class ReservationController {
                         r.getId(),
                         r.getEquipment().getName(),
                         r.getStartDatetime().toString(),
-                        r.getEndDatetime().toString()
-                        // TODO: Add user name if matches OIDC user or is trainer reserving it, else add reserved
-//                        r.getUser().getFirstName() + " " + r.getUser().getLastName() // <-- user who reserved
+                        r.getEndDatetime().toString(),
+                        resolveEquipmentColor(r)
                 ))
                 .collect(Collectors.toList());
     }
@@ -111,10 +117,7 @@ public class ReservationController {
             OAuth2AuthenticationToken authentication,
             @RequestBody ReservationRequest request) {
 
-        final String oidcUserId = authentication.getPrincipal().getAttribute("sub");
-
-        final User user = userRepository.findByOidcUserId(oidcUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        final User user = userService.resolveCurrentUser(authentication);
 
         final Reservation newRes = reservationService.createReservation(
                 user,
@@ -131,7 +134,8 @@ public class ReservationController {
                 newRes.getId(),
                 newRes.getEquipment().getName(),
                 newRes.getStartDatetime().toString(),
-                newRes.getEndDatetime().toString()
+                newRes.getEndDatetime().toString(),
+                resolveEquipmentColor(newRes)
         );
 
         final URI location = URI.create("/api/reservations/" + newRes.getId());
@@ -139,6 +143,31 @@ public class ReservationController {
         return ResponseEntity
                 .created(location)
                 .body(response);
+    }
+
+    /**
+     * GET /api/reservations/admin
+     * <p>
+     * Returns all active athlete reservations for admin/trainer review.
+     * </p>
+     */
+    @GetMapping("/admin")
+    public List<AdminReservationResponse> getActiveReservationsForAdmin(OAuth2AuthenticationToken authentication) {
+        User user = userService.resolveCurrentUser(authentication);
+        userService.requireTrainer(user);
+
+        return reservationService.getActiveReservations().stream()
+                .filter(reservation -> UserRole.ATHLETE.equals(reservation.getUser().getRole()))
+                .map(reservation -> new AdminReservationResponse(
+                        reservation.getId(),
+                        reservation.getEquipment().getName(),
+                        reservation.getStartDatetime(),
+                        reservation.getEndDatetime(),
+                        reservation.getUser().getFirstName(),
+                        reservation.getUser().getLastName(),
+                        resolveEquipmentColor(reservation)
+                ))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -152,7 +181,10 @@ public class ReservationController {
      */
     @PutMapping("/{id}")
     public ReservationResponse updateReservation(@PathVariable Long id,
+                                                 OAuth2AuthenticationToken authentication,
                                                  @RequestBody ReservationRequest request) {
+
+        User user = userService.resolveCurrentUser(authentication);
 
         Reservation updated = reservationService.updateReservation(
                 id,
@@ -161,14 +193,16 @@ public class ReservationController {
                         .toLocalDateTime(),
                 request.getEnd()
                         .atZone(ZoneId.of("America/Denver"))
-                        .toLocalDateTime()
+                        .toLocalDateTime(),
+                user
         );
 
         return new ReservationResponse(
                 updated.getId(),
                 updated.getEquipment().getName(),
                 updated.getStartDatetime().toString(),
-                updated.getEndDatetime().toString()
+                updated.getEndDatetime().toString(),
+                resolveEquipmentColor(updated)
         );
     }
 
@@ -180,9 +214,12 @@ public class ReservationController {
      * @throws Exception If the reservation does not exist.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Object> cancelReservation(@PathVariable Long id) throws Exception {
-        reservationService.cancelReservation(id);
+    public ResponseEntity<Object> cancelReservation(@PathVariable Long id,
+                                                    OAuth2AuthenticationToken authentication) throws Exception {
+        User user = userService.resolveCurrentUser(authentication);
+        reservationService.cancelReservation(id, user);
         logger.info("cancelReservation: Reservation #{} cancelled", id);
         return ResponseEntity.noContent().build();
     }
+
 }

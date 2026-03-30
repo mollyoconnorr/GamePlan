@@ -27,6 +27,7 @@ public class ReservationResponse {
      * The end datetime of the reservation as a string.
      */
     private String end;
+    private String color;
 
     /**
      * Constructs a new ReservationResponse.
@@ -36,11 +37,12 @@ public class ReservationResponse {
      * @param start         The start datetime of the reservation.
      * @param end           The end datetime of the reservation.
      */
-    public ReservationResponse(Long id, String equipmentName, String start, String end) {
+    public ReservationResponse(Long id, String equipmentName, String start, String end, String color) {
         this.id = id;
         this.equipmentName = equipmentName;
         this.start = start;
         this.end = end;
+        this.color = color;
     }
 
     /**
@@ -97,5 +99,13 @@ public class ReservationResponse {
      */
     public void setEnd(String end) {
         this.end = end;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 }

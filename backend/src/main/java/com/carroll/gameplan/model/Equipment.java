@@ -65,7 +65,7 @@ public class Equipment {
      * Cascade ALL ensures attributes are persisted/removed with the equipment.
      * </p>
      */
-    @OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EquipmentAttribute> attributes;
 
     /**

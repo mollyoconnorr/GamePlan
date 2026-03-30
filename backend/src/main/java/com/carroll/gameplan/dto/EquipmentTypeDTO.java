@@ -30,6 +30,11 @@ public class EquipmentTypeDTO {
     private final String color;
 
     /**
+     * Raw field schema JSON, if present.
+     */
+    private final String fieldSchema;
+
+    /**
      * Constructor to create an EquipmentTypeDTO.
      *
      * @param id        Unique identifier of the equipment type
@@ -37,11 +42,12 @@ public class EquipmentTypeDTO {
      * @param hasSchema True if a field schema exists
      * @param color     Optional color string
      */
-    public EquipmentTypeDTO(Long id, String name, boolean hasSchema, String color) {
+    public EquipmentTypeDTO(Long id, String name, boolean hasSchema, String color, String fieldSchema) {
         this.id = id;
         this.name = name;
         this.hasSchema = hasSchema;
         this.color = color;
+        this.fieldSchema = fieldSchema;
     }
 
     /**
@@ -78,5 +84,14 @@ public class EquipmentTypeDTO {
      */
     public String getColor() {
         return color;
+    }
+
+    /**
+     * Gets the raw field schema JSON for this equipment type.
+     *
+     * @return field schema string, or null if none
+     */
+    public String getFieldSchema() {
+        return fieldSchema;
     }
 }

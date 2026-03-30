@@ -31,6 +31,8 @@ public class EquipmentDTO {
      */
     private String typeName;
 
+    private Long typeId;
+
     /**
      * List of attribute DTOs describing additional properties of the equipment.
      */
@@ -68,6 +70,14 @@ public class EquipmentDTO {
 
     public void setTypeName(String typeName) {
         this.typeName = typeName;
+    }
+
+    public Long getTypeId() {
+        return typeId;
+    }
+
+    public void setTypeId(Long typeId) {
+        this.typeId = typeId;
     }
 
     public List<AttributeDTO> getAttributes() {

@@ -3,11 +3,14 @@ package com.carroll.gameplan.controller;
 import com.carroll.gameplan.dto.*;
 import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.EquipmentType;
+import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.EquipmentTypeRepository;
 import com.carroll.gameplan.service.EquipmentTypeService;
+import com.carroll.gameplan.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +29,7 @@ public class EquipmentTypeController {
     private final EquipmentTypeRepository equipmentTypeRepository;
     private final EquipmentRepository equipmentRepository;
     private final EquipmentTypeService equipmentTypeService;
+    private final UserService userService;
 
     /**
      * Constructor for EquipmentTypeController.
@@ -36,10 +40,12 @@ public class EquipmentTypeController {
      */
     public EquipmentTypeController(EquipmentTypeRepository equipmentTypeRepository,
                                    EquipmentRepository equipmentRepository,
-                                   EquipmentTypeService equipmentTypeService) {
+                                   EquipmentTypeService equipmentTypeService,
+                                   UserService userService) {
         this.equipmentTypeRepository = equipmentTypeRepository;
         this.equipmentRepository = equipmentRepository;
         this.equipmentTypeService = equipmentTypeService;
+        this.userService = userService;
     }
 
     /**
@@ -57,7 +63,8 @@ public class EquipmentTypeController {
                         type.getId(),
                         type.getName(),
                         type.getFieldSchema() != null && !type.getFieldSchema().isEmpty(),
-                        type.getColor()
+                        type.getColor(),
+                        type.getFieldSchema()
                 ))
                 .toList();
     }
@@ -138,7 +145,11 @@ public class EquipmentTypeController {
      * @return Created EquipmentTypeDTO object
      */
     @PostMapping
-    public EquipmentTypeDTO createEquipmentType(@RequestBody CreateEquipmentTypeRequest request) {
+    public EquipmentTypeDTO createEquipmentType(OAuth2AuthenticationToken authentication,
+                                                @RequestBody CreateEquipmentTypeRequest request) {
+        User user = userService.resolveCurrentUser(authentication);
+        userService.requireTrainer(user);
+
 
         // Check for duplicate name
         if (equipmentTypeRepository.findAll().stream()
@@ -159,7 +170,48 @@ public class EquipmentTypeController {
                 saved.getId(),
                 saved.getName(),
                 saved.getFieldSchema() != null && !saved.getFieldSchema().isEmpty(),
-                saved.getColor()
+                saved.getColor(),
+                saved.getFieldSchema()
+        );
+    }
+
+    @PutMapping("/{id}")
+    public EquipmentTypeDTO updateEquipmentType(@PathVariable Long id,
+                                                @RequestBody EquipmentTypeUpdateRequest request,
+                                                OAuth2AuthenticationToken authentication) {
+        User user = userService.resolveCurrentUser(authentication);
+        userService.requireTrainer(user);
+
+        EquipmentType type = equipmentTypeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Equipment type not found: " + id));
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            String trimmed = request.getName().trim();
+            boolean nameTaken = equipmentTypeRepository.findAll()
+                    .stream()
+                    .anyMatch(existing -> !existing.getId().equals(id) && existing.getName().equalsIgnoreCase(trimmed));
+            if (nameTaken) {
+                throw new IllegalArgumentException("Equipment type name already exists");
+            }
+            type.setName(trimmed);
+        }
+
+        if (request.getColor() != null) {
+            type.setColor(request.getColor().trim());
+        }
+
+        if (request.getFieldSchema() != null) {
+            String cleaned = request.getFieldSchema().trim();
+            type.setFieldSchema(cleaned.isEmpty() ? null : cleaned);
+        }
+
+        EquipmentType updated = equipmentTypeRepository.save(type);
+        return new EquipmentTypeDTO(
+                updated.getId(),
+                updated.getName(),
+                updated.getFieldSchema() != null && !updated.getFieldSchema().isEmpty(),
+                updated.getColor(),
+                updated.getFieldSchema()
         );
     }
 
@@ -173,9 +225,21 @@ public class EquipmentTypeController {
      * @return ResponseEntity with appropriate status code
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEquipmentType(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteEquipmentType(@PathVariable Long id,
+                                                    @RequestParam(defaultValue = "false") boolean force,
+                                                    @RequestParam(required = false) String confirm,
+                                                    OAuth2AuthenticationToken authentication) {
+        User user = userService.resolveCurrentUser(authentication);
+        userService.requireTrainer(user);
         try {
-            equipmentTypeService.deleteEquipmentType(id);
+            if (force) {
+                if (confirm == null || !confirm.equalsIgnoreCase("confirm")) {
+                    return ResponseEntity.badRequest().build();
+                }
+                equipmentTypeService.forceDeleteEquipmentType(id);
+            } else {
+                equipmentTypeService.deleteEquipmentType(id);
+            }
             return ResponseEntity.noContent().build(); // 204
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409

@@ -2,6 +2,7 @@ package com.carroll.gameplan.service;
 
 import com.carroll.gameplan.dto.EquipmentTypeAttributeDTO;
 import com.carroll.gameplan.model.EquipmentType;
+import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.EquipmentTypeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,14 +22,17 @@ import java.util.List;
 public class EquipmentTypeService {
 
     private final EquipmentTypeRepository equipmentTypeRepository;
+    private final EquipmentRepository equipmentRepository;
 
     /**
      * Constructor for dependency injection.
      *
      * @param equipmentTypeRepository repository for EquipmentType entities
      */
-    public EquipmentTypeService(EquipmentTypeRepository equipmentTypeRepository) {
+    public EquipmentTypeService(EquipmentTypeRepository equipmentTypeRepository,
+                                EquipmentRepository equipmentRepository) {
         this.equipmentTypeRepository = equipmentTypeRepository;
+        this.equipmentRepository = equipmentRepository;
     }
 
     /**
@@ -121,6 +125,20 @@ public class EquipmentTypeService {
             throw new IllegalStateException("Cannot delete type: equipment exists");
         }
 
+        equipmentTypeRepository.delete(type);
+    }
+
+    /**
+     * Deletes an equipment type along with all related equipment and reservations.
+     *
+     * @param id ID of the equipment type
+     */
+    public void forceDeleteEquipmentType(Long id) {
+        EquipmentType type = equipmentTypeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("EquipmentType not found"));
+
+        // Delete every equipment that belongs to this type; cascade removes reservations.
+        equipmentRepository.deleteAll(type.getEquipmentList());
         equipmentTypeRepository.delete(type);
     }
 }
