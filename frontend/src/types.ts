@@ -48,11 +48,12 @@ export interface RawReservation {
 }
 
 export interface Reservation {
-    id: number,
-    name: string,
-    start: Dayjs,
-    end: Dayjs
+    id: number;
+    name: string;
+    start: Dayjs;
+    end: Dayjs;
     color?: string;
+    description?: string;
 }
 
 export interface CalendarEvent {

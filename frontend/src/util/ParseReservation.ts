@@ -21,6 +21,7 @@ export function parseResToEvent(reservation: Reservation): CalendarEvent {
         startIso: reservation.start.toISOString(),
         endIso: reservation.end.toISOString(),
         color: reservation.color,
+        description: reservation.description,
     };
 }
 
@@ -43,5 +44,20 @@ export function parseAdminRawResToEvent(reservation: RawAdminReservation): Calen
         startIso: reservation.start,
         endIso: reservation.end,
         color: reservation.color,
+    };
+}
+
+export function parseAdminRawResToRes(reservation: RawAdminReservation): Reservation {
+    const athleteName = [reservation.athleteFirstName, reservation.athleteLastName]
+        .filter(Boolean)
+        .join(" ");
+
+    return {
+        start: dayjs(reservation.start),
+        end: dayjs(reservation.end),
+        name: reservation.equipmentName,
+        id: reservation.id,
+        color: reservation.color ?? undefined,
+        description: athleteName || "Athlete reservation",
     };
 }
