@@ -10,12 +10,15 @@ import Login from "./pages/Login.tsx";
 import Logout from "./pages/Logout.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Profile from "./pages/Profile.tsx";
-import AdminReservations from "./pages/AdminReservations.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
 import {type JSX, useEffect, useMemo, useState} from "react";
 import type {Reservation} from "./types.ts";
-import {getReservations} from "./api/Reservations.ts";
-import {parseRawResToRes, parseResToEvent} from "./util/ParseReservation.ts";
+import {getActiveReservationsForAdmin, getReservations} from "./api/Reservations.ts";
+import {
+    parseAdminRawResToRes,
+    parseRawResToRes,
+    parseResToEvent
+} from "./util/ParseReservation.ts";
 import CreateEquipment from "./pages/CreateEquipment";
 import EquipmentTypes from "./pages/EquipmentTypes";
 import AllEquipment from "./pages/AllEquipment";
@@ -45,8 +48,15 @@ function AppShell() {
     // TODO error handling
     const loadReservations = async () => {
         try {
-            const data = await getReservations();
-            setReservations(data.map(parseRawResToRes));
+            if (hasPrivilegedAccess) {
+                // Get all active reservations if admin
+                const data = await getActiveReservationsForAdmin();
+                setReservations(data.map(parseAdminRawResToRes));
+            } else {
+                // Just get users reservations
+                const data = await getReservations();
+                setReservations(data.map(parseRawResToRes));
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -76,16 +86,12 @@ function AppShell() {
                     <Route
                         path="home"
                         element={
-                            hasPrivilegedAccess ? (
-                                <Navigate to="/app/admin/reservations" replace />
-                            ) : (
-                                <Home
-                                    reservations={reservations}
-                                    calendarEvents={calendarEvents}
-                                    loadReservations={loadReservations}
-                                    loading={loading}
-                                />
-                            )
+                            <Home
+                                reservations={reservations}
+                                calendarEvents={calendarEvents}
+                                loadReservations={loadReservations}
+                                loading={loading}
+                            />
                         }
                     />
                     <Route
@@ -101,7 +107,6 @@ function AppShell() {
                             )
                         }
                     />
-                    <Route path="admin/reservations" element={renderForPrivileged(<AdminReservations />)} />
                     <Route path="admin/users" element={renderForPrivileged(<AdminUsers />)} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="*" element={<NotFound compact />} />
