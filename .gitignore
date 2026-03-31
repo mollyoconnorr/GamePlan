@@ -14,6 +14,9 @@ backend/src/main/resources/
 backend/src/main/resources/application.yaml
 src/local.properties
 
+# Ignore static files
+backend/src/main/resources/static/*
+
 .idea/
 *.iws
 *.iml
