@@ -348,6 +348,8 @@ export default function ManageReservations({
                                     endTime={e.end.format("h:mm A")}
                                     name={e.name}
                                     id={e.id}
+                                    color={e.color}
+                                    description={e.description}
                                     onRequestEdit={() => handleOpenEdit(e)}
                                     onRequestDelete={(id, name) => setPendingDelete({ id, name })}
                                 />
@@ -368,6 +370,8 @@ function ReservationCard({
     id,
     onRequestEdit,
     onRequestDelete,
+    color,
+    description
 }: {
     startTime: string;
     endTime: string;
@@ -375,15 +379,21 @@ function ReservationCard({
     id: number;
     onRequestEdit: () => void;
     onRequestDelete: (id: number, name: string) => void;
+    color: string | undefined;
+    description: string | undefined;
 }) {
     return (
-        <div className="flex w-full justify-between items-center border shadow-md rounded-md bg-orange-400 px-2 max-w-[80%]">
+        <div className="flex w-full justify-between items-center border shadow-md rounded-md px-2 max-w-[80%]"
+        style={{backgroundColor: color || "white"}}
+        >
             <div className="flex flex-col md:flex-row space-x-1">
                 <p>{startTime} -</p>
                 <p>{endTime}</p>
             </div>
 
             <p>{name}</p>
+
+            {description && <p>{description}</p>}
 
             <div className="flex flex-col p-2 space-y-6">
                 <button
