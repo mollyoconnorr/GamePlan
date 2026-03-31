@@ -21,7 +21,7 @@ export default function EditEquipment() {
     const {equipmentId} = useParams<{equipmentId: string}>();
     const navigate = useNavigate();
 
-    const [equipment, setEquipment] = useState<EquipmentDTO | null>(null);
+    const [, setEquipment] = useState<EquipmentDTO | null>(null);
     const [types, setTypes] = useState<EquipmentType[]>([]);
     const [name, setName] = useState("");
     const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);

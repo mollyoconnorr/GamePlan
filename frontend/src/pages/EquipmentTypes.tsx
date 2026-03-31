@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import Button from "../components/Button.tsx";
 import Toast from "../components/Toast.tsx";
@@ -100,8 +100,8 @@ export default function EquipmentTypes() {
         try {
             await updateEquipmentType(editingType.id, {
                 name: formName.trim(),
-                color: formColor.trim() || null,
-                fieldSchema: formSchema.trim() || null,
+                color: formColor.trim() || undefined,
+                fieldSchema: formSchema.trim() || undefined,
             });
             setToastMessage("Equipment type updated.");
             await loadTypes();
