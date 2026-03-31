@@ -32,7 +32,7 @@ export default function Home(
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [firstDate] = useState(() => dayjs().startOf("day"));
+    const [firstDate] = useState(() => dayjs().startOf("week"));
     const locationState = location.state as HomeLocationState | null;
     const toastMessage = locationState?.toastMessage ?? "";
     const preferredView = locationState?.view;
