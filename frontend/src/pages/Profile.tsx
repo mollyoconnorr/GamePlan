@@ -3,6 +3,12 @@ import {useAuthedUser} from "../auth/AuthContext.tsx";
 export default function Profile() {
     const user = useAuthedUser();
 
+    const roleMap: Map<string, string> = new Map([
+        ["ATHLETE","Athlete"],
+        ["AT","Athletic Trainer"],
+        ["ADMIN","Administrator"]
+    ]);
+
     return (
         <section className="mx-5 md:mx-30 space-y-6">
             <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
@@ -16,7 +22,7 @@ export default function Profile() {
                     <p>{user.lastName}</p>
 
                     <p className="font-semibold text-gray-700 my-5">Role</p>
-                    <p className="my-5">{user.role.substring(0,1).toUpperCase()}{user.role.substring(1).toLowerCase()}</p>
+                    <p className="my-5">{roleMap.get(user.role) || `Unknown`}</p>
 
                     <p className="font-semibold text-gray-700">Username</p>
                     <p>{user.username}</p>
