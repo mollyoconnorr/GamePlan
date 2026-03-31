@@ -132,6 +132,11 @@ export default function Home(
                     {isAdmin && (
                         <div className="ml-auto flex flex-wrap items-center gap-2">
                             <Button
+                                text="App Settings"
+                                className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                                onClick={() => navigate("/app/admin/settings")}
+                            />
+                            <Button
                                 text="Manage users"
                                 className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
                                 onClick={() => navigate("/app/admin/users")}

@@ -59,7 +59,7 @@ export default function AllEquipment() {
             );
         } catch (error) {
             console.error("Failed to update equipment status:", error);
-            alert("Failed to update equipment status");
+            setToastMessage("Failed to update equipment status");
         } finally {
             setStatusUpdatingId(null);
         }

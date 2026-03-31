@@ -23,6 +23,7 @@ import CreateEquipment from "./pages/CreateEquipment";
 import EquipmentTypes from "./pages/EquipmentTypes";
 import AllEquipment from "./pages/AllEquipment";
 import EditEquipment from "./pages/EditEquipment.tsx";
+import AppSettings from "./pages/AppSettings.tsx";
 
 function AppShell() {
     // user is guaranteed by RequireAuth
@@ -107,6 +108,7 @@ function AppShell() {
                             )
                         }
                     />
+                    <Route path="admin/settings" element={renderForPrivileged(<AppSettings />)} />
                     <Route path="admin/users" element={renderForPrivileged(<AdminUsers />)} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="*" element={<NotFound compact />} />
