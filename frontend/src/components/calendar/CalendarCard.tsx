@@ -306,10 +306,10 @@ export default function CalendarCard({
                         </div>
 
                         <div className="space-y-2 text-sm text-black">
-                            {"date" in event && <p><span className="font-semibold">Date:</span> {String(event.date)}</p>}
-                            {"startTime" in event && <p><span className="font-semibold">Start:</span> {String(event.startTime)}</p>}
-                            {"endTime" in event && <p><span className="font-semibold">End:</span> {String(event.endTime)}</p>}
-                            {"description" in event && (
+                            {event.date && <p><span className="font-semibold">Date:</span> {String(event.date)}</p>}
+                            {event.startTime && <p><span className="font-semibold">Start:</span> {String(event.startTime)}</p>}
+                            {event.endTime && <p><span className="font-semibold">End:</span> {String(event.endTime)}</p>}
+                            {event.description && (
                                 <p>
                                     <span className="font-semibold">Reserved by:</span> {String(event.description)}
                                 </p>
