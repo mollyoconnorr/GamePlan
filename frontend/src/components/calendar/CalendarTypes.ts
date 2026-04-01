@@ -24,6 +24,7 @@ export interface CalendarContentProps {
     left: number,
     height: number,
     width: number,
+    numRows: number,
     cellHeight: number,
     numDays: number,
     dayMap: Map<string, number>,

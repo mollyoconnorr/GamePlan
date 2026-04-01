@@ -159,7 +159,7 @@ export default function CalendarContent(props: CalendarContentProps) {
                 */}
                 {Array.from({length: props.numDays}).map((_, i) => (
                     <div key={i} className="w-full px-1 relative"
-                         style={{ height: props.cellHeight * 36 }}>
+                         style={{ height: props.cellHeight * props.numRows }}>
                         {dayEventMapHTML.get(i)}
                     </div>
                 ))}

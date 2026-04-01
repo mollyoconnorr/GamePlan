@@ -126,6 +126,7 @@ export default function Calendar(props: CalendarProps) {
                     width={size.width - TIME_W}
                     numDays={props.numDays}
                     cellHeight={CELL_H}
+                    numRows={numRows}
                     dayMap={dayMap}
                     timeMap={timeMap}
                     events={props.reservations}
