@@ -11,7 +11,7 @@ import Logout from "./pages/Logout.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Profile from "./pages/Profile.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
-import {type JSX, useEffect, useMemo, useState} from "react";
+import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
 import type {Reservation} from "./types.ts";
 import {getActiveReservationsForAdmin, getReservations} from "./api/Reservations.ts";
 import {
@@ -48,7 +48,8 @@ function AppShell() {
     );
 
     // TODO error handling
-    const loadReservations = async () => {
+    const loadReservations = useCallback(async () => {
+        setLoading(true);
         try {
             if (hasPrivilegedAccess) {
                 // Get all active reservations if admin
@@ -64,14 +65,14 @@ function AppShell() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [hasPrivilegedAccess]);
 
     useEffect(() => {
-        loadReservations();
+        void loadReservations();
     }, [loadReservations]);
 
     const [firstDateToShow, setFirstDateToShow] = useState<"week" | "day">("week");
-    const [firstDate, setFirstDate] = useState(() => dayjs().startOf("week"));
+    const [firstDate, ] = useState(() => dayjs().startOf(firstDateToShow));
     const [startTime, setStartTime] = useState(dayjs().startOf("day").hour(8).minute(0));
     const [endTime, setEndTime] = useState(dayjs().startOf("day").hour(17).minute(0));
     const [timeStep, setTimeStep] = useState(15);
@@ -138,7 +139,6 @@ function AppShell() {
                             timeStep={timeStep}
                             maxResTime={maxResTime}
                             numDays={numDays}
-                            setFirstDate={setFirstDate}
                             setFirstDateToShow={setFirstDateToShow}
                             setStartTime={setStartTime}
                             setEndTime={setEndTime}
