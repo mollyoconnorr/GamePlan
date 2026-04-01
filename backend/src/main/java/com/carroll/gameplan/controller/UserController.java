@@ -23,11 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     /**
-     * Looks up the authenticated user in the database so the frontend can read
-     * the persisted role (e.g., ATHLETE vs AT) in addition to the profile info.
-     *
-     * @param authentication The OAuth2 authentication token containing user info.
-     * @return The full DTO describing the user.
+     * Service used to resolve the authenticated user's persisted data.
      */
     private final UserService userService;
 
@@ -35,6 +31,12 @@ public class UserController {
         this.userService = userService;
     }
 
+    /**
+     * Returns the DTO for the authenticated user, including the stored application role.
+     *
+     * @param authentication current OAuth2 authentication token
+     * @return OK with {@link UserDto} when the user exists; 404 when authentication is absent
+     */
     @GetMapping("/user")
     public ResponseEntity<UserDto> getUser(OAuth2AuthenticationToken authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {

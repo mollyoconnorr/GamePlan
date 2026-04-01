@@ -11,16 +11,25 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controller used by admins to manage users and their roles.
+ */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
 
     private final UserService userService;
 
+    /**
+     * @param userService service for user lookup and role enforcement
+     */
     public AdminController(UserService userService) {
         this.userService = userService;
     }
 
+    /**
+     * Returns every persisted user for the admin UI.
+     */
     @GetMapping("/users")
     public List<AdminUserResponse> getAllUsers(OAuth2AuthenticationToken authentication) {
         User currentUser = userService.resolveCurrentUser(authentication);
@@ -31,6 +40,9 @@ public class AdminController {
                 .toList();
     }
 
+    /**
+     * Creates a pending student record when admins approve a new person.
+     */
     @PostMapping("/users")
     public AdminUserResponse createUser(@RequestBody CreateUserRequest request,
                                         OAuth2AuthenticationToken authentication) {
@@ -59,6 +71,9 @@ public class AdminController {
         return toResponse(saved);
     }
 
+    /**
+     * Updates the application role for an existing user; the supplied string must match an enum.
+     */
     @PostMapping("/users/{userId}/role")
     public AdminUserResponse updateUserRole(@PathVariable Long userId,
                                             @RequestBody UserRoleUpdateRequest request,
@@ -86,6 +101,9 @@ public class AdminController {
         return toResponse(saved);
     }
 
+    /**
+     * Helper mapping routine for returning the DTO expected by the frontend.
+     */
     private AdminUserResponse toResponse(User user) {
         return new AdminUserResponse(
                 user.getId(),

@@ -124,6 +124,9 @@ public class EquipmentController {
         return equipmentRepository.save(equipment);
     }
 
+    /**
+     * Returns a single {@link EquipmentDTO} for the given ID after validating trainer access.
+     */
     @GetMapping("/{id}")
     public EquipmentDTO getEquipment(@PathVariable Long id,
                                      OAuth2AuthenticationToken authentication) {
@@ -136,6 +139,9 @@ public class EquipmentController {
         return toDto(equipment);
     }
 
+    /**
+     * Updates metadata (name, type, attributes) of an equipment instance.
+     */
     @PutMapping("/{id}")
     @Transactional
     public EquipmentDTO updateEquipment(@PathVariable Long id,
@@ -182,6 +188,9 @@ public class EquipmentController {
         return toDto(updated);
     }
 
+    /**
+     * Updates the persisted status (AVAILABLE, MAINTENANCE, etc.) of the equipment.
+     */
     @PutMapping("/{id}/status")
     @Transactional
     public EquipmentStatusUpdateResponse updateEquipmentStatus(@PathVariable Long id,

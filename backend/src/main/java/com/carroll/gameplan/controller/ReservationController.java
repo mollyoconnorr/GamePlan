@@ -46,6 +46,9 @@ public class ReservationController {
         this.userService = userService;
     }
 
+    /**
+     * Returns the equipment type color that the frontend can use to paint the reservation event.
+     */
     private String resolveEquipmentColor(Reservation reservation) {
         if (reservation == null ||
                 reservation.getEquipment() == null ||
@@ -212,6 +215,11 @@ public class ReservationController {
      * @param id The reservation ID.
      * @return The cancelled {@link Reservation}.
      * @throws Exception If the reservation does not exist.
+     */
+    /**
+     * Cancels a reservation the calling user owns (or overrides as a trainer).
+     *
+     * @return 204 No Content when cancellation is successful
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> cancelReservation(@PathVariable Long id,

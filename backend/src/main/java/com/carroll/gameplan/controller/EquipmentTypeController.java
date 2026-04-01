@@ -175,6 +175,9 @@ public class EquipmentTypeController {
         );
     }
 
+    /**
+     * Updates the equipment type record (name, color, schema) after validating uniqueness.
+     */
     @PutMapping("/{id}")
     public EquipmentTypeDTO updateEquipmentType(@PathVariable Long id,
                                                 @RequestBody EquipmentTypeUpdateRequest request,

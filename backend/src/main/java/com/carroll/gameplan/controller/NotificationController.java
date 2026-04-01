@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Endpoint for users to read inbox/notifications.
+ * Provides the logged-in user with stored notifications such as reservation cancellations.
  */
 @RestController
 @RequestMapping("/api/notifications")
@@ -27,6 +27,9 @@ public class NotificationController {
     }
 
     @GetMapping
+    /**
+     * Reads and clears the user's unread notifications.
+     */
     public List<NotificationResponse> getNotifications(OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         List<Notification> notifications = notificationService.fetchUnreadAndMarkRead(user);
