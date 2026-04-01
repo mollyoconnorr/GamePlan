@@ -70,6 +70,7 @@ function AppShell() {
         loadReservations();
     }, [loadReservations]);
 
+    const [firstDateToShow, setFirstDateToShow] = useState<"week" | "day">("week");
     const [firstDate, setFirstDate] = useState(() => dayjs().startOf("week"));
     const [startTime, setStartTime] = useState(dayjs().startOf("day").hour(8).minute(0));
     const [endTime, setEndTime] = useState(dayjs().startOf("day").hour(17).minute(0));
@@ -128,7 +129,23 @@ function AppShell() {
                             )
                         }
                     />
-                    <Route path="admin/settings" element={renderForPrivileged(<AppSettings />)} />
+                    <Route path="admin/settings" element={renderForPrivileged(
+                        <AppSettings
+                            firstDate={firstDate}
+                            firstDateToShow={firstDateToShow}
+                            startTime={startTime}
+                            endTime={endTime}
+                            timeStep={timeStep}
+                            maxResTime={maxResTime}
+                            numDays={numDays}
+                            setFirstDate={setFirstDate}
+                            setFirstDateToShow={setFirstDateToShow}
+                            setStartTime={setStartTime}
+                            setEndTime={setEndTime}
+                            setTimeStep={setTimeStep}
+                            setMaxResTime={setMaxResTime}
+                            setNumDays={setNumDays}
+                        />)} />
                     <Route path="admin/users" element={renderForPrivileged(<AdminUsers />)} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="*" element={<NotFound compact />} />
