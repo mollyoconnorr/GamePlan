@@ -31,6 +31,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests covering equipment creation, status transitions, and deletion.
+ */
 class EquipmentServiceTest {
 
     @Mock
@@ -51,12 +54,18 @@ class EquipmentServiceTest {
     private EquipmentType equipmentType;
 
     @BeforeEach
+    /**
+     * Initializes shared test fixtures.
+     */
     void setUp() {
         equipmentType = new EquipmentType();
         equipmentType.setName("Bench");
     }
 
     @Test
+    /**
+     * Ensures listAllEquipment returns mapped DTOs.
+     */
     void listAllEquipmentReturnsDtos() {
         Equipment equipment = new Equipment();
         equipment.setId(5L);
@@ -71,6 +80,9 @@ class EquipmentServiceTest {
     }
 
     @Test
+    /**
+     * Verifies new equipment is saved with attribute mapping.
+     */
     void createEquipmentBuildsAttributesAndPersists() {
         CreateEquipmentRequest request = new CreateEquipmentRequest();
         request.setEquipmentTypeId(1L);
@@ -87,6 +99,9 @@ class EquipmentServiceTest {
     }
 
     @Test
+    /**
+     * Ensures a missing equipment type triggers validation.
+     */
     void createEquipmentThrowsWhenTypeMissing() {
         CreateEquipmentRequest request = new CreateEquipmentRequest();
         request.setName("NoType");
@@ -97,6 +112,9 @@ class EquipmentServiceTest {
     }
 
     @Test
+    /**
+     * Confirms switching to maintenance cancels reservations and sends notifications.
+     */
     void updateEquipmentCancelsReservationsWhenMaintenance() {
         Equipment equipment = new Equipment();
         equipment.setId(10L);
@@ -124,6 +142,9 @@ class EquipmentServiceTest {
     }
 
     @Test
+    /**
+     * Rejects unknown statuses for updates.
+     */
     void updateEquipmentStatusRejectsInvalidStatus() {
         Equipment equipment = new Equipment();
         equipment.setId(15L);
@@ -138,6 +159,9 @@ class EquipmentServiceTest {
     }
 
     @Test
+    /**
+     * Returns false when deleting nonexistent equipment.
+     */
     void deleteEquipmentReturnsFalseWhenMissing() {
         when(equipmentRepository.existsById(100L)).thenReturn(false);
 

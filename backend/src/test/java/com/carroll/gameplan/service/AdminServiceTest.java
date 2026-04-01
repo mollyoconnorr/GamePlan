@@ -20,6 +20,9 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests covering administrative user behavior such as listing and role updates.
+ */
 class AdminServiceTest {
 
     @Mock
@@ -29,6 +32,9 @@ class AdminServiceTest {
     private AdminService adminService;
 
     @Test
+    /**
+     * Validates that {@link AdminService#listUsers()} returns DTOs for every user.
+     */
     void listUsersReturnsResponses() {
         User user = new User();
         user.setRole(UserRole.ATHLETE);
@@ -41,6 +47,9 @@ class AdminServiceTest {
     }
 
     @Test
+    /**
+     * Ensures duplicate emails trigger an error when creating a pending student.
+     */
     void createPendingStudentValidatesDuplicateEmail() {
         CreateUserRequest request = new CreateUserRequest();
         request.setEmail("test@example.com");
@@ -52,6 +61,9 @@ class AdminServiceTest {
     }
 
     @Test
+    /**
+     * Verifies that invalid role names are rejected when updating a user.
+     */
     void updateUserRoleThrowsForInvalidRole() {
         when(userService.getUserById(1L)).thenReturn(new User());
 
@@ -61,6 +73,9 @@ class AdminServiceTest {
     }
 
     @Test
+    /**
+     * Confirms a new student is created when the email is free.
+     */
     void createPendingStudentSavesNewStudent() {
         CreateUserRequest request = new CreateUserRequest();
         request.setEmail("new@example.com");
@@ -77,6 +92,9 @@ class AdminServiceTest {
     }
 
     @Test
+    /**
+     * Checks that a valid role string is persisted on the user.
+     */
     void updateUserRoleAppliesValidRole() {
         User user = new User();
         user.setRole(UserRole.ATHLETE);

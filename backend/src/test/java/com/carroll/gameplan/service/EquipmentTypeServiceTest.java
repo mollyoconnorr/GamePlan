@@ -24,6 +24,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for {@link EquipmentTypeService} attribute parsing and metadata handling.
+ */
 class EquipmentTypeServiceTest {
 
     @Mock
@@ -38,6 +41,9 @@ class EquipmentTypeServiceTest {
     private EquipmentType type;
 
     @BeforeEach
+    /**
+     * Prepares a reusable equipment type fixture for the tests.
+     */
     void setUp() {
         type = new EquipmentType();
         type.setName("Racks");
@@ -45,6 +51,9 @@ class EquipmentTypeServiceTest {
     }
 
     @Test
+    /**
+     * Verifies equipment types are converted into DTOs.
+     */
     void listEquipmentTypesTransformsToDto() {
         when(equipmentTypeRepository.findAll()).thenReturn(List.of(type));
 
@@ -55,6 +64,9 @@ class EquipmentTypeServiceTest {
     }
 
     @Test
+    /**
+     * Ensures duplicate names cannot be created.
+     */
     void createEquipmentTypeRejectsDuplicateName() {
         when(equipmentTypeRepository.findAll()).thenReturn(List.of(type));
         CreateEquipmentTypeRequest request = new CreateEquipmentTypeRequest();
@@ -66,6 +78,9 @@ class EquipmentTypeServiceTest {
     }
 
     @Test
+    /**
+     * Confirms blank names are rejected when creating a type.
+     */
     void createEquipmentTypeRejectsBlankName() {
         CreateEquipmentTypeRequest request = new CreateEquipmentTypeRequest();
         request.setName(" ");
@@ -76,6 +91,9 @@ class EquipmentTypeServiceTest {
     }
 
     @Test
+    /**
+     * Explores attribute aggregation across equipment instances.
+     */
     void getUniqueAttributesReturnsDistinctPairs() {
         Equipment equipment = new Equipment();
         EquipmentAttribute attr = new EquipmentAttribute();
@@ -92,6 +110,9 @@ class EquipmentTypeServiceTest {
     }
 
     @Test
+    /**
+     * Ensures the service gracefully handles missing equipment lists.
+     */
     void getUniqueAttributesHandlesMissingEquipmentList() {
         type.setEquipmentList(null);
         when(equipmentTypeRepository.findById(1L)).thenReturn(java.util.Optional.of(type));
@@ -100,6 +121,9 @@ class EquipmentTypeServiceTest {
     }
 
     @Test
+    /**
+     * Validates updates trim whitespace and persist changes.
+     */
     void updateEquipmentTypeTrimsNameAndSchema() {
         when(equipmentTypeRepository.findAll()).thenReturn(List.of(type));
         when(equipmentTypeRepository.save(type)).thenReturn(type);

@@ -14,6 +14,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for the helper {@link UserService} methods around role checks and lookups.
+ */
 class UserServiceTest {
 
     @Mock
@@ -23,6 +26,9 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
+    /**
+     * Verifies trainers and admins are treated as trainers.
+     */
     void isTrainerReturnsTrueForAtOrAdmin() {
         User admin = new User();
         admin.setRole(UserRole.ADMIN);
@@ -34,6 +40,9 @@ class UserServiceTest {
     }
 
     @Test
+    /**
+     * Ensures non-trainers cannot pass the trainer guard.
+     */
     void requireTrainerThrowsForAthlete() {
         User athlete = new User();
         athlete.setRole(UserRole.ATHLETE);
@@ -42,6 +51,9 @@ class UserServiceTest {
     }
 
     @Test
+    /**
+     * Confirms only admins satisfy the admin guard.
+     */
     void requireAdminThrowsForNonAdmin() {
         User user = new User();
         user.setRole(UserRole.AT);
@@ -50,6 +62,9 @@ class UserServiceTest {
     }
 
     @Test
+    /**
+     * Allows admin users to pass the guard without exception.
+     */
     void requireAdminAllowsAdmin() {
         User admin = new User();
         admin.setRole(UserRole.ADMIN);
@@ -58,6 +73,9 @@ class UserServiceTest {
     }
 
     @Test
+    /**
+     * Checks email existence is delegated to the repository.
+     */
     void emailExistsDelegatesToRepository() {
         when(userRepository.existsByEmailIgnoreCase("foo@example.com")).thenReturn(true);
 

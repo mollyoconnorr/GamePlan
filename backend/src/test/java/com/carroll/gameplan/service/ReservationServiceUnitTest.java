@@ -23,6 +23,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for {@link ReservationService} covering ownership, conflicts, and validation rules.
+ */
 class ReservationServiceUnitTest {
 
     @Mock
@@ -38,6 +41,9 @@ class ReservationServiceUnitTest {
     private Equipment equipment;
 
     @BeforeEach
+    /**
+     * Sets up a default user and equipment fixture.
+     */
     void setUp() {
         user = new User();
         user.setId(1L);
@@ -47,6 +53,9 @@ class ReservationServiceUnitTest {
     }
 
     @Test
+    /**
+     * Ensures overlapping equipment reservations are rejected.
+     */
     void createReservationThrowsWhenEquipmentReserved() {
         LocalDateTime start = LocalDateTime.now();
         LocalDateTime end = start.plusMinutes(30);
@@ -60,6 +69,9 @@ class ReservationServiceUnitTest {
     }
 
     @Test
+    /**
+     * Confirms only owners or trainers may cancel reservations.
+     */
     void cancelReservationRestrictsNonOwner() {
         Reservation existing = new Reservation();
         existing.setId(5L);
@@ -74,6 +86,9 @@ class ReservationServiceUnitTest {
     }
 
     @Test
+    /**
+     * Validates the service enforces proper start/end ordering.
+     */
     void updateReservationRejectsConflictingSlots() {
         Reservation current = new Reservation();
         current.setId(7L);

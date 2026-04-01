@@ -19,6 +19,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for {@link NotificationService}, focusing on persistence and unread handling.
+ */
 class NotificationServiceTest {
 
     @Mock
@@ -28,6 +31,9 @@ class NotificationServiceTest {
     private NotificationService notificationService;
 
     @Test
+    /**
+     * Ensures notifications are saved with the recipient and message.
+     */
     void createNotificationPersistsMessage() {
         User recipient = new User();
         when(notificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -42,6 +48,9 @@ class NotificationServiceTest {
     }
 
     @Test
+    /**
+     * Verifies unread notifications are marked as read and flushed.
+     */
     void fetchUnreadMarksMatchingNotificationsAsRead() {
         User user = new User();
         Notification unread = new Notification();
@@ -58,6 +67,9 @@ class NotificationServiceTest {
     }
 
     @Test
+    /**
+     * Confirms no save call happens when the user has no unread notifications.
+     */
     void fetchUnreadSkipsSaveWhenNone() {
         User user = new User();
         when(notificationRepository.findByUserAndReadFalse(user)).thenReturn(List.of());
