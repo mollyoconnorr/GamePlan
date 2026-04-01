@@ -68,7 +68,7 @@ function AppShell() {
 
     useEffect(() => {
         loadReservations();
-    }, []);
+    }, [loadReservations]);
 
     const [firstDate, setFirstDate] = useState(() => dayjs().startOf("week"));
     const [startTime, setStartTime] = useState(dayjs().startOf("day").hour(8).minute(0));
@@ -116,6 +116,12 @@ function AppShell() {
                                 <Navigate to="/app/admin/reservations" replace />
                             ) : (
                                 <ReserveEquipment
+                                    firstDate={firstDate}
+                                    startTime={startTime}
+                                    endTime={endTime}
+                                    timeStep={timeStep}
+                                    maxResTime={maxResTime}
+                                    numDays={numDays}
                                     reservations={reservations}
                                     setReservations={setReservations}
                                 />

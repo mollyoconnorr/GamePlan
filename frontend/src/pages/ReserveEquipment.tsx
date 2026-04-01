@@ -4,12 +4,18 @@ import {safeBack} from "../util/Navigation.ts";
 import Calendar from "../components/calendar/Calendar.tsx";
 import {useState, useEffect, useMemo, type Dispatch, type SetStateAction} from "react";
 import dayjs from "dayjs";
-import type {CalendarEvent, Reservation, EquipmentWithReservations, EquipmentAttribute} from "../types.ts";
+import type {
+    CalendarEvent,
+    Reservation,
+    EquipmentWithReservations,
+    EquipmentAttribute,
+    CalendarData
+} from "../types.ts";
 import {getEquipmentReservations, makeReservation} from "../api/Reservations.ts";
 import {parseRawResToEvent, parseRawResToRes, parseResToEvent} from "../util/ParseReservation.ts";
 import ReservationDateTimePicker from "../components/ReservationDateTimePicker.tsx";
 
-type ReserveEquipmentProps = {
+interface ReserveEquipmentProps extends CalendarData {
     reservations: Reservation[];
     setReservations: Dispatch<SetStateAction<Reservation[]>>;
 }
@@ -17,12 +23,9 @@ type ReserveEquipmentProps = {
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
 type EquipmentTypeResponse = { id: number; name: string };
 
-export default function ReserveEquipment({reservations, setReservations} : ReserveEquipmentProps) {
+export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
+                                             maxResTime,numDays,reservations, setReservations} : ReserveEquipmentProps) {
     const navigate = useNavigate();
-
-    const [firstDate] = useState(() => dayjs().startOf("day"));
-    const startTime = dayjs().startOf("day").hour(8).minute(0);
-    const endTime = dayjs().startOf("day").hour(17).minute(0);
 
     // Backend data
     const [equipmentTypes, setEquipmentTypes] = useState<Option[]>([]);
@@ -293,7 +296,7 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
                                         <button
                                             key={equipment.id}
                                             type="button"
-                                            className={`rounded-lg border p-4 text-left transition duration-150 ${
+                                            className={`rounded-lg border p-4 text-left transition duration-150 hover:cursor-pointer ${
                                                 isSelected
                                                     ? "border-primary bg-primary/10"
                                                     : "border-gray-200 bg-white hover:border-primary/70"
@@ -338,9 +341,11 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
                 <div>
                     <ReservationDateTimePicker
                         firstDate={firstDate}
-                        numDays={7}
+                        numDays={numDays}
                         startTime={startTime}
+                        timeStep={timeStep}
                         endTime={endTime}
+                        maxResTime={maxResTime}
                         selectedDate={selectedDate}
                         selectedStartTime={selectedStartTime}
                         selectedEndTime={selectedEndTime}
@@ -378,10 +383,10 @@ export default function ReserveEquipment({reservations, setReservations} : Reser
                         </div>
                         <Calendar
                             firstDate={firstDate}
-                            numDays={7}
+                            numDays={numDays}
                             startTime={startTime}
                             endTime={endTime}
-                            timeStepMin={15}
+                            timeStepMin={timeStep}
                             variant={"equip"}
                             reservations={displayedReservations}
                             loading={loading}

@@ -1,12 +1,6 @@
 import { useMemo } from "react";
-import { Dayjs } from "dayjs";
 
-type DateTimeRangePickerProps = {
-    firstDate: Dayjs;
-    numDays: number;
-    startTime: Dayjs;
-    endTime: Dayjs;
-
+interface DateTimeRangePickerProps extends CalendarData {
     // controlled values
     selectedDate: string;
     selectedStartTime: string;
@@ -16,7 +10,7 @@ type DateTimeRangePickerProps = {
     setSelectedDate: (date: string) => void;
     setSelectedStartTime: (time: string) => void;
     setSelectedEndTime: (time: string) => void;
-};
+}
 
 export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     // Date options, from given start date + numDays
@@ -40,18 +34,27 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                 value: current.format("HH:mm"),
                 label: current.format("h:mm A"),
             });
-            current = current.add(15, "minute");
+            current = current.add(props.timeStep, "minute");
         }
 
         return options;
-    }, [props.startTime, props.endTime]);
+    }, [props.startTime, props.endTime,props.timeStep]);
+
+    const toMinutes = (time: string) => {
+        const [h, m] = time.split(":").map(Number);
+        return h * 60 + m;
+    };
 
     // Filter selectedEndTime options to only include those after selectedStartTime
     const endTimeOptions = useMemo(() => {
         if (!props.selectedStartTime) return [];
 
-        return timeOptions.filter((t) => t.value > props.selectedStartTime);
-    }, [props.selectedStartTime, timeOptions]);
+        const start = toMinutes(props.selectedStartTime);
+
+        return timeOptions.filter((t) => {
+            const val = toMinutes(t.value);
+            return val > start && val <= start + props.maxResTime;
+        });    }, [props.selectedStartTime, timeOptions, props.maxResTime]);
 
     return (
         <div className="flex flex-col md:flex-row space-x-10 space-y-10">
