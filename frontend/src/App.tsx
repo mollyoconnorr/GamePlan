@@ -24,6 +24,7 @@ import EquipmentTypes from "./pages/EquipmentTypes";
 import AllEquipment from "./pages/AllEquipment";
 import EditEquipment from "./pages/EditEquipment.tsx";
 import AppSettings from "./pages/AppSettings.tsx";
+import dayjs from "dayjs";
 
 function AppShell() {
     // user is guaranteed by RequireAuth
@@ -69,6 +70,13 @@ function AppShell() {
         loadReservations();
     }, []);
 
+    const [firstDate, setFirstDate] = useState(() => dayjs().startOf("week"));
+    const [startTime, setStartTime] = useState(dayjs().startOf("day").hour(8).minute(0));
+    const [endTime, setEndTime] = useState(dayjs().startOf("day").hour(17).minute(0));
+    const [timeStep, setTimeStep] = useState(15);
+    const [maxResTime, setMaxResTime] = useState(30);
+    const [numDays, setNumDays] = useState(7);
+
     return (
         <div className="min-h-screen flex flex-col">
             <Navbar username={user!.email} logout={logout} />
@@ -88,6 +96,12 @@ function AppShell() {
                         path="home"
                         element={
                             <Home
+                                firstDate={firstDate}
+                                startTime={startTime}
+                                endTime={endTime}
+                                timeStep={timeStep}
+                                maxResTime={maxResTime}
+                                numDays={numDays}
                                 reservations={reservations}
                                 calendarEvents={calendarEvents}
                                 loadReservations={loadReservations}

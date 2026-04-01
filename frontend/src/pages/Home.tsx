@@ -1,15 +1,14 @@
 import Calendar from "../components/calendar/Calendar.tsx";
 import {useEffect, useState} from "react";
-import dayjs from "dayjs";
 import {useAuthedUser} from "../auth/AuthContext.tsx";
 import Button from "../components/Button.tsx";
 import {useLocation, useNavigate} from "react-router-dom";
 import ManageReservations from "../components/ManageReservations.tsx";
-import type {CalendarEvent, Reservation} from "../types.ts";
+import type {CalendarData, CalendarEvent, Reservation} from "../types.ts";
 import {deleteReservation, updateReservation} from "../api/Reservations.ts";
 import Toast from "../components/Toast.tsx";
 
-type HomeProps = {
+interface HomeProps extends CalendarData {
     reservations: Reservation[];
     calendarEvents: CalendarEvent[];
     loadReservations: () => Promise<void>;
@@ -22,7 +21,8 @@ type HomeLocationState = {
 }
 
 export default function Home(
-    {reservations, calendarEvents, loadReservations, loading}: HomeProps
+    { firstDate,startTime,endTime,timeStep,maxResTime,numDays,
+        reservations, calendarEvents, loadReservations, loading}: HomeProps
 
 ){
     const user = useAuthedUser();
@@ -32,13 +32,9 @@ export default function Home(
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [firstDate] = useState(() => dayjs().startOf("week"));
     const locationState = location.state as HomeLocationState | null;
     const toastMessage = locationState?.toastMessage ?? "";
     const preferredView = locationState?.view;
-
-    const startTime = dayjs().startOf("day").hour(8).minute(0);
-    const endTime   = dayjs().startOf("day").hour(17).minute(0);
 
     // Store current event view in local storage so it persists across refreshes
     const [showCalendar, setShowCalendar] = useState(() => {
@@ -53,6 +49,7 @@ export default function Home(
 
     useEffect(() => {
         if (!preferredView) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowCalendar(preferredView === "calendar");
     }, [preferredView]);
 
@@ -181,10 +178,10 @@ export default function Home(
 
                 {showCalendar && <Calendar
                     firstDate={firstDate}
-                    numDays={7}
+                    numDays={numDays}
                     startTime={startTime}
                     endTime={endTime}
-                    timeStepMin={15}
+                    timeStepMin={timeStep}
                     variant={"user"}
                     reservations={calendarEvents}
                     loading={loading}
@@ -197,7 +194,7 @@ export default function Home(
                     loading={loading}
                     startTime={startTime}
                     endTime={endTime}
-                    timeStepMin={15}
+                    timeStepMin={timeStep}
                     onEditReservation={handleEditReservation}
                     onDeleteReservation={handleDeleteReservation}
                 />}

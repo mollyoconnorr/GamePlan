@@ -1,6 +1,6 @@
-import type {JSX} from "react";
+import {type JSX} from "react";
 import * as React from "react";
-import type {Dayjs} from "dayjs";
+import {type Dayjs} from "dayjs";
 
 export type User = {
     id: string;
@@ -112,3 +112,12 @@ export type PendingDelete = {
     id: number;
     name: string;
 };
+
+export type CalendarData = {
+    firstDate: Dayjs;
+    startTime: Dayjs;
+    endTime: Dayjs;
+    timeStep: number;
+    maxResTime: number;
+    numDays: number;
+}
