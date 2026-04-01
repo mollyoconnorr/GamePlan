@@ -6,30 +6,42 @@ import java.time.format.DateTimeFormatter;
 /**
  * Represents a notification delivered to a user.
  */
-public class NotificationResponse {
-
-    private final Long id;
-    private final String message;
-    private final String createdAt;
+public record NotificationResponse(Long id, String message, String createdAt) {
 
     private static final DateTimeFormatter FORMATTER =
             DateTimeFormatter.ofPattern("EEEE, MMM d 'at' h:mm a");
 
     public NotificationResponse(Long id, String message, LocalDateTime createdAt) {
-        this.id = id;
-        this.message = message;
-        this.createdAt = createdAt.format(FORMATTER);
+        this(id, message, createdAt.format(FORMATTER));
     }
 
-    public Long getId() {
+    /**
+     * Gets the identifier for the notification.
+     *
+     * @return notification ID
+     */
+    @Override
+    public Long id() {
         return id;
     }
 
-    public String getMessage() {
+    /**
+     * Gets the message body presented to the user.
+     *
+     * @return notification message
+     */
+    @Override
+    public String message() {
         return message;
     }
 
-    public String getCreatedAt() {
+    /**
+     * Gets the formatted timestamp for when the notification was created.
+     *
+     * @return formatted creation timestamp
+     */
+    @Override
+    public String createdAt() {
         return createdAt;
     }
 }

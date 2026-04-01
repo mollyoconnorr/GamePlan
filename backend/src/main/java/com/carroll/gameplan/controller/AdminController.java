@@ -4,7 +4,7 @@ import com.carroll.gameplan.dto.AdminUserResponse;
 import com.carroll.gameplan.dto.CreateUserRequest;
 import com.carroll.gameplan.dto.UserRoleUpdateRequest;
 import com.carroll.gameplan.model.User;
-import com.carroll.gameplan.model.UserRole;
+import com.carroll.gameplan.service.AdminService;
 import com.carroll.gameplan.service.UserService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
@@ -18,12 +18,15 @@ import java.util.List;
 @RequestMapping("/api/admin")
 public class AdminController {
 
+    private final AdminService adminService;
     private final UserService userService;
 
     /**
-     * @param userService service for user lookup and role enforcement
+     * @param adminService service for admin operations
+     * @param userService  service for user lookup and role enforcement
      */
-    public AdminController(UserService userService) {
+    public AdminController(AdminService adminService, UserService userService) {
+        this.adminService = adminService;
         this.userService = userService;
     }
 
@@ -35,9 +38,7 @@ public class AdminController {
         User currentUser = userService.resolveCurrentUser(authentication);
         userService.requireAdmin(currentUser);
 
-        return userService.findAllUsers().stream()
-                .map(this::toResponse)
-                .toList();
+        return adminService.listUsers();
     }
 
     /**
@@ -49,26 +50,7 @@ public class AdminController {
         User currentUser = userService.resolveCurrentUser(authentication);
         userService.requireAdmin(currentUser);
 
-        String email = request.getEmail();
-        if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("Email is required");
-        }
-
-        if (userService.emailExists(email)) {
-            throw new IllegalArgumentException("Email already in use");
-        }
-
-        UserRole targetRole = UserRole.STUDENT;
-        User user = new User();
-        user.setEmail(email.trim());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setRole(targetRole);
-        user.setOidcUserId(request.getOidcUserId());
-
-        User saved = userService.saveUser(user);
-
-        return toResponse(saved);
+        return adminService.createPendingStudent(request);
     }
 
     /**
@@ -81,37 +63,6 @@ public class AdminController {
         User currentUser = userService.resolveCurrentUser(authentication);
         userService.requireAdmin(currentUser);
 
-        User targetUser = userService.getUserById(userId);
-
-        String requestedRole = request.role();
-        if (requestedRole == null || requestedRole.isBlank()) {
-            throw new IllegalArgumentException("Role is required");
-        }
-
-        UserRole nextRole;
-        try {
-            nextRole = UserRole.valueOf(requestedRole.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid role: " + requestedRole);
-        }
-
-        targetUser.setRole(nextRole);
-        User saved = userService.saveUser(targetUser);
-
-        return toResponse(saved);
-    }
-
-    /**
-     * Helper mapping routine for returning the DTO expected by the frontend.
-     */
-    private AdminUserResponse toResponse(User user) {
-        return new AdminUserResponse(
-                user.getId(),
-                user.getOidcUserId(),
-                user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getRole() != null ? user.getRole().name() : UserRole.ATHLETE.name()
-        );
+        return adminService.updateUserRole(userId, request.role());
     }
 }

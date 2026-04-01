@@ -6,15 +6,12 @@ import com.carroll.gameplan.repository.EquipmentTypeRepository;
 import com.carroll.gameplan.repository.ReservationRepository;
 import com.carroll.gameplan.repository.UserRepository;
 import com.carroll.gameplan.service.ReservationService;
-
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.annotation.Transactional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -45,7 +42,7 @@ public class DataSeeder {
         // ===== USER =====
         User testUser = ur.findByOidcUserId("00uzv9ab25xQEHKRc697").orElse(null);
 
-        if (testUser == null){
+        if (testUser == null) {
             testUser = new User();
             testUser.setEmail("testuser@carroll.edu");
             testUser.setFirstName("test");
@@ -109,13 +106,13 @@ public class DataSeeder {
         List<Equipment> mediumWirelessBoots = createBoots("Medium Wireless Boots", "M", wirelessBootsType, er, 2);
 
         // ===== OPTIONAL: Example reservations =====
-        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().atTime(8,0), LocalDate.now().atTime(8,30));
-        createReservationIfPossible(rs, testUser, coldBath2, LocalDate.now().atTime(8,15), LocalDate.now().atTime(9,0));
-        createReservationIfPossible(rs, testUser, coldBath3, LocalDate.now().atTime(10,15), LocalDate.now().atTime(10,45));
-        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
-        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().plusDays(1).atTime(8,0), LocalDate.now().plusDays(1).atTime(8,30));
-        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,30), LocalDate.now().plusDays(1).atTime(9,0));
-        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(9,0), LocalDate.now().plusDays(1).atTime(9,30));
+        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().atTime(8, 0), LocalDate.now().atTime(8, 30));
+        createReservationIfPossible(rs, testUser, coldBath2, LocalDate.now().atTime(8, 15), LocalDate.now().atTime(9, 0));
+        createReservationIfPossible(rs, testUser, coldBath3, LocalDate.now().atTime(10, 15), LocalDate.now().atTime(10, 45));
+        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8, 0), LocalDate.now().plusDays(1).atTime(8, 30));
+        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().plusDays(1).atTime(8, 0), LocalDate.now().plusDays(1).atTime(8, 30));
+        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8, 30), LocalDate.now().plusDays(1).atTime(9, 0));
+        createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(9, 0), LocalDate.now().plusDays(1).atTime(9, 30));
 
     }
 

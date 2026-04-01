@@ -38,7 +38,6 @@ public class ReservationService {
         this.equipmentRepository = equipmentRepository;
     }
 
-    // ===== Function 1: Get all reservations for a user =====
 
     /**
      * Returns all reservations for a given user that are active.
@@ -50,7 +49,6 @@ public class ReservationService {
         return reservationRepository.findByUserAndStatusIs(user, ReservationStatus.ACTIVE);
     }
 
-    // ===== Function 2: Create a new reservation =====
 
     /**
      * Creates a new reservation for a user and equipment within a specified time window.
@@ -92,7 +90,6 @@ public class ReservationService {
         return reservationRepository.save(reservation);
     }
 
-    // ===== Function 3: Cancel a reservation =====
 
     /**
      * Cancels an existing reservation by setting its status to CANCELLED.
@@ -134,7 +131,6 @@ public class ReservationService {
         return reservationRepository.findByStatus(ReservationStatus.ACTIVE);
     }
 
-    // ===== Function 4: Update an existing reservation =====
 
     /**
      * Updates the start and end times of an existing reservation.
@@ -189,7 +185,6 @@ public class ReservationService {
         return reservationRepository.save(reservation);
     }
 
-    // ===== Function 5: Helper method to fetch equipment by ID =====
 
     /**
      * Retrieves equipment by its ID.

@@ -8,28 +8,14 @@ import java.util.List;
  * Contains basic equipment info (ID, name), a list of attributes, and a list of reservations.
  * Useful for displaying equipment details along with upcoming or existing reservations.
  * </p>
+ *
+ * @param id           Unique identifier for the equipment.
+ * @param name         Name of the equipment.
+ * @param attributes   List of attributes associated with the equipment.
+ * @param reservations List of reservations for this equipment.
  */
-public class EquipmentWithReservationsDTO {
-
-    /**
-     * Unique identifier for the equipment.
-     */
-    private final Long id;
-
-    /**
-     * Name of the equipment.
-     */
-    private final String name;
-
-    /**
-     * List of attributes associated with the equipment.
-     */
-    private final List<EquipmentAttributeDTO> attributes;
-
-    /**
-     * List of reservations for this equipment.
-     */
-    private final List<ReservationDTO> reservations;
+public record EquipmentWithReservationsDTO(Long id, String name, List<EquipmentAttributeDTO> attributes,
+                                           List<ReservationDTO> reservations) {
 
     /**
      * Constructor to create an EquipmentWithReservationsDTO.
@@ -39,13 +25,7 @@ public class EquipmentWithReservationsDTO {
      * @param attributes   List of attributes
      * @param reservations List of reservations
      */
-    public EquipmentWithReservationsDTO(Long id, String name,
-                                        List<EquipmentAttributeDTO> attributes,
-                                        List<ReservationDTO> reservations) {
-        this.id = id;
-        this.name = name;
-        this.attributes = attributes;
-        this.reservations = reservations;
+    public EquipmentWithReservationsDTO {
     }
 
     // ===== Getters =====
@@ -55,7 +35,8 @@ public class EquipmentWithReservationsDTO {
      *
      * @return equipment ID
      */
-    public Long getId() {
+    @Override
+    public Long id() {
         return id;
     }
 
@@ -64,7 +45,8 @@ public class EquipmentWithReservationsDTO {
      *
      * @return equipment name
      */
-    public String getName() {
+    @Override
+    public String name() {
         return name;
     }
 
@@ -73,7 +55,8 @@ public class EquipmentWithReservationsDTO {
      *
      * @return list of attributes
      */
-    public List<EquipmentAttributeDTO> getAttributes() {
+    @Override
+    public List<EquipmentAttributeDTO> attributes() {
         return attributes;
     }
 
@@ -82,7 +65,8 @@ public class EquipmentWithReservationsDTO {
      *
      * @return list of reservations
      */
-    public List<ReservationDTO> getReservations() {
+    @Override
+    public List<ReservationDTO> reservations() {
         return reservations;
     }
 }

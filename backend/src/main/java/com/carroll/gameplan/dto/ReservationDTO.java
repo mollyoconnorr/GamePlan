@@ -8,23 +8,12 @@ import java.time.LocalDateTime;
  * Contains the reservation ID, start time, and end time as ISO-formatted strings.
  * Used for sending reservation details to clients.
  * </p>
+ *
+ * @param id    Unique identifier of the reservation.
+ * @param start Reservation start time as a string (ISO format).
+ * @param end   Reservation end time as a string (ISO format).
  */
-public class ReservationDTO {
-
-    /**
-     * Unique identifier of the reservation.
-     */
-    private final Long id;
-
-    /**
-     * Reservation start time as a string (ISO format).
-     */
-    private final String start;
-
-    /**
-     * Reservation end time as a string (ISO format).
-     */
-    private final String end;
+public record ReservationDTO(Long id, String start, String end) {
 
     /**
      * Constructor to create a ReservationDTO from LocalDateTime values.
@@ -34,9 +23,7 @@ public class ReservationDTO {
      * @param end   Reservation end time
      */
     public ReservationDTO(Long id, LocalDateTime start, LocalDateTime end) {
-        this.id = id;
-        this.start = start.toString();
-        this.end = end.toString();
+        this(id, start.toString(), end.toString());
     }
 
     // ===== Getters =====
@@ -46,7 +33,8 @@ public class ReservationDTO {
      *
      * @return reservation ID
      */
-    public Long getId() {
+    @Override
+    public Long id() {
         return id;
     }
 
@@ -55,7 +43,8 @@ public class ReservationDTO {
      *
      * @return start time
      */
-    public String getStart() {
+    @Override
+    public String start() {
         return start;
     }
 
@@ -64,7 +53,8 @@ public class ReservationDTO {
      *
      * @return end time
      */
-    public String getEnd() {
+    @Override
+    public String end() {
         return end;
     }
 }

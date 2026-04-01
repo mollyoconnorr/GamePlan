@@ -1,11 +1,12 @@
 package com.carroll.gameplan.controller;
 
-import com.carroll.gameplan.dto.*;
-import com.carroll.gameplan.model.Equipment;
-import com.carroll.gameplan.model.EquipmentType;
+import com.carroll.gameplan.dto.CreateEquipmentTypeRequest;
+import com.carroll.gameplan.dto.EquipmentAttributeDTO;
+import com.carroll.gameplan.dto.EquipmentTypeAttributeDTO;
+import com.carroll.gameplan.dto.EquipmentTypeDTO;
+import com.carroll.gameplan.dto.EquipmentTypeUpdateRequest;
+import com.carroll.gameplan.dto.EquipmentWithReservationsDTO;
 import com.carroll.gameplan.model.User;
-import com.carroll.gameplan.repository.EquipmentRepository;
-import com.carroll.gameplan.repository.EquipmentTypeRepository;
 import com.carroll.gameplan.service.EquipmentTypeService;
 import com.carroll.gameplan.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -26,24 +27,17 @@ import java.util.List;
 @RequestMapping("/api/equipment-types")
 public class EquipmentTypeController {
 
-    private final EquipmentTypeRepository equipmentTypeRepository;
-    private final EquipmentRepository equipmentRepository;
     private final EquipmentTypeService equipmentTypeService;
     private final UserService userService;
 
     /**
      * Constructor for EquipmentTypeController.
      *
-     * @param equipmentTypeRepository Repository for EquipmentType entities
-     * @param equipmentRepository     Repository for Equipment entities
-     * @param equipmentTypeService    Service layer for EquipmentType business logic
+     * @param equipmentTypeService Service layer for EquipmentType business logic
+     * @param userService          Service for user resolution and authorization
      */
-    public EquipmentTypeController(EquipmentTypeRepository equipmentTypeRepository,
-                                   EquipmentRepository equipmentRepository,
-                                   EquipmentTypeService equipmentTypeService,
+    public EquipmentTypeController(EquipmentTypeService equipmentTypeService,
                                    UserService userService) {
-        this.equipmentTypeRepository = equipmentTypeRepository;
-        this.equipmentRepository = equipmentRepository;
         this.equipmentTypeService = equipmentTypeService;
         this.userService = userService;
     }
@@ -57,16 +51,7 @@ public class EquipmentTypeController {
      */
     @GetMapping
     public List<EquipmentTypeDTO> getAllTypes() {
-        return equipmentTypeRepository.findAll()
-                .stream()
-                .map(type -> new EquipmentTypeDTO(
-                        type.getId(),
-                        type.getName(),
-                        type.getFieldSchema() != null && !type.getFieldSchema().isEmpty(),
-                        type.getColor(),
-                        type.getFieldSchema()
-                ))
-                .toList();
+        return equipmentTypeService.listEquipmentTypes();
     }
 
     /**
@@ -80,16 +65,7 @@ public class EquipmentTypeController {
      */
     @GetMapping("/{id}/attributes")
     public List<EquipmentAttributeDTO> getAttributesForType(@PathVariable Long id) {
-        EquipmentType type = equipmentTypeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment type not found with id: " + id));
-
-        List<Equipment> equipments = type.getEquipmentList();
-
-        return equipments.stream()
-                .flatMap(e -> e.getAttributes().stream())
-                .map(attr -> new EquipmentAttributeDTO(attr.getName(), attr.getValue()))
-                .distinct()
-                .toList();
+        return equipmentTypeService.getUniqueAttributes(id);
     }
 
     /**
@@ -121,19 +97,7 @@ public class EquipmentTypeController {
             @RequestParam(required = false) String attrName,
             @RequestParam(required = false) String attrValue) {
 
-        return equipmentRepository.findByTypeAndAttribute(typeId, attrName, attrValue)
-                .stream()
-                .map(e -> new EquipmentWithReservationsDTO(
-                        e.getId(),
-                        e.getName(),
-                        e.getAttributes().stream()
-                                .map(a -> new EquipmentAttributeDTO(a.getName(), a.getValue()))
-                                .toList(),
-                        e.getReservations().stream()
-                                .map(r -> new ReservationDTO(r.getId(), r.getStartDatetime(), r.getEndDatetime()))
-                                .toList()
-                ))
-                .toList();
+        return equipmentTypeService.getEquipmentWithReservations(typeId, attrName, attrValue);
     }
 
     /**
@@ -150,29 +114,7 @@ public class EquipmentTypeController {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
 
-
-        // Check for duplicate name
-        if (equipmentTypeRepository.findAll().stream()
-                .anyMatch(t -> t.getName().equalsIgnoreCase(request.getName()))) {
-            throw new IllegalArgumentException("Equipment type already exists");
-        }
-
-        // Create entity
-        EquipmentType type = new EquipmentType();
-        type.setName(request.getName());
-        type.setFieldSchema(request.getFieldSchema());
-        type.setColor(request.getColor());
-
-        // Save to DB
-        EquipmentType saved = equipmentTypeRepository.save(type);
-
-        return new EquipmentTypeDTO(
-                saved.getId(),
-                saved.getName(),
-                saved.getFieldSchema() != null && !saved.getFieldSchema().isEmpty(),
-                saved.getColor(),
-                saved.getFieldSchema()
-        );
+        return equipmentTypeService.createEquipmentType(request);
     }
 
     /**
@@ -185,37 +127,7 @@ public class EquipmentTypeController {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
 
-        EquipmentType type = equipmentTypeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment type not found: " + id));
-
-        if (request.getName() != null && !request.getName().isBlank()) {
-            String trimmed = request.getName().trim();
-            boolean nameTaken = equipmentTypeRepository.findAll()
-                    .stream()
-                    .anyMatch(existing -> !existing.getId().equals(id) && existing.getName().equalsIgnoreCase(trimmed));
-            if (nameTaken) {
-                throw new IllegalArgumentException("Equipment type name already exists");
-            }
-            type.setName(trimmed);
-        }
-
-        if (request.getColor() != null) {
-            type.setColor(request.getColor().trim());
-        }
-
-        if (request.getFieldSchema() != null) {
-            String cleaned = request.getFieldSchema().trim();
-            type.setFieldSchema(cleaned.isEmpty() ? null : cleaned);
-        }
-
-        EquipmentType updated = equipmentTypeRepository.save(type);
-        return new EquipmentTypeDTO(
-                updated.getId(),
-                updated.getName(),
-                updated.getFieldSchema() != null && !updated.getFieldSchema().isEmpty(),
-                updated.getColor(),
-                updated.getFieldSchema()
-        );
+        return equipmentTypeService.updateEquipmentType(id, request);
     }
 
     /**

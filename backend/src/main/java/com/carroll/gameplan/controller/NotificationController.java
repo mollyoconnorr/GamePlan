@@ -6,7 +6,9 @@ import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.service.NotificationService;
 import com.carroll.gameplan.service.UserService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 

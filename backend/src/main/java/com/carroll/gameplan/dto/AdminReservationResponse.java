@@ -8,15 +8,8 @@ import java.time.LocalDateTime;
  * Includes athlete metadata so admins can see who reserved each piece.
  * </p>
  */
-public class AdminReservationResponse {
-
-    private final Long id;
-    private final String equipmentName;
-    private final String start;
-    private final String end;
-    private final String athleteFirstName;
-    private final String athleteLastName;
-    private final String color;
+public record AdminReservationResponse(Long id, String equipmentName, String start, String end, String athleteFirstName,
+                                       String athleteLastName, String color) {
 
     public AdminReservationResponse(Long id,
                                     String equipmentName,
@@ -25,40 +18,82 @@ public class AdminReservationResponse {
                                     String athleteFirstName,
                                     String athleteLastName,
                                     String color) {
-        this.id = id;
-        this.equipmentName = equipmentName;
-        this.start = start.toString();
-        this.end = end.toString();
-        this.athleteFirstName = athleteFirstName;
-        this.athleteLastName = athleteLastName;
-        this.color = color;
+        this(id,
+                equipmentName,
+                start.toString(),
+                end.toString(),
+                athleteFirstName,
+                athleteLastName,
+                color);
     }
 
-    public Long getId() {
+    /**
+     * Gets the reservation identifier.
+     *
+     * @return Reservation ID
+     */
+    @Override
+    public Long id() {
         return id;
     }
 
-    public String getEquipmentName() {
+    /**
+     * Gets the name of the equipment reserved.
+     *
+     * @return Equipment name
+     */
+    @Override
+    public String equipmentName() {
         return equipmentName;
     }
 
-    public String getStart() {
+    /**
+     * Gets the reservation start timestamp, formatted as a string.
+     *
+     * @return Start timestamp
+     */
+    @Override
+    public String start() {
         return start;
     }
 
-    public String getEnd() {
+    /**
+     * Gets the reservation end timestamp, formatted as a string.
+     *
+     * @return End timestamp
+     */
+    @Override
+    public String end() {
         return end;
     }
 
-    public String getAthleteFirstName() {
+    /**
+     * Gets the athlete's first name.
+     *
+     * @return Athlete first name
+     */
+    @Override
+    public String athleteFirstName() {
         return athleteFirstName;
     }
 
-    public String getAthleteLastName() {
+    /**
+     * Gets the athlete's last name.
+     *
+     * @return Athlete last name
+     */
+    @Override
+    public String athleteLastName() {
         return athleteLastName;
     }
 
-    public String getColor() {
+    /**
+     * Gets the display color associated with the reservation entry.
+     *
+     * @return Display color
+     */
+    @Override
+    public String color() {
         return color;
     }
 }

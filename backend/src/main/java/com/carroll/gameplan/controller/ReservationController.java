@@ -113,7 +113,7 @@ public class ReservationController {
      * @param authentication The OAuth2 authentication token of the user.
      * @param request        The reservation details (equipmentId, start, end as ISO-8601).
      * @return A {@link ResponseEntity} containing the created {@link ReservationResponse}
-     *         with HTTP status 201 (Created) and a Location header.
+     * with HTTP status 201 (Created) and a Location header.
      */
     @PostMapping
     public ResponseEntity<ReservationResponse> createReservation(

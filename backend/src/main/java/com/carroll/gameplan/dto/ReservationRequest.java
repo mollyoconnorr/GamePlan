@@ -25,6 +25,7 @@ public class ReservationRequest {
      * The end datetime of the reservation, as a string (ISO-8601 format).
      */
     private Instant end;
+
     /**
      * Gets the equipment ID.
      *

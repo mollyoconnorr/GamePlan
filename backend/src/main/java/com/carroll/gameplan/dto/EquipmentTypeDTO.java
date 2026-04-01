@@ -6,33 +6,14 @@ package com.carroll.gameplan.dto;
  * Contains basic information about an equipment type including its ID, name,
  * whether it has a field schema, and an optional color for UI display.
  * </p>
+ *
+ * @param id          Unique identifier for the equipment type.
+ * @param name        Name of the equipment type.
+ * @param hasSchema   Indicates whether this equipment type has a field schema defined.
+ * @param color       Optional color associated with this equipment type (e.g., for UI representation).
+ * @param fieldSchema Raw field schema JSON, if present.
  */
-public class EquipmentTypeDTO {
-
-    /**
-     * Unique identifier for the equipment type.
-     */
-    private final Long id;
-
-    /**
-     * Name of the equipment type.
-     */
-    private final String name;
-
-    /**
-     * Indicates whether this equipment type has a field schema defined.
-     */
-    private final boolean hasSchema;
-
-    /**
-     * Optional color associated with this equipment type (e.g., for UI representation).
-     */
-    private final String color;
-
-    /**
-     * Raw field schema JSON, if present.
-     */
-    private final String fieldSchema;
+public record EquipmentTypeDTO(Long id, String name, boolean hasSchema, String color, String fieldSchema) {
 
     /**
      * Constructor to create an EquipmentTypeDTO.
@@ -42,12 +23,7 @@ public class EquipmentTypeDTO {
      * @param hasSchema True if a field schema exists
      * @param color     Optional color string
      */
-    public EquipmentTypeDTO(Long id, String name, boolean hasSchema, String color, String fieldSchema) {
-        this.id = id;
-        this.name = name;
-        this.hasSchema = hasSchema;
-        this.color = color;
-        this.fieldSchema = fieldSchema;
+    public EquipmentTypeDTO {
     }
 
     /**
@@ -55,7 +31,8 @@ public class EquipmentTypeDTO {
      *
      * @return equipment type ID
      */
-    public Long getId() {
+    @Override
+    public Long id() {
         return id;
     }
 
@@ -64,16 +41,18 @@ public class EquipmentTypeDTO {
      *
      * @return equipment type name
      */
-    public String getName() {
+    @Override
+    public String name() {
         return name;
     }
 
     /**
-     * Checks if this equipment type has a field schema.
+     * Checks if this equipment type has a field schema defined.
      *
      * @return true if a schema exists, false otherwise
      */
-    public boolean isHasSchema() {
+    @Override
+    public boolean hasSchema() {
         return hasSchema;
     }
 
@@ -82,7 +61,8 @@ public class EquipmentTypeDTO {
      *
      * @return color string, or null if none
      */
-    public String getColor() {
+    @Override
+    public String color() {
         return color;
     }
 
@@ -91,7 +71,8 @@ public class EquipmentTypeDTO {
      *
      * @return field schema string, or null if none
      */
-    public String getFieldSchema() {
+    @Override
+    public String fieldSchema() {
         return fieldSchema;
     }
 }

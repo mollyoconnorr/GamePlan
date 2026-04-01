@@ -8,6 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Service responsible for creating and delivering notifications to users.
+ */
 @Service
 public class NotificationService {
 
@@ -17,6 +20,12 @@ public class NotificationService {
         this.notificationRepository = notificationRepository;
     }
 
+    /**
+     * Creates a new notification for the provided user with the supplied message.
+     *
+     * @param user    target user
+     * @param message notification message
+     */
     @Transactional
     public void createNotification(User user, String message) {
         Notification notification = new Notification();
@@ -25,6 +34,12 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
+    /**
+     * Fetches unread notifications for the user and marks them as read.
+     *
+     * @param user target user
+     * @return list of notifications that were unread
+     */
     @Transactional
     public List<Notification> fetchUnreadAndMarkRead(User user) {
         List<Notification> unread = notificationRepository.findByUserAndReadFalse(user);

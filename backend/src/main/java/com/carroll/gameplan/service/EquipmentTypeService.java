@@ -1,7 +1,15 @@
 package com.carroll.gameplan.service;
 
+import com.carroll.gameplan.dto.CreateEquipmentTypeRequest;
+import com.carroll.gameplan.dto.EquipmentAttributeDTO;
 import com.carroll.gameplan.dto.EquipmentTypeAttributeDTO;
+import com.carroll.gameplan.dto.EquipmentTypeDTO;
+import com.carroll.gameplan.dto.EquipmentTypeUpdateRequest;
+import com.carroll.gameplan.dto.EquipmentWithReservationsDTO;
+import com.carroll.gameplan.dto.ReservationDTO;
+import com.carroll.gameplan.model.Equipment;
 import com.carroll.gameplan.model.EquipmentType;
+import com.carroll.gameplan.model.Reservation;
 import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.EquipmentTypeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Service class for handling business logic related to {@link EquipmentType}.
@@ -85,6 +94,84 @@ public class EquipmentTypeService {
     }
 
     /**
+     * Lists all equipment types available in the application.
+     *
+     * @return list of equipment type DTOs
+     */
+    public List<EquipmentTypeDTO> listEquipmentTypes() {
+        return equipmentTypeRepository.findAll().stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    /**
+     * Creates a new equipment type from the provided request.
+     */
+    public EquipmentTypeDTO createEquipmentType(CreateEquipmentTypeRequest request) {
+        String name = requireName(request.getName());
+        ensureNameAvailable(name, null);
+
+        EquipmentType type = new EquipmentType();
+        type.setName(name);
+        type.setFieldSchema(trimToNull(request.getFieldSchema()));
+        type.setColor(trimToNull(request.getColor()));
+
+        return toDto(equipmentTypeRepository.save(type));
+    }
+
+    /**
+     * Updates the metadata of an existing equipment type.
+     */
+    public EquipmentTypeDTO updateEquipmentType(Long id, EquipmentTypeUpdateRequest request) {
+        EquipmentType type = fetchEquipmentType(id);
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            String trimmed = request.getName().trim();
+            ensureNameAvailable(trimmed, id);
+            type.setName(trimmed);
+        }
+
+        if (request.getColor() != null) {
+            type.setColor(trimToNull(request.getColor()));
+        }
+
+        if (request.getFieldSchema() != null) {
+            type.setFieldSchema(trimToNull(request.getFieldSchema()));
+        }
+
+        return toDto(equipmentTypeRepository.save(type));
+    }
+
+    /**
+     * Returns every attribute value stored on equipment of this type.
+     */
+    public List<EquipmentAttributeDTO> getUniqueAttributes(Long id) {
+        EquipmentType type = fetchEquipmentType(id);
+        if (type.getEquipmentList() == null) {
+            return List.of();
+        }
+
+        return type.getEquipmentList().stream()
+                .filter(e -> e.getAttributes() != null)
+                .flatMap(e -> e.getAttributes().stream())
+                .map(attr -> new EquipmentAttributeDTO(attr.getName(), attr.getValue()))
+                .distinct()
+                .toList();
+    }
+
+    /**
+     * Returns equipment along with existing reservations, optionally filtering by attribute.
+     */
+    public List<EquipmentWithReservationsDTO> getEquipmentWithReservations(Long typeId,
+                                                                          String attrName,
+                                                                          String attrValue) {
+        return equipmentRepository.findByTypeAndAttribute(typeId, attrName, attrValue)
+                .stream()
+                .map(this::toEquipmentWithReservations)
+                .toList();
+    }
+
+    /**
      * Retrieves all attribute definitions for a given equipment type.
      * <p>
      * This method loads the EquipmentType from the database and parses its
@@ -140,5 +227,60 @@ public class EquipmentTypeService {
         // Delete every equipment that belongs to this type; cascade removes reservations.
         equipmentRepository.deleteAll(type.getEquipmentList());
         equipmentTypeRepository.delete(type);
+    }
+
+    private EquipmentType fetchEquipmentType(Long id) {
+        return equipmentTypeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("EquipmentType not found"));
+    }
+
+    private String requireName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Equipment type name is required");
+        }
+        return name.trim();
+    }
+
+    private void ensureNameAvailable(String name, Long ignoreId) {
+        boolean taken = equipmentTypeRepository.findAll().stream()
+                .anyMatch(existing -> !Objects.equals(existing.getId(), ignoreId)
+                        && existing.getName().equalsIgnoreCase(name));
+        if (taken) {
+            throw new IllegalArgumentException("Equipment type name already exists");
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private EquipmentTypeDTO toDto(EquipmentType type) {
+        return new EquipmentTypeDTO(
+                type.getId(),
+                type.getName(),
+                type.getFieldSchema() != null && !type.getFieldSchema().isBlank(),
+                type.getColor(),
+                type.getFieldSchema()
+        );
+    }
+
+    private EquipmentWithReservationsDTO toEquipmentWithReservations(Equipment equipment) {
+        List<EquipmentAttributeDTO> attributes = equipment.getAttributes() == null
+                ? List.of()
+                : equipment.getAttributes().stream()
+                .map(attr -> new EquipmentAttributeDTO(attr.getName(), attr.getValue()))
+                .toList();
+
+        List<ReservationDTO> reservations = equipment.getReservations() == null
+                ? List.of()
+                : equipment.getReservations().stream()
+                .map(res -> new ReservationDTO(res.getId(), res.getStartDatetime(), res.getEndDatetime()))
+                .toList();
+
+        return new EquipmentWithReservationsDTO(equipment.getId(), equipment.getName(), attributes, reservations);
     }
 }

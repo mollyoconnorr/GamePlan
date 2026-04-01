@@ -3,21 +3,25 @@ package com.carroll.gameplan.dto;
 /**
  * Response payload returned when an equipment status update occurs.
  */
-public class EquipmentStatusUpdateResponse {
+public record EquipmentStatusUpdateResponse(EquipmentDTO equipment, int canceledReservations) {
 
-    private final EquipmentDTO equipment;
-    private final int canceledReservations;
-
-    public EquipmentStatusUpdateResponse(EquipmentDTO equipment, int canceledReservations) {
-        this.equipment = equipment;
-        this.canceledReservations = canceledReservations;
-    }
-
-    public EquipmentDTO getEquipment() {
+    /**
+     * Gets the updated equipment representation.
+     *
+     * @return equipment DTO
+     */
+    @Override
+    public EquipmentDTO equipment() {
         return equipment;
     }
 
-    public int getCanceledReservations() {
+    /**
+     * Gets the number of reservations canceled due to the status change.
+     *
+     * @return canceled reservation count
+     */
+    @Override
+    public int canceledReservations() {
         return canceledReservations;
     }
 }

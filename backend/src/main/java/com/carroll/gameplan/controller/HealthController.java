@@ -21,7 +21,7 @@ public class HealthController {
      * Health endpoint that returns status and timestamp.
      */
     @GetMapping("/health")
-    public Map<String, Object> health(){
+    public Map<String, Object> health() {
         logger.info("Health endpoint called");
         return Map.of("status", "UP",
                 "time", Instant.now().toString(),

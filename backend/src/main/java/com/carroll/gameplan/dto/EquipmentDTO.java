@@ -14,76 +14,154 @@ public class EquipmentDTO {
     /**
      * Unique identifier of the equipment.
      */
+    /**
+     * Unique identifier of the equipment.
+     */
     private Long id;
 
     /**
      * Name of the equipment.
+     */
+    /**
+     * Equipment display name.
      */
     private String name;
 
     /**
      * Status of the equipment (e.g., AVAILABLE, RESERVED).
      */
+    /**
+     * Current status label for the equipment (AVAILABLE, etc.).
+     */
     private String status;
 
     /**
      * Name of the equipment type this equipment belongs to.
      */
+    /**
+     * Human-readable name of the equipment type.
+     */
     private String typeName;
 
+    /**
+     * Identifier of the equipment type.
+     */
     private Long typeId;
 
     /**
      * List of attribute DTOs describing additional properties of the equipment.
      */
+    /**
+     * Attribute list describing equipment properties.
+     */
     private List<AttributeDTO> attributes;
 
     // ===== Getters & Setters =====
 
+    /**
+     * Gets the equipment identifier.
+     *
+     * @return equipment ID
+     */
     public Long getId() {
         return id;
     }
 
+    /**
+     * Sets the equipment identifier.
+     *
+     * @param id equipment ID
+     */
     public void setId(Long id) {
         this.id = id;
     }
 
+    /**
+     * Gets the equipment name.
+     *
+     * @return equipment name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Sets the equipment name.
+     *
+     * @param name equipment name
+     */
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * Gets the equipment status.
+     *
+     * @return status string
+     */
     public String getStatus() {
         return status;
     }
 
+    /**
+     * Sets the equipment status.
+     *
+     * @param status status string
+     */
     public void setStatus(String status) {
         this.status = status;
     }
 
+    /**
+     * Gets the equipment type name.
+     *
+     * @return type name
+     */
     public String getTypeName() {
         return typeName;
     }
 
+    /**
+     * Sets the equipment type name.
+     *
+     * @param typeName type name
+     */
     public void setTypeName(String typeName) {
         this.typeName = typeName;
     }
 
+    /**
+     * Gets the equipment type identifier.
+     *
+     * @return type ID
+     */
     public Long getTypeId() {
         return typeId;
     }
 
+    /**
+     * Sets the equipment type identifier.
+     *
+     * @param typeId type ID
+     */
     public void setTypeId(Long typeId) {
         this.typeId = typeId;
     }
 
+    /**
+     * Gets the attribute list.
+     *
+     * @return list of attribute DTOs
+     */
     public List<AttributeDTO> getAttributes() {
         return attributes;
     }
 
+    /**
+     * Sets the attribute list.
+     *
+     * @param attributes list of attribute DTOs
+     */
     public void setAttributes(List<AttributeDTO> attributes) {
         this.attributes = attributes;
     }
