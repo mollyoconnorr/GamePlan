@@ -66,7 +66,7 @@ public class EquipmentTypeService {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode schema = mapper.readTree(fieldSchema);
 
-            schema.fields().forEachRemaining(field -> {
+            schema.properties().forEach(field -> {
                 String name = field.getKey();
                 JsonNode attrNode = field.getValue();
 

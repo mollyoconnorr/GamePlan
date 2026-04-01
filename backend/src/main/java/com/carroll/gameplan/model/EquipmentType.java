@@ -121,7 +121,7 @@ public class EquipmentType {
             JsonNode attrNode = schema.get(attributeName);
             if (attrNode != null && attrNode.has("options")) {
                 List<String> options = new ArrayList<>();
-                attrNode.get("options").forEach(n -> options.add(n.asText()));
+                attrNode.get("options").forEach(n -> options.add(n.asString()));
                 return options;
             }
         } catch (Exception e) {
