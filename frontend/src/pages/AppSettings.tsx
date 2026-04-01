@@ -240,27 +240,6 @@ export default function AppSettings(props: AppSettingProps) {
         }
     };
 
-    // Field handlers update local input state first, then attempt to apply valid values.
-    const updateNumDays = (value: string) => {
-        setNumDaysInput(value);
-    };
-
-    const updateTimeStep = (value: string) => {
-        setTimeStepInput(value);
-    };
-
-    const updateMaxResTime = (value: string) => {
-        setMaxResTimeInput(value);
-    };
-
-    const updateStartTime = (value: string) => {
-        setStartTimeInput(value);
-    };
-
-    const updateEndTime = (value: string) => {
-        setEndTimeInput(value);
-    };
-
     return (
         <>
             <div className="flex flex-wrap gap-2">
@@ -325,7 +304,7 @@ export default function AppSettings(props: AppSettingProps) {
                                 max={30}
                                 step={1}
                                 value={numDaysInput}
-                                onChange={(event) => updateNumDays(event.target.value)}
+                                onChange={(event) => setNumDaysInput(event.target.value)}
                                 className={getInputClassName("numDays")}
                                 aria-invalid={Boolean(errors.numDays)}
                             />
@@ -344,7 +323,7 @@ export default function AppSettings(props: AppSettingProps) {
                                 min={15}
                                 step={15}
                                 value={timeStepInput}
-                                onChange={(event) => updateTimeStep(event.target.value)}
+                                onChange={(event) => setTimeStepInput(event.target.value)}
                                 className={getInputClassName("timeStep")}
                                 aria-invalid={Boolean(errors.timeStep)}
                             />
@@ -363,7 +342,7 @@ export default function AppSettings(props: AppSettingProps) {
                                 min={15}
                                 step={15}
                                 value={maxResTimeInput}
-                                onChange={(event) => updateMaxResTime(event.target.value)}
+                                onChange={(event) => setMaxResTimeInput(event.target.value)}
                                 className={getInputClassName("maxResTime")}
                                 aria-invalid={Boolean(errors.maxResTime)}
                             />
@@ -381,7 +360,7 @@ export default function AppSettings(props: AppSettingProps) {
                                 type="time"
                                 step={timeStepSeconds}
                                 value={startTimeInput}
-                                onChange={(event) => updateStartTime(event.target.value)}
+                                onChange={(event) => setStartTimeInput(event.target.value)}
                                 className={getInputClassName("startTime")}
                                 aria-invalid={Boolean(errors.startTime)}
                             />
@@ -399,7 +378,7 @@ export default function AppSettings(props: AppSettingProps) {
                                 type="time"
                                 step={timeStepSeconds}
                                 value={endTimeInput}
-                                onChange={(event) => updateEndTime(event.target.value)}
+                                onChange={(event) => setEndTimeInput(event.target.value)}
                                 className={getInputClassName("endTime")}
                                 aria-invalid={Boolean(errors.endTime)}
                             />
