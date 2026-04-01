@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type {CalendarData} from "../types.ts";
 
 interface DateTimeRangePickerProps extends CalendarData {
     // controlled values
