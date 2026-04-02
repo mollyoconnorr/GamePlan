@@ -9,13 +9,19 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.util.Map;
 
+/**
+ * Exposes a minimal health check for uptime monitoring.
+ */
 @RestController
 @RequestMapping("/api")
 public class HealthController {
     private final Logger logger = LoggerFactory.getLogger(HealthController.class);
 
+    /**
+     * Health endpoint that returns status and timestamp.
+     */
     @GetMapping("/health")
-    public Map<String, Object> health(){
+    public Map<String, Object> health() {
         logger.info("Health endpoint called");
         return Map.of("status", "UP",
                 "time", Instant.now().toString(),

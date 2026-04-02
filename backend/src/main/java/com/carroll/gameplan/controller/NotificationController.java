@@ -6,12 +6,14 @@ import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.service.NotificationService;
 import com.carroll.gameplan.service.UserService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * Endpoint for users to read inbox/notifications.
+ * Provides the logged-in user with stored notifications such as reservation cancellations.
  */
 @RestController
 @RequestMapping("/api/notifications")
@@ -26,6 +28,9 @@ public class NotificationController {
         this.userService = userService;
     }
 
+    /**
+     * Reads and clears the user's unread notifications.
+     */
     @GetMapping
     public List<NotificationResponse> getNotifications(OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);

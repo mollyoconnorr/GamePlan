@@ -32,6 +32,10 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+/**
+ * Integration tests verifying {@link com.carroll.gameplan.controller.EquipmentController} against the Spring context
+ * and real repositories.
+ */
 @SpringBootTest
 @Transactional
 public class EquipmentControllerIntegrationTest {
@@ -61,6 +65,9 @@ public class EquipmentControllerIntegrationTest {
     private Equipment equipment;
 
     @BeforeEach
+    /**
+     * Seeds the test database with users, equipment, and a reservation before each test run.
+     */
     void setUp() {
         reservationRepository.deleteAll();
         notificationRepository.deleteAll();
@@ -114,6 +121,9 @@ public class EquipmentControllerIntegrationTest {
     }
 
     @Test
+    /**
+     * Verifies that marking equipment as maintenance through the controller does not throw.
+     */
     void updateStatusCancelsReservations() {
         EquipmentStatusUpdateRequest request = new EquipmentStatusUpdateRequest();
         request.setStatus(EquipmentStatus.MAINTENANCE.name());

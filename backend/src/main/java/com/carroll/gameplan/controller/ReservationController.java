@@ -46,6 +46,9 @@ public class ReservationController {
         this.userService = userService;
     }
 
+    /**
+     * Returns the equipment type color that the frontend can use to paint the reservation event.
+     */
     private String resolveEquipmentColor(Reservation reservation) {
         if (reservation == null ||
                 reservation.getEquipment() == null ||
@@ -110,7 +113,7 @@ public class ReservationController {
      * @param authentication The OAuth2 authentication token of the user.
      * @param request        The reservation details (equipmentId, start, end as ISO-8601).
      * @return A {@link ResponseEntity} containing the created {@link ReservationResponse}
-     *         with HTTP status 201 (Created) and a Location header.
+     * with HTTP status 201 (Created) and a Location header.
      */
     @PostMapping
     public ResponseEntity<ReservationResponse> createReservation(
@@ -207,15 +210,13 @@ public class ReservationController {
     }
 
     /**
-     * Cancels an existing reservation.
+     * Cancels a reservation the calling user owns (or overrides as a trainer).
      *
-     * @param id The reservation ID.
-     * @return The cancelled {@link Reservation}.
-     * @throws Exception If the reservation does not exist.
+     * @return 204 No Content when cancellation is successful
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> cancelReservation(@PathVariable Long id,
-                                                    OAuth2AuthenticationToken authentication) throws Exception {
+                                                    OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         reservationService.cancelReservation(id, user);
         logger.info("cancelReservation: Reservation #{} cancelled", id);

@@ -1,30 +1,18 @@
 package com.carroll.gameplan.controller;
 
 import com.carroll.gameplan.dto.request.CreateEquipmentRequest;
-import com.carroll.gameplan.dto.response.EquipmentDTO;
 import com.carroll.gameplan.dto.request.EquipmentStatusUpdateRequest;
-import com.carroll.gameplan.dto.response.EquipmentStatusUpdateResponse;
 import com.carroll.gameplan.dto.request.EquipmentUpdateRequest;
-import com.carroll.gameplan.model.Equipment;
-import com.carroll.gameplan.model.EquipmentAttribute;
-import com.carroll.gameplan.model.EquipmentStatus;
-import com.carroll.gameplan.model.EquipmentType;
-import com.carroll.gameplan.model.Reservation;
+import com.carroll.gameplan.dto.response.EquipmentDTO;
+import com.carroll.gameplan.dto.response.EquipmentStatusUpdateResponse;
 import com.carroll.gameplan.model.User;
-import com.carroll.gameplan.repository.EquipmentRepository;
-import com.carroll.gameplan.repository.EquipmentTypeRepository;
-import com.carroll.gameplan.service.NotificationService;
-import com.carroll.gameplan.service.ReservationService;
+import com.carroll.gameplan.service.EquipmentService;
 import com.carroll.gameplan.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * REST controller for managing Equipment.
@@ -37,30 +25,19 @@ import java.util.Map;
 @RequestMapping("/api/equipment")
 public class EquipmentController {
 
-    private final EquipmentRepository equipmentRepository;
-    private final EquipmentTypeRepository equipmentTypeRepository;
+    private final EquipmentService equipmentService;
     private final UserService userService;
-    private final ReservationService reservationService;
-    private final NotificationService notificationService;
-    private static final DateTimeFormatter NOTIFICATION_FORMATTER =
-            DateTimeFormatter.ofPattern("EEEE, MMM d 'at' h:mm a");
 
     /**
      * Constructor for EquipmentController.
      *
-     * @param equipmentRepository Repository for Equipment entities
-     * @param equipmentTypeRepository Repository for EquipmentType entities
+     * @param equipmentService Service handling equipment business logic
+     * @param userService      Service for resolving and authorizing users
      */
-    public EquipmentController(EquipmentRepository equipmentRepository,
-                               EquipmentTypeRepository equipmentTypeRepository,
-                               UserService userService,
-                               ReservationService reservationService,
-                               NotificationService notificationService) {
-        this.equipmentRepository = equipmentRepository;
-        this.equipmentTypeRepository = equipmentTypeRepository;
+    public EquipmentController(EquipmentService equipmentService,
+                               UserService userService) {
+        this.equipmentService = equipmentService;
         this.userService = userService;
-        this.reservationService = reservationService;
-        this.notificationService = notificationService;
     }
 
     /**
@@ -76,10 +53,7 @@ public class EquipmentController {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
 
-        return equipmentRepository.findAll()
-                .stream()
-                .map(this::toDto)
-                .toList();
+        return equipmentService.listAllEquipment();
     }
 
     /**
@@ -92,132 +66,50 @@ public class EquipmentController {
      * @return The saved Equipment entity
      */
     @PostMapping
-    public Equipment createEquipment(OAuth2AuthenticationToken authentication,
-                                     @RequestBody CreateEquipmentRequest request) {
+    public EquipmentDTO createEquipment(OAuth2AuthenticationToken authentication,
+                                        @RequestBody CreateEquipmentRequest request) {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
 
-        // 1. Get EquipmentType
-        EquipmentType type = equipmentTypeRepository.findById(request.getEquipmentTypeId())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid equipment type"));
-
-        // 2. Create Equipment
-        Equipment equipment = new Equipment();
-        equipment.setName(request.getName());
-        equipment.setEquipmentType(type);
-        equipment.setStatus(EquipmentStatus.AVAILABLE); // default
-
-        // 3. Create attributes
-        List<EquipmentAttribute> attributeList = new ArrayList<>();
-
-        if (request.getAttributes() != null) {
-            for (Map.Entry<String, String> entry : request.getAttributes().entrySet()) {
-                EquipmentAttribute attr = new EquipmentAttribute();
-                attr.setName(entry.getKey());
-                attr.setValue(entry.getValue());
-                attr.setEquipment(equipment);
-                attributeList.add(attr);
-            }
-        }
-
-        equipment.setAttributes(attributeList);
-        return equipmentRepository.save(equipment);
+        return equipmentService.createEquipment(request);
     }
 
+    /**
+     * Returns a single {@link EquipmentDTO} for the given ID after validating trainer access.
+     */
     @GetMapping("/{id}")
     public EquipmentDTO getEquipment(@PathVariable Long id,
                                      OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
 
-        Equipment equipment = equipmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment not found: " + id));
-
-        return toDto(equipment);
+        return equipmentService.getEquipment(id);
     }
 
+    /**
+     * Updates metadata (name, type, attributes) of an equipment instance.
+     */
     @PutMapping("/{id}")
-    @Transactional
     public EquipmentDTO updateEquipment(@PathVariable Long id,
                                         @RequestBody EquipmentUpdateRequest request,
                                         OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
 
-        Equipment equipment = equipmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment not found: " + id));
-
-        if (request.getName() != null && !request.getName().isBlank()) {
-            equipment.setName(request.getName().trim());
-        }
-
-        if (request.getEquipmentTypeId() != null) {
-            EquipmentType type = equipmentTypeRepository.findById(request.getEquipmentTypeId())
-                    .orElseThrow(() -> new IllegalArgumentException("Equipment type not found: " + request.getEquipmentTypeId()));
-            equipment.setEquipmentType(type);
-        }
-
-        List<EquipmentAttribute> newAttributes = new ArrayList<>();
-        if (request.getAttributes() != null) {
-            request.getAttributes().entrySet().stream()
-                    .filter(entry -> entry.getKey() != null && !entry.getKey().isBlank())
-                    .forEach(entry -> {
-                        EquipmentAttribute attr = new EquipmentAttribute();
-                        attr.setName(entry.getKey().trim());
-                        attr.setValue(entry.getValue());
-                        attr.setEquipment(equipment);
-                        newAttributes.add(attr);
-                    });
-        }
-
-        List<EquipmentAttribute> existingAttributes = equipment.getAttributes();
-        if (existingAttributes == null) {
-            existingAttributes = new ArrayList<>();
-            equipment.setAttributes(existingAttributes);
-        }
-        existingAttributes.clear();
-        existingAttributes.addAll(newAttributes);
-
-        Equipment updated = equipmentRepository.save(equipment);
-        return toDto(updated);
+        return equipmentService.updateEquipment(id, request);
     }
 
+    /**
+     * Updates the persisted status (AVAILABLE, MAINTENANCE, etc.) of the equipment.
+     */
     @PutMapping("/{id}/status")
-    @Transactional
     public EquipmentStatusUpdateResponse updateEquipmentStatus(@PathVariable Long id,
-                                              @RequestBody EquipmentStatusUpdateRequest request,
-                                              OAuth2AuthenticationToken authentication) {
+                                                               @RequestBody EquipmentStatusUpdateRequest request,
+                                                               OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
 
-        Equipment equipment = equipmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Equipment not found: " + id));
-
-        EquipmentStatus nextStatus;
-        try {
-            nextStatus = EquipmentStatus.valueOf(request.getStatus());
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid equipment status: " + request.getStatus());
-        }
-        int canceled = 0;
-        if (EquipmentStatus.MAINTENANCE.equals(nextStatus)) {
-            List<Reservation> activeReservations = reservationService.getActiveReservationsForEquipment(id);
-            for (Reservation reservation : activeReservations) {
-                String equipmentName = reservation.getEquipment() != null
-                        ? reservation.getEquipment().getName()
-                        : "equipment";
-                String formattedStart = reservation.getStartDatetime().format(NOTIFICATION_FORMATTER);
-                User reservationUser = reservation.getUser();
-
-                reservationService.cancelReservation(reservation.getId(), user);
-                cancelledMessage(reservationUser, equipmentName, formattedStart);
-                canceled++;
-            }
-        }
-
-        equipment.setStatus(nextStatus);
-        Equipment updated = equipmentRepository.save(equipment);
-        return new EquipmentStatusUpdateResponse(toDto(updated), canceled);
+        return equipmentService.updateEquipmentStatus(id, request, user);
     }
 
     /**
@@ -233,52 +125,10 @@ public class EquipmentController {
                                                 OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
-        if (!equipmentRepository.existsById(id)) {
+        if (!equipmentService.deleteEquipment(id)) {
             return ResponseEntity.notFound().build();
         }
 
-        equipmentRepository.deleteById(id);
         return ResponseEntity.noContent().build();
-    }
-
-    private void cancelledMessage(User reservationUser, String equipmentName, String formattedStart) {
-        if (reservationUser == null || equipmentName == null || formattedStart == null) {
-            return;
-        }
-
-        String message = String.format(
-                "Your reservation for %s on %s was cancelled because the equipment entered maintenance.",
-                equipmentName,
-                formattedStart
-        );
-        notificationService.createNotification(reservationUser, message);
-    }
-
-    private EquipmentDTO toDto(Equipment equipment) {
-        EquipmentDTO dto = new EquipmentDTO();
-        dto.setId(equipment.getId());
-        dto.setName(equipment.getName());
-        dto.setStatus(equipment.getStatus() != null ? equipment.getStatus().name() : null);
-        dto.setTypeName(equipment.getEquipmentType() != null
-                ? equipment.getEquipmentType().getName()
-                : null);
-        dto.setTypeId(equipment.getEquipmentType() != null
-                ? equipment.getEquipmentType().getId()
-                : null);
-
-        if (equipment.getAttributes() != null) {
-            List<EquipmentDTO.AttributeDTO> attrList = equipment.getAttributes()
-                    .stream()
-                    .map(attr -> {
-                        EquipmentDTO.AttributeDTO attrDTO = new EquipmentDTO.AttributeDTO();
-                        attrDTO.setName(attr.getName());
-                        attrDTO.setValue(attr.getValue());
-                        return attrDTO;
-                    })
-                    .toList();
-            dto.setAttributes(attrList);
-        }
-
-        return dto;
     }
 }

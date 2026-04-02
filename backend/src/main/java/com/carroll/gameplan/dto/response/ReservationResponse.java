@@ -27,6 +27,10 @@ public class ReservationResponse {
      * The end datetime of the reservation as a string.
      */
     private String end;
+
+    /**
+     * Color used for client-side display.
+     */
     private String color;
 
     /**
@@ -101,10 +105,20 @@ public class ReservationResponse {
         this.end = end;
     }
 
+    /**
+     * Gets the color associated with this reservation.
+     *
+     * @return color string
+     */
     public String getColor() {
         return color;
     }
 
+    /**
+     * Sets the color associated with this reservation.
+     *
+     * @param color color string
+     */
     public void setColor(String color) {
         this.color = color;
     }
