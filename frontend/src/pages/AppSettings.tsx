@@ -27,6 +27,7 @@ interface AppSettingProps extends CalendarData {
     setTimeStep: (timeStep: number) => void;
     setMaxResTime: (maxResTime: number) => void;
     setNumDays: (numDays: number) => void;
+    refreshCalendarData: () => Promise<void>;
     loading: boolean;
 }
 
@@ -119,6 +120,12 @@ const validateSettings = (inputs: SettingsInputs): ValidationResult => {
 
 export default function AppSettings(props: AppSettingProps) {
     const navigate = useNavigate();
+
+    const refreshMainCalendar = () => {
+        void props.refreshCalendarData().catch((err) => {
+            console.error("Failed to refresh main calendar data:", err);
+        });
+    };
 
     // Keep editable input text local so users can type intermediate invalid values.
     const [firstDayInput, setFirstDayInput] =  useState<"week" | "day">(props.firstDateToShow);
@@ -351,6 +358,7 @@ export default function AppSettings(props: AppSettingProps) {
             setSelectedBlockStartTime("");
             setSelectedBlockEndTime("");
             setBlockReasonInput("");
+            refreshMainCalendar();
         } catch (err) {
             const message = err instanceof Error ? err.message : "Failed to add block.";
             setBlockErrorMessage(message);
@@ -377,6 +385,7 @@ export default function AppSettings(props: AppSettingProps) {
 
         setBlockedSlots((previous) => previous.filter((slot) => slot.id !== id));
         setToastMessage("Block removed.");
+        refreshMainCalendar();
     };
 
     // Highlight invalid fields while reusing the base input styling.
@@ -416,6 +425,7 @@ export default function AppSettings(props: AppSettingProps) {
         props.setStartTime(updated.startTime);
         props.setEndTime(updated.endTime);
         setToastMessage("Settings saved.");
+        refreshMainCalendar();
     };
 
     return (

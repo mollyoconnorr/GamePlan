@@ -196,6 +196,7 @@ function AppShell() {
                             setTimeStep={setTimeStep}
                             setMaxResTime={setMaxResTime}
                             setNumDays={setNumDays}
+                            refreshCalendarData={loadReservations}
                             loading={loading}
                         />)} />
                     <Route path="admin/users" element={renderForPrivileged(<AdminUsers />)} />
