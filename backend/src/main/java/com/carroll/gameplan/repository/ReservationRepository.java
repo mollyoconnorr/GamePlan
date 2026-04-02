@@ -44,6 +44,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             Equipment equipment, LocalDateTime end, LocalDateTime start, ReservationStatus status
     );
 
+    List<Reservation> findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
+            LocalDateTime end, LocalDateTime start, ReservationStatus status
+    );
+
     List<Reservation> findByUserAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
             User user, LocalDateTime end, LocalDateTime start, ReservationStatus status
     );
