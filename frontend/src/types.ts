@@ -113,7 +113,7 @@ export type PendingDelete = {
     name: string;
 };
 
-export type CalendarData = {
+export interface CalendarData {
     firstDate: Dayjs;
     startTime: Dayjs;
     endTime: Dayjs;

@@ -25,6 +25,7 @@ import AllEquipment from "./pages/AllEquipment";
 import EditEquipment from "./pages/EditEquipment.tsx";
 import AppSettings from "./pages/AppSettings.tsx";
 import dayjs from "dayjs";
+import {getAppSettings} from "./api/Settings.ts";
 
 function AppShell() {
     // user is guaranteed by RequireAuth
@@ -72,12 +73,40 @@ function AppShell() {
     }, [loadReservations]);
 
     const [firstDateToShow, setFirstDateToShow] = useState<"week" | "day">("week");
-    const [firstDate, ] = useState(() => dayjs().startOf(firstDateToShow));
-    const [startTime, setStartTime] = useState(dayjs().startOf("day").hour(8).minute(0));
-    const [endTime, setEndTime] = useState(dayjs().startOf("day").hour(17).minute(0));
-    const [timeStep, setTimeStep] = useState(15);
-    const [maxResTime, setMaxResTime] = useState(30);
-    const [numDays, setNumDays] = useState(7);
+    const [firstDate, setFirstDate] = useState(dayjs());
+
+    const [startTime, setStartTime] = useState(dayjs());
+    const [endTime, setEndTime] = useState(dayjs());
+    const [timeStep, setTimeStep] = useState(0);
+    const [maxResTime, setMaxResTime] = useState(0);
+    const [numDays, setNumDays] = useState(0);
+
+    useEffect(() => {
+        async function getSettings() {
+            setLoading(true);
+            try {
+                const settings = await getAppSettings();
+
+                setFirstDateToShow(settings.firstDateToShow);
+                setFirstDate(settings.firstDate);
+                setStartTime(settings.startTime);
+                setEndTime(settings.endTime);
+                setTimeStep(settings.timeStep);
+                setMaxResTime(settings.maxResTime);
+                setNumDays(settings.numDays);
+            } catch (err: any) {
+                console.log(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        getSettings();
+    }, []);
+
+    useEffect(() => {
+        console.log("Time to update in db");
+    }, [firstDateToShow,startTime,endTime,timeStep,maxResTime,numDays]);
 
     return (
         <div className="min-h-screen flex flex-col">
