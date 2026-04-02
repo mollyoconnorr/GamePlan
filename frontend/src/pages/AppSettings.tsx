@@ -1,13 +1,21 @@
 import Button from "../components/Button.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import {useNavigate} from "react-router-dom";
-import type {CalendarData, ParsedTime} from "../types.ts";
+import type {CalendarData, CalendarEvent, ParsedTime} from "../types.ts";
 import dayjs, {type Dayjs} from "dayjs";
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import Calendar from "../components/calendar/Calendar.tsx";
 import {parseTime, parseWholeNumber} from "../util/Time.ts";
 import {type ParsedAppSettingsData, updateAppSettings} from "../api/Settings.ts";
 import Spinner from "../components/Spinner.tsx";
+import ReservationDateTimePicker from "../components/ReservationDateTimePicker.tsx";
+import Toast from "../components/Toast.tsx";
+import {
+    createScheduleBlock,
+    deleteScheduleBlock,
+    getScheduleBlocks
+} from "../api/Blocks.ts";
+import {parseRawBlockToEvent, sortEventsByStartIso} from "../util/ParseScheduleBlock.ts";
 
 // Parent-owned app settings plus callbacks to persist validated updates.
 interface AppSettingProps extends CalendarData {
@@ -149,6 +157,209 @@ export default function AppSettings(props: AppSettingProps) {
     const hasErrors = uniqueErrorMessages.length > 0;
     // HTML time input expects seconds for `step`; default to 15 minutes when invalid.
     const timeStepSeconds = hasValidTimeStep && parsedTimeStep ? parsedTimeStep * 60 : 900;
+    // Calendar preview always uses a valid value: current draft when valid, otherwise persisted setting.
+    const previewFirstDate = useMemo(() => dayjs().startOf(firstDayInput), [firstDayInput]);
+    const previewNumDays = validation.parsedNumDays ?? props.numDays;
+    const previewTimeStep = validation.parsedTimeStep ?? props.timeStep;
+
+    // Build preview start/end times from valid draft fields so block picker stays in sync with settings edits.
+    const previewStartTime = useMemo(() => {
+        if (!validation.parsedStartTime) {
+            return props.startTime;
+        }
+
+        return props.startTime
+            .hour(validation.parsedStartTime.hour)
+            .minute(validation.parsedStartTime.minute)
+            .second(0)
+            .millisecond(0);
+    }, [props.startTime, validation.parsedStartTime]);
+
+    const previewEndTime = useMemo(() => {
+        if (!validation.parsedEndTime) {
+            return props.endTime;
+        }
+
+        return props.endTime
+            .hour(validation.parsedEndTime.hour)
+            .minute(validation.parsedEndTime.minute)
+            .second(0)
+            .millisecond(0);
+    }, [props.endTime, validation.parsedEndTime]);
+
+    // Allow block picker to span the full daily window while still respecting the configured step.
+    const blockMaxDuration = Math.max(
+        previewTimeStep,
+        previewEndTime.diff(previewStartTime, "minute")
+    );
+
+    // Block-creation form state (frontend controlled, persisted through /api/blocks).
+    const [selectedBlockDate, setSelectedBlockDate] = useState("");
+    const [selectedBlockStartTime, setSelectedBlockStartTime] = useState("");
+    const [selectedBlockEndTime, setSelectedBlockEndTime] = useState("");
+    const [blockReasonInput, setBlockReasonInput] = useState("");
+    const [blockedSlots, setBlockedSlots] = useState<CalendarEvent[]>([]);
+    const [blocksLoading, setBlocksLoading] = useState(false);
+    const [isSavingBlock, setIsSavingBlock] = useState(false);
+    const [blockErrorMessage, setBlockErrorMessage] = useState("");
+    const [blockToastMessage, setBlockToastMessage] = useState("");
+
+    const pendingBlockStart = selectedBlockDate && selectedBlockStartTime
+        ? dayjs(`${selectedBlockDate} ${selectedBlockStartTime}`, "YYYY-MM-DD HH:mm")
+        : null;
+    const pendingBlockEnd = selectedBlockDate && selectedBlockEndTime
+        ? dayjs(`${selectedBlockDate} ${selectedBlockEndTime}`, "YYYY-MM-DD HH:mm")
+        : null;
+
+    // Prevent creating overlapping blocks in the current dataset before calling the API.
+    const pendingBlockConflict = useMemo(() => {
+        if (!pendingBlockStart || !pendingBlockEnd) {
+            return false;
+        }
+
+        return blockedSlots.some((slot) => {
+            if (!slot.startIso || !slot.endIso) {
+                return false;
+            }
+
+            const slotStart = dayjs(slot.startIso);
+            const slotEnd = dayjs(slot.endIso);
+            return pendingBlockStart.isBefore(slotEnd) && slotStart.isBefore(pendingBlockEnd);
+        });
+    }, [pendingBlockEnd, pendingBlockStart, blockedSlots]);
+
+    // Temporary event used only for live calendar preview before the block is saved.
+    const pendingBlock = pendingBlockStart && pendingBlockEnd
+        ? {
+            id: 0,
+            name: "Pending block",
+            date: pendingBlockStart.format("ddd M/D"),
+            startTime: pendingBlockStart.format("h:mm A"),
+            endTime: pendingBlockEnd.format("h:mm A"),
+            description: blockReasonInput.trim() || "Not added yet",
+            temp: true,
+            startIso: pendingBlockStart.toISOString(),
+            endIso: pendingBlockEnd.toISOString(),
+            color: pendingBlockConflict ? "#dc2626" : "#2563eb",
+            borderColor: pendingBlockConflict ? "#991b1b" : "#1d4ed8",
+            textColor: "#ffffff",
+            conflict: pendingBlockConflict,
+        } satisfies CalendarEvent
+        : null;
+
+    // Show persisted blocks plus the unsaved preview block in one calendar feed.
+    const blockedSlotsWithPreview = [
+        ...blockedSlots,
+        ...(pendingBlock ? [pendingBlock] : []),
+    ];
+
+    // Disable creation until selection is complete and we are not in a conflicting/loading state.
+    const addBlockDisabled =
+        !pendingBlockStart ||
+        !pendingBlockEnd ||
+        pendingBlockConflict ||
+        isSavingBlock ||
+        blocksLoading;
+
+    // Keep toast auto-dismiss behavior consistent with the rest of the app.
+    useEffect(() => {
+        if (!blockToastMessage) return;
+        const timeout = setTimeout(() => setBlockToastMessage(""), 2500);
+        return () => clearTimeout(timeout);
+    }, [blockToastMessage]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        // Hydrate the page with existing persisted blocks on first load.
+        const loadBlocks = async () => {
+            setBlocksLoading(true);
+            setBlockErrorMessage("");
+
+            try {
+                const data = await getScheduleBlocks();
+                if (cancelled) {
+                    return;
+                }
+
+                setBlockedSlots(sortEventsByStartIso(data.map(parseRawBlockToEvent)));
+            } catch (err) {
+                if (cancelled) {
+                    return;
+                }
+
+                const message = err instanceof Error ? err.message : "Failed to load existing blocks.";
+                setBlockErrorMessage(message);
+            } finally {
+                if (!cancelled) {
+                    setBlocksLoading(false);
+                }
+            }
+        };
+
+        void loadBlocks();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const handleAddBlock = async () => {
+        if (addBlockDisabled || !pendingBlockStart || !pendingBlockEnd) {
+            return;
+        }
+
+        // Save the block first; optimistic insertion is intentionally avoided so
+        // canceled-reservation counts and any server validations stay authoritative.
+        setIsSavingBlock(true);
+        setBlockErrorMessage("");
+
+        try {
+            const createdBlock = await createScheduleBlock({
+                start: pendingBlockStart.toISOString(),
+                end: pendingBlockEnd.toISOString(),
+                reason: blockReasonInput.trim() || undefined,
+            });
+
+            const canceledReservations = createdBlock.canceledReservations ?? 0;
+            const suffix = canceledReservations === 1 ? "" : "s";
+            const canceledMessage = canceledReservations > 0
+                ? ` ${canceledReservations} reservation${suffix} canceled.`
+                : "";
+
+            setBlockedSlots((previous) => sortEventsByStartIso([...previous, parseRawBlockToEvent(createdBlock)]));
+            setBlockToastMessage(`Block added.${canceledMessage}`);
+
+            setSelectedBlockDate("");
+            setSelectedBlockStartTime("");
+            setSelectedBlockEndTime("");
+            setBlockReasonInput("");
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to add block.";
+            setBlockErrorMessage(message);
+        } finally {
+            setIsSavingBlock(false);
+        }
+    };
+
+    const handleDeleteBlock = async (id: number) => {
+        // Pending preview blocks are local-only and should never hit DELETE API.
+        if (id <= 0) {
+            return;
+        }
+
+        setBlockErrorMessage("");
+
+        try {
+            await deleteScheduleBlock(id);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to remove block.";
+            setBlockErrorMessage(message);
+            throw err;
+        }
+
+        setBlockedSlots((previous) => previous.filter((slot) => slot.id !== id));
+        setBlockToastMessage("Block removed.");
+    };
 
     // Highlight invalid fields while reusing the base input styling.
     const getInputClassName = (field: SettingField) =>
@@ -188,6 +399,7 @@ export default function AppSettings(props: AppSettingProps) {
 
     return (
         <>
+            <Toast message={blockToastMessage} />
             <div className="flex flex-wrap gap-2">
                 <Button text="Back" className="bg-gray-200 hover:bg-gray-100" onClick={() => safeBack(navigate)} />
             </div>
@@ -353,25 +565,73 @@ export default function AppSettings(props: AppSettingProps) {
                     />
                 </div>}
 
+                <div className="rounded border bg-white p-6 shadow-sm space-y-4">
+                    <h2 className="text-2xl font-bold text-gray-900">Block Time Slots</h2>
+                    <p className="text-sm text-gray-500">
+                        Add persisted block events to mark unavailable windows.
+                    </p>
+
+                    <ReservationDateTimePicker
+                        firstDate={previewFirstDate}
+                        numDays={previewNumDays}
+                        startTime={previewStartTime}
+                        timeStep={previewTimeStep}
+                        endTime={previewEndTime}
+                        maxResTime={blockMaxDuration}
+                        selectedDate={selectedBlockDate}
+                        selectedStartTime={selectedBlockStartTime}
+                        selectedEndTime={selectedBlockEndTime}
+                        setSelectedDate={setSelectedBlockDate}
+                        setSelectedStartTime={setSelectedBlockStartTime}
+                        setSelectedEndTime={setSelectedBlockEndTime}
+                    />
+
+                    <div className="max-w-xl">
+                        <label className={labelClassName} htmlFor="block-reason">
+                            Block reason (optional)
+                        </label>
+                        <input
+                            id="block-reason"
+                            type="text"
+                            value={blockReasonInput}
+                            onChange={(event) => setBlockReasonInput(event.target.value)}
+                            placeholder="Example: Team lift, facility event, maintenance window"
+                            className={`${baseInputClassName} border-gray-300 focus:border-primary focus:ring-primary/30`}
+                        />
+                        <p className={helperTextClassName}>
+                            This note appears on the calendar when someone opens the blocked time slot.
+                        </p>
+                    </div>
+
+                    {pendingBlockConflict && (
+                        <p className="text-sm font-semibold text-red-600">
+                            This block overlaps an existing block on the preview calendar.
+                        </p>
+                    )}
+                    {blockErrorMessage && (
+                        <p className="text-sm font-semibold text-red-600">{blockErrorMessage}</p>
+                    )}
+
+                    <Button
+                        text={isSavingBlock ? "Adding..." : "Add Block"}
+                        className="text-white font-bold bg-slate-800 border-slate-900 hover:bg-slate-700 hover:border-slate-800 w-fit"
+                        onClick={handleAddBlock}
+                        disabled={addBlockDisabled}
+                    />
+                </div>
+
                 <h2 className="text-2xl font-bold text-gray-900">Calendar Preview</h2>
 
                 <Calendar
-                    firstDate={dayjs().startOf(firstDayInput)}
-                    numDays={validation.parsedNumDays ?? 7}
-                    startTime={props.startTime
-                        .hour(validation.parsedStartTime.hour)
-                        .minute(validation.parsedStartTime.minute)
-                        .second(0)
-                        .millisecond(0)}
-                    endTime={props.endTime
-                        .hour(validation.parsedEndTime.hour)
-                        .minute(validation.parsedEndTime.minute)
-                        .second(0)
-                        .millisecond(0)}
-                    timeStepMin={validation.parsedTimeStep ?? 15}
-                    variant={"trainer"} // TODO New variant?
-                    loading={props.loading}
-
+                    firstDate={previewFirstDate}
+                    numDays={previewNumDays}
+                    startTime={previewStartTime}
+                    endTime={previewEndTime}
+                    timeStepMin={previewTimeStep}
+                    variant={"trainer"}
+                    reservations={blockedSlotsWithPreview}
+                    onDeleteReservation={handleDeleteBlock}
+                    loading={props.loading || blocksLoading}
                 />
             </section>
         </>
