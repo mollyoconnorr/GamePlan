@@ -1,6 +1,6 @@
 import type {AdminUser} from "../types.ts";
 
-async function extractErrorMessage(response: Response, fallback: string) {
+export async function extractErrorMessage(response: Response, fallback: string) {
     const body = await response.text();
     if (!body) {
         return fallback;
@@ -29,7 +29,7 @@ export async function fetchAdminUsers() {
         throw new Error(message);
     }
 
-    return res.json() as Promise<AdminUser[]>;
+    return await res.json() as Promise<AdminUser[]>;
 }
 
 export async function updateUserRole(userId: number, role: string) {
@@ -47,7 +47,7 @@ export async function updateUserRole(userId: number, role: string) {
         throw new Error(message);
     }
 
-    return res.json() as Promise<AdminUser>;
+    return await res.json() as Promise<AdminUser>;
 }
 
 export async function promoteUserToTrainer(userId: number) {
@@ -80,5 +80,5 @@ export async function createAdminUser(request: CreateAdminUserRequest) {
         throw new Error(message);
     }
 
-    return res.json() as Promise<AdminUser>;
+    return await res.json() as Promise<AdminUser>;
 }
