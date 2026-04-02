@@ -1,0 +1,55 @@
+import {extractErrorMessage} from "./Admin.ts";
+import type {RawScheduleBlock} from "../types.ts";
+
+interface CreateScheduleBlockRequest {
+    start: string;
+    end: string;
+    reason?: string;
+}
+
+export async function getScheduleBlocks() {
+    // Trainer/admin-only endpoint that returns persisted global blocks.
+    const res = await fetch("/api/blocks", {
+        method: "GET",
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const message = await extractErrorMessage(res, "Failed to fetch schedule blocks");
+        throw new Error(message);
+    }
+
+    return await res.json() as Promise<RawScheduleBlock[]>;
+}
+
+export async function createScheduleBlock(request: CreateScheduleBlockRequest) {
+    // Creates a block and returns metadata (including canceled reservation count).
+    const res = await fetch("/api/blocks", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!res.ok) {
+        const message = await extractErrorMessage(res, "Failed to create schedule block");
+        throw new Error(message);
+    }
+
+    return await res.json() as Promise<RawScheduleBlock>;
+}
+
+export async function deleteScheduleBlock(id: number) {
+    // Soft-deletes a persisted block.
+    const res = await fetch(`/api/blocks/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const message = await extractErrorMessage(res, "Failed to delete schedule block");
+        throw new Error(message);
+    }
+}
