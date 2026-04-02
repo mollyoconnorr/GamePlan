@@ -26,6 +26,7 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final EquipmentRepository equipmentRepository;
+    private final ScheduleBlockService scheduleBlockService;
 
     /**
      * Constructor injection of repositories.
@@ -33,9 +34,12 @@ public class ReservationService {
      * @param reservationRepository repository for Reservation entities
      * @param equipmentRepository   repository for Equipment entities
      */
-    public ReservationService(ReservationRepository reservationRepository, EquipmentRepository equipmentRepository) {
+    public ReservationService(ReservationRepository reservationRepository,
+                              EquipmentRepository equipmentRepository,
+                              ScheduleBlockService scheduleBlockService) {
         this.reservationRepository = reservationRepository;
         this.equipmentRepository = equipmentRepository;
+        this.scheduleBlockService = scheduleBlockService;
     }
 
     // ===== Function 1: Get all reservations for a user =====
@@ -63,6 +67,14 @@ public class ReservationService {
      * @return the saved reservation
      */
     public Reservation createReservation(User user, Equipment equipment, LocalDateTime start, LocalDateTime end) {
+        if (end.isBefore(start) || end.equals(start)) {
+            throw new IllegalArgumentException("End time must be after start time.");
+        }
+
+        if (scheduleBlockService.hasActiveBlockConflict(start, end)) {
+            throw new IllegalArgumentException("This time slot is blocked by an admin.");
+        }
+
         // Check if equipment is already reserved for overlapping time slots
         final List<Reservation> existingReservations = reservationRepository
                 .findByEquipmentAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(equipment, start, end, ReservationStatus.ACTIVE);
@@ -76,9 +88,6 @@ public class ReservationService {
 
         if (!userConflicts.isEmpty()) {
             throw new IllegalArgumentException("You already have a reservation during that time.");
-        }
-        if (end.isBefore(start) || end.equals(start)) {
-            throw new IllegalArgumentException("End time must be after start time.");
         }
 
         // Create and save the new reservation
@@ -109,7 +118,7 @@ public class ReservationService {
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found: " + reservationId));
 
         boolean isOwner = reservation.getUser().getId().equals(actingUser.getId());
-        boolean isAdmin = UserRole.AT.equals(actingUser.getRole());
+        boolean isAdmin = UserRole.AT.equals(actingUser.getRole()) || UserRole.ADMIN.equals(actingUser.getRole());
 
         if (!isOwner && !isAdmin) {
             throw new AccessDeniedException("Only the reservation owner or an admin can cancel this reservation.");
@@ -148,12 +157,20 @@ public class ReservationService {
      * @return the updated reservation
      */
     public Reservation updateReservation(Long reservationId, LocalDateTime newStart, LocalDateTime newEnd, User actingUser) {
+        if (newEnd.isBefore(newStart) || newEnd.equals(newStart)) {
+            throw new IllegalArgumentException("End time must be after start time.");
+        }
+
+        if (scheduleBlockService.hasActiveBlockConflict(newStart, newEnd)) {
+            throw new IllegalArgumentException("This time slot is blocked by an admin.");
+        }
+
         // Fetch the reservation
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found"));
 
         boolean isOwner = reservation.getUser().getId().equals(actingUser.getId());
-        boolean isAdmin = UserRole.AT.equals(actingUser.getRole());
+        boolean isAdmin = UserRole.AT.equals(actingUser.getRole()) || UserRole.ADMIN.equals(actingUser.getRole());
 
         if (!isOwner && !isAdmin) {
             throw new AccessDeniedException("Only the reservation owner or an admin can edit this reservation.");
@@ -177,9 +194,6 @@ public class ReservationService {
 
         if (!userConflicts.isEmpty()) {
             throw new IllegalArgumentException("You already have another reservation during that time.");
-        }
-        if (newEnd.isBefore(newStart) || newEnd.equals(newStart)) {
-            throw new IllegalArgumentException("End time must be after start time.");
         }
 
         // Update reservation times and save
