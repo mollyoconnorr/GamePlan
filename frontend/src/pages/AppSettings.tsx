@@ -128,6 +128,23 @@ export default function AppSettings(props: AppSettingProps) {
     const [startTimeInput, setStartTimeInput] = useState(() => props.startTime.format("HH:mm"));
     const [endTimeInput, setEndTimeInput] = useState(() => props.endTime.format("HH:mm"));
 
+    // Keep local form inputs in sync with persisted settings loaded by parent.
+    useEffect(() => {
+        setFirstDayInput(props.firstDateToShow);
+        setNumDaysInput(props.numDays.toString());
+        setTimeStepInput(props.timeStep.toString());
+        setMaxResTimeInput(props.maxResTime.toString());
+        setStartTimeInput(props.startTime.format("HH:mm"));
+        setEndTimeInput(props.endTime.format("HH:mm"));
+    }, [
+        props.firstDateToShow,
+        props.numDays,
+        props.timeStep,
+        props.maxResTime,
+        props.startTime,
+        props.endTime,
+    ]);
+
     const saved = firstDayInput === props.firstDateToShow &&
         numDaysInput === props.numDays.toString() &&
         timeStepInput === props.timeStep.toString() &&
@@ -203,7 +220,7 @@ export default function AppSettings(props: AppSettingProps) {
     const [blocksLoading, setBlocksLoading] = useState(false);
     const [isSavingBlock, setIsSavingBlock] = useState(false);
     const [blockErrorMessage, setBlockErrorMessage] = useState("");
-    const [blockToastMessage, setBlockToastMessage] = useState("");
+    const [toastMessage, setToastMessage] = useState("");
 
     const pendingBlockStart = selectedBlockDate && selectedBlockStartTime
         ? dayjs(`${selectedBlockDate} ${selectedBlockStartTime}`, "YYYY-MM-DD HH:mm")
@@ -264,10 +281,10 @@ export default function AppSettings(props: AppSettingProps) {
 
     // Keep toast auto-dismiss behavior consistent with the rest of the app.
     useEffect(() => {
-        if (!blockToastMessage) return;
-        const timeout = setTimeout(() => setBlockToastMessage(""), 2500);
+        if (!toastMessage) return;
+        const timeout = setTimeout(() => setToastMessage(""), 2500);
         return () => clearTimeout(timeout);
-    }, [blockToastMessage]);
+    }, [toastMessage]);
 
     useEffect(() => {
         let cancelled = false;
@@ -328,7 +345,7 @@ export default function AppSettings(props: AppSettingProps) {
                 : "";
 
             setBlockedSlots((previous) => sortEventsByStartIso([...previous, parseRawBlockToEvent(createdBlock)]));
-            setBlockToastMessage(`Block added.${canceledMessage}`);
+            setToastMessage(`Block added.${canceledMessage}`);
 
             setSelectedBlockDate("");
             setSelectedBlockStartTime("");
@@ -359,7 +376,7 @@ export default function AppSettings(props: AppSettingProps) {
         }
 
         setBlockedSlots((previous) => previous.filter((slot) => slot.id !== id));
-        setBlockToastMessage("Block removed.");
+        setToastMessage("Block removed.");
     };
 
     // Highlight invalid fields while reusing the base input styling.
@@ -398,11 +415,12 @@ export default function AppSettings(props: AppSettingProps) {
         props.setMaxResTime(updated.maxResTime);
         props.setStartTime(updated.startTime);
         props.setEndTime(updated.endTime);
+        setToastMessage("Settings saved.");
     };
 
     return (
         <>
-            <Toast message={blockToastMessage} />
+            <Toast message={toastMessage} />
             <div className="flex flex-wrap gap-2">
                 <Button text="Back" className="bg-gray-200 hover:bg-gray-100" onClick={() => safeBack(navigate)} />
             </div>

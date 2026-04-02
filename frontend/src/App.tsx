@@ -105,7 +105,6 @@ function AppShell() {
     const [timeStep, setTimeStep] = useState(0);
     const [maxResTime, setMaxResTime] = useState(0);
     const [numDays, setNumDays] = useState(0);
-    const appSettingsFormKey = `${firstDateToShow}-${numDays}-${timeStep}-${maxResTime}-${startTime.format("HH:mm")}-${endTime.format("HH:mm")}`;
 
     useEffect(() => {
         async function getSettings() {
@@ -183,7 +182,6 @@ function AppShell() {
                     />
                     <Route path="admin/settings" element={renderForPrivileged(
                         <AppSettings
-                            key={appSettingsFormKey}
                             firstDate={firstDate}
                             firstDateToShow={firstDateToShow}
                             startTime={startTime}
