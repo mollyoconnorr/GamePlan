@@ -25,9 +25,7 @@ public class AppSettingsController {
      * Returns the current application settings.
      */
     @GetMapping("/settings")
-    public AppSettingsResponseDTO getAppSettings(OAuth2AuthenticationToken authentication) {
-        final User currentUser = userService.resolveCurrentUser(authentication);
-        userService.requireAdmin(currentUser);
+    public AppSettingsResponseDTO getAppSettings() {
 
         return appSettingsService.getAppSettings();
     }
