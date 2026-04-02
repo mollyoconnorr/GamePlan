@@ -3,13 +3,18 @@ package com.carroll.gameplan.service;
 import com.carroll.gameplan.dto.response.AppSettingsResponseDTO;
 import com.carroll.gameplan.model.AppSettings;
 import com.carroll.gameplan.model.CalendarFirstDay;
+import com.carroll.gameplan.model.Reservation;
+import com.carroll.gameplan.model.ReservationStatus;
 import com.carroll.gameplan.repository.AppSettingsRepository;
+import com.carroll.gameplan.repository.ReservationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.function.Predicate;
 
 import static com.carroll.gameplan.AppConstants.MAX_DAYS_TO_SHOW;
@@ -26,14 +31,17 @@ public class AppSettingsService {
     private static final String SETTINGS_NOT_FOUND_MESSAGE = "No app settings found";
 
     private final AppSettingsRepository appSettingsRepository;
+    private final ReservationRepository reservationRepository;
 
     /**
      * Creates a service backed by the app settings repository.
      *
      * @param appSettingsRepository repository used to load and persist settings
      */
-    public AppSettingsService(AppSettingsRepository appSettingsRepository) {
+    public AppSettingsService(AppSettingsRepository appSettingsRepository,
+                              ReservationRepository reservationRepository) {
         this.appSettingsRepository = appSettingsRepository;
+        this.reservationRepository = reservationRepository;
     }
 
     /**
@@ -52,6 +60,7 @@ public class AppSettingsService {
      * @return saved settings mapped to API response format
      * @throws IllegalArgumentException when one or more values fail validation
      */
+    @Transactional
     public AppSettingsResponseDTO updateAppSettings(AppSettingsResponseDTO newSettings) {
         final AppSettings appSettings = getExistingSettings();
 
@@ -84,7 +93,9 @@ public class AppSettingsService {
         appSettings.setMaxReservationTime(maxReservationTime);
         appSettings.setNumDaysToShow(numDaysToShow);
 
-        return toDto(appSettingsRepository.save(appSettings));
+        AppSettings saved = appSettingsRepository.save(appSettings);
+        cancelOutOfBoundsReservations(startTime, endTime);
+        return toDto(saved);
     }
 
     /**
@@ -240,5 +251,24 @@ public class AppSettingsService {
      */
     private boolean isValidNumDaysToShow(Integer numDaysToShow) {
         return numDaysToShow != null && numDaysToShow >= MIN_DAYS_TO_SHOW && numDaysToShow <= MAX_DAYS_TO_SHOW;
+    }
+
+    /**
+     * Cancels active reservations that no longer fit within the configured daily start/end window.
+     */
+    private void cancelOutOfBoundsReservations(LocalTime startTime, LocalTime endTime) {
+        List<Reservation> activeReservations = reservationRepository.findByStatus(ReservationStatus.ACTIVE);
+
+        List<Reservation> toCancel = activeReservations.stream()
+                .filter(reservation -> reservation.getStartDatetime().toLocalTime().isBefore(startTime)
+                        || reservation.getEndDatetime().toLocalTime().isAfter(endTime))
+                .toList();
+
+        if (toCancel.isEmpty()) {
+            return;
+        }
+
+        toCancel.forEach(reservation -> reservation.setStatus(ReservationStatus.CANCELLED));
+        reservationRepository.saveAll(toCancel);
     }
 }
