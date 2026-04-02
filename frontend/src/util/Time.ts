@@ -14,7 +14,7 @@ export const parseWholeNumber = (raw: string): number | null => {
 
 // Parse strict 24-hour HH:mm format and include total minutes for comparisons.
 export const parseTime = (raw: string): ParsedTime | null => {
-    if (!/^\d{2}:\d{2}$/.test(raw)) {
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(raw)) {
         return null;
     }
 
