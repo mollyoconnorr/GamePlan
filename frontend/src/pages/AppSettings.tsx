@@ -7,6 +7,7 @@ import {useMemo, useState} from "react";
 import Calendar from "../components/calendar/Calendar.tsx";
 import {parseTime, parseWholeNumber} from "../util/Time.ts";
 import {type ParsedAppSettingsData, updateAppSettings} from "../api/Settings.ts";
+import Spinner from "../components/Spinner.tsx";
 
 // Parent-owned app settings plus callbacks to persist validated updates.
 interface AppSettingProps extends CalendarData {
@@ -17,6 +18,7 @@ interface AppSettingProps extends CalendarData {
     setTimeStep: (timeStep: number) => void;
     setMaxResTime: (maxResTime: number) => void;
     setNumDays: (numDays: number) => void;
+    loading: boolean;
 }
 
 // Field keys used by validation and dynamic input styling.
@@ -109,8 +111,6 @@ const validateSettings = (inputs: SettingsInputs): ValidationResult => {
 export default function AppSettings(props: AppSettingProps) {
     const navigate = useNavigate();
 
-    const [loading,setLoading] = useState(false);
-
     // Keep editable input text local so users can type intermediate invalid values.
     const [firstDayInput, setFirstDayInput] =  useState<"week" | "day">(props.firstDateToShow);
     const [numDaysInput, setNumDaysInput] = useState(() => props.numDays.toString());
@@ -119,7 +119,8 @@ export default function AppSettings(props: AppSettingProps) {
     const [startTimeInput, setStartTimeInput] = useState(() => props.startTime.format("HH:mm"));
     const [endTimeInput, setEndTimeInput] = useState(() => props.endTime.format("HH:mm"));
 
-    const saved = numDaysInput === props.numDays.toString() &&
+    const saved = firstDayInput === props.firstDateToShow &&
+        numDaysInput === props.numDays.toString() &&
         timeStepInput === props.timeStep.toString() &&
         maxResTimeInput === props.maxResTime.toString() &&
         startTimeInput === props.startTime.format("HH:mm") &&
@@ -198,7 +199,8 @@ export default function AppSettings(props: AppSettingProps) {
                     </div>
                 </div>
 
-                <div className="flex flex-col rounded border bg-white p-6 shadow-sm space-y-6">
+                {props.loading && <Spinner/>}
+                {!props.loading && <div className="flex flex-col rounded border bg-white p-6 shadow-sm space-y-6">
                     {/* Summary banner reflects the current form validity in real time. */}
                     {hasErrors ? (
                         <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3">
@@ -212,7 +214,8 @@ export default function AppSettings(props: AppSettingProps) {
                             </ul>
                         </div>
                     ) : !saved && (
-                        <div className="rounded border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+                        <div
+                            className="rounded border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
                             All settings are valid. Press save to save your changes.
                         </div>
                     )}
@@ -280,7 +283,8 @@ export default function AppSettings(props: AppSettingProps) {
                         </div>
 
                         <div>
-                            <label className={labelClassName} htmlFor="max-reservation-time">Max reservation time (minutes)</label>
+                            <label className={labelClassName} htmlFor="max-reservation-time">Max reservation time
+                                (minutes)</label>
                             <input
                                 id="max-reservation-time"
                                 type="number"
@@ -347,7 +351,7 @@ export default function AppSettings(props: AppSettingProps) {
                             endTimeInput,
                         })}
                     />
-                </div>
+                </div>}
 
                 <h2 className="text-2xl font-bold text-gray-900">Calendar Preview</h2>
 
@@ -366,7 +370,7 @@ export default function AppSettings(props: AppSettingProps) {
                         .millisecond(0)}
                     timeStepMin={validation.parsedTimeStep ?? 15}
                     variant={"trainer"} // TODO New variant?
-                    loading={loading}
+                    loading={props.loading}
 
                 />
             </section>
