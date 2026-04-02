@@ -14,6 +14,9 @@ import type {
 import {getEquipmentReservations, makeReservation} from "../api/Reservations.ts";
 import {parseRawResToEvent, parseRawResToRes, parseResToEvent} from "../util/ParseReservation.ts";
 import ReservationDateTimePicker from "../components/ReservationDateTimePicker.tsx";
+import {getFriendlyReservationErrorMessage} from "../util/ReservationErrorMessages.ts";
+import {getScheduleBlocks} from "../api/Blocks.ts";
+import {parseRawBlockToEvent} from "../util/ParseScheduleBlock.ts";
 
 interface ReserveEquipmentProps extends CalendarData {
     reservations: Reservation[];
@@ -43,11 +46,13 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
     // Reservations
     const [equipmentReservations, setEquipmentReservations] = useState<CalendarEvent[]>([]);
+    const [scheduleBlocks, setScheduleBlocks] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
     const [selectedDate, setSelectedDate] = useState("");
     const [selectedStartTime, setSelectedStartTime] = useState("");
     const [selectedEndTime, setSelectedEndTime] = useState("");
+    const [reservationErrorMessage, setReservationErrorMessage] = useState("");
 
     const previewStart = selectedDate && selectedStartTime
         ? dayjs(`${selectedDate} ${selectedStartTime}`, "YYYY-MM-DD HH:mm")
@@ -106,6 +111,20 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         [reservations]
     );
 
+    const scheduleBlocksWithConflict = useMemo(() => {
+        return scheduleBlocks.map((event) => {
+            if (!previewStart || !previewEnd || !event.startIso || !event.endIso) {
+                return { ...event, conflict: false };
+            }
+
+            const eventStart = dayjs(event.startIso);
+            const eventEnd = dayjs(event.endIso);
+            const overlaps = previewStart.isBefore(eventEnd) && eventStart.isBefore(previewEnd);
+
+            return { ...event, conflict: overlaps };
+        });
+    }, [previewEnd, previewStart, scheduleBlocks]);
+
     const equipmentOtherReservations = useMemo(
         () =>
             equipmentReservationsWithConflict
@@ -129,13 +148,20 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
     const displayedReservations = [
         ...equipmentOtherReservations,
+        ...scheduleBlocksWithConflict,
         ...userCalendarEvents,
         ...(previewReservationWithColor ? [previewReservationWithColor] : []),
     ];
 
-    const hasConflict = equipmentReservationsWithConflict.some((event) => event.conflict) || userReservationConflict;
+    const scheduleBlockConflict = scheduleBlocksWithConflict.some((event) => event.conflict);
+    const hasConflict =
+        equipmentReservationsWithConflict.some((event) => event.conflict) ||
+        userReservationConflict ||
+        scheduleBlockConflict;
     const conflictMessage = userReservationConflict
         ? "This overlaps another one of your reservations. Delete or adjust that reservation before booking again."
+        : scheduleBlockConflict
+            ? "This time slot is blocked by a trainer or admin. Pick a different slot."
         : "Someone else already has that equipment at this time; delete this pending reservation and try again or pick a different slot.";
 
     const needsAttribute = attributes.length > 0;
@@ -162,6 +188,24 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
         fetchReservations();
     }, [selectedEquipment]);
+
+    useEffect(() => {
+        const fetchBlocks = async () => {
+            try {
+                const data = await getScheduleBlocks();
+                setScheduleBlocks(data.map(parseRawBlockToEvent));
+            } catch (err) {
+                console.error("Failed to fetch schedule blocks:", err);
+            }
+        };
+
+        void fetchBlocks();
+    }, []);
+
+    useEffect(() => {
+        // Clear stale API error copy when any selected reservation inputs change.
+        setReservationErrorMessage("");
+    }, [selectedEquipment, selectedDate, selectedStartTime, selectedEndTime]);
 
     // Fetch equipment types on load
     useEffect(() => {
@@ -230,6 +274,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         if (!allResInfoPresent) return;
 
         setLoading(true);
+        setReservationErrorMessage("");
 
         const payload = {
             equipmentId: selectedEquipment,
@@ -246,6 +291,8 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
         } catch (err) {
             console.error(err);
+            const message = err instanceof Error ? err.message : "Failed to create reservation.";
+            setReservationErrorMessage(getFriendlyReservationErrorMessage(message));
         } finally {
             setLoading(false);
         }
@@ -365,6 +412,11 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                             {conflictMessage}
                         </p>
                     )}
+                    {reservationErrorMessage && (
+                        <p className="text-sm font-semibold text-red-600">
+                            {reservationErrorMessage}
+                        </p>
+                    )}
                     <Button
                       text="Reserve"
                       className="bg-green-400 hover:bg-green-300 border-green-500"
@@ -380,6 +432,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                         <div className="mt-4 flex flex-wrap gap-4 text-sm">
                             <LegendItem color="#fbbf24" label="Your existing reservations" />
                             <LegendItem color="#dc2626" label="Other athletes' bookings" />
+                            <LegendItem color="#111827" label="Admin/trainer blocked time" />
                         </div>
                         <Calendar
                             firstDate={firstDate}
