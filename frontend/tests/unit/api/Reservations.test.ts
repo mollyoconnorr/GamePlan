@@ -7,10 +7,11 @@ import {
     updateReservation,
 } from "../../../src/api/Reservations.ts";
 
-function response<T>(ok: boolean, data?: T): Response {
+function response<T>(ok: boolean, data?: T, textBody = ""): Response {
     return {
         ok,
         json: vi.fn().mockResolvedValue(data),
+        text: vi.fn().mockResolvedValue(textBody),
     } as unknown as Response;
 }
 

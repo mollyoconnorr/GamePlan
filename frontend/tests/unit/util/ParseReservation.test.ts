@@ -37,6 +37,10 @@ describe("ParseReservation utils", () => {
             startTime: "1:15 PM",
             endTime: "2:30 PM",
             date: dayjs("2026-03-19T13:15:00").format("ddd M/D"),
+            startIso: dayjs("2026-03-19T13:15:00").toISOString(),
+            endIso: dayjs("2026-03-19T14:30:00").toISOString(),
+            color: undefined,
+            description: undefined,
         });
     });
 
@@ -57,6 +61,10 @@ describe("ParseReservation utils", () => {
             startTime: "6:00 AM",
             endTime: "6:30 AM",
             date: dayjs(raw.start).format("ddd M/D"),
+            startIso: dayjs(raw.start).toISOString(),
+            endIso: dayjs(raw.end).toISOString(),
+            color: undefined,
+            description: undefined,
         });
     });
 });
