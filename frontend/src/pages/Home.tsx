@@ -26,7 +26,7 @@ export default function Home(
 
 ){
     const user = useAuthedUser();
-    const isAdmin = user.role === "AT";
+    const isAdmin = user.role === "AT" || user.role === "ADMIN"; //TODO FIX: AT != ADMIN
     const isStudent = user.role === "STUDENT";
 
     const navigate = useNavigate();

@@ -5,7 +5,8 @@ import type {CalendarData, ParsedTime} from "../types.ts";
 import dayjs, {type Dayjs} from "dayjs";
 import {useMemo, useState} from "react";
 import Calendar from "../components/calendar/Calendar.tsx";
-import {formatTwoDigits, parseTime, parseWholeNumber} from "../util/Time.ts";
+import {parseTime, parseWholeNumber} from "../util/Time.ts";
+import {type ParsedAppSettingsData, updateAppSettings} from "../api/Settings.ts";
 
 // Parent-owned app settings plus callbacks to persist validated updates.
 interface AppSettingProps extends CalendarData {
@@ -157,50 +158,31 @@ export default function AppSettings(props: AppSettingProps) {
         }`;
 
     // Push only valid, changed fields to parent state; invalid fields stay local.
-    const applyValidSettings = (inputs: SettingsInputs) => {
+    const applyValidSettings = async (inputs: SettingsInputs) => {
         const next = validateSettings(inputs);
 
-        props.setFirstDateToShow(firstDayInput);
-
-        if (!next.errors.numDays && next.parsedNumDays !== null && next.parsedNumDays !== props.numDays) {
-            props.setNumDays(next.parsedNumDays);
+        const hasErrors = Object.values(next.errors).some(Boolean);
+        if (hasErrors) {
+            return;
         }
 
-        if (!next.errors.timeStep && next.parsedTimeStep !== null && next.parsedTimeStep !== props.timeStep) {
-            props.setTimeStep(next.parsedTimeStep);
+        let updated: ParsedAppSettingsData;
+        try {
+            updated = await updateAppSettings({
+                ...inputs,
+                firstDateToShow: firstDayInput,
+            });
+        } catch (err) {
+            console.error("Failed to update app settings:", err);
+            return;
         }
 
-        if (!next.errors.maxResTime && next.parsedMaxResTime !== null && next.parsedMaxResTime !== props.maxResTime) {
-            props.setMaxResTime(next.parsedMaxResTime);
-        }
-
-        if (!next.errors.startTime && next.parsedStartTime) {
-            const nextStart = `${formatTwoDigits(next.parsedStartTime.hour)}:${formatTwoDigits(next.parsedStartTime.minute)}`;
-            if (nextStart !== props.startTime.format("HH:mm")) {
-                // Preserve the existing date context and only replace the time portion.
-                props.setStartTime(
-                    props.startTime
-                        .hour(next.parsedStartTime.hour)
-                        .minute(next.parsedStartTime.minute)
-                        .second(0)
-                        .millisecond(0)
-                );
-            }
-        }
-
-        if (!next.errors.endTime && next.parsedEndTime) {
-            const nextEnd = `${formatTwoDigits(next.parsedEndTime.hour)}:${formatTwoDigits(next.parsedEndTime.minute)}`;
-            if (nextEnd !== props.endTime.format("HH:mm")) {
-                // Preserve the existing date context and only replace the time portion.
-                props.setEndTime(
-                    props.endTime
-                        .hour(next.parsedEndTime.hour)
-                        .minute(next.parsedEndTime.minute)
-                        .second(0)
-                        .millisecond(0)
-                );
-            }
-        }
+        props.setFirstDateToShow(updated.firstDateToShow);
+        props.setNumDays(updated.numDays);
+        props.setTimeStep(updated.timeStep);
+        props.setMaxResTime(updated.maxResTime);
+        props.setStartTime(updated.startTime);
+        props.setEndTime(updated.endTime);
     };
 
     return (

@@ -104,10 +104,6 @@ function AppShell() {
         getSettings();
     }, []);
 
-    useEffect(() => {
-        console.log("Time to update in db");
-    }, [firstDateToShow,startTime,endTime,timeStep,maxResTime,numDays]);
-
     return (
         <div className="min-h-screen flex flex-col">
             <Navbar username={user!.email} logout={logout} />
