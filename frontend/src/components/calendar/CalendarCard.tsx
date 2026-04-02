@@ -314,38 +314,48 @@ export default function CalendarCard({
                                     <span className="font-semibold">Reserved by:</span> {String(event.description)}
                                 </p>
                             )}
-                            {"temp" in event && <p className="text-red-600"><strong>Pending reservation</strong></p>}
+                            {event.temp && <p className="text-red-600"><strong>Pending reservation</strong></p>}
                         </div>
 
                         <div className="mt-4 flex justify-between">
                             {variant === "trainer" ? (
-                                <button
-                                    type="button"
-                                    className="rounded bg-red-600 px-3 py-1 text-sm font-semibold text-white hover:bg-red-500 hover:cursor-pointer"
-                                    onClick={() => setPendingDelete({ id: event.id, name: event.name })}
-                                >
-                                    Cancel reservation
-                                </button>
+                                event.temp ? (
+                                    // Pending preview blocks are not persisted and cannot be deleted.
+                                    <div />
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="rounded bg-red-600 px-3 py-1 text-sm font-semibold text-white hover:bg-red-500 hover:cursor-pointer"
+                                        onClick={() => setPendingDelete({ id: event.id, name: event.name })}
+                                    >
+                                        Cancel reservation
+                                    </button>
+                                )
                             ) : variant !== "equip" ? (
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        className="hover:cursor-pointer"
-                                        title="Edit Reservation"
-                                        onClick={handleOpenEdit}
-                                    >
-                                        <SquarePen />
-                                    </button>
+                                event.isBlock ? (
+                                    // Home trainer/admin calendar should display blocks as read-only.
+                                    <div />
+                                ) : (
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            className="hover:cursor-pointer"
+                                            title="Edit Reservation"
+                                            onClick={handleOpenEdit}
+                                        >
+                                            <SquarePen />
+                                        </button>
 
-                                    <button
-                                        type="button"
-                                        className="hover:cursor-pointer"
-                                        title="Delete Reservation"
-                                        onClick={() => setPendingDelete({id: event.id, name: event.name})}
-                                    >
-                                        <Trash2 />
-                                    </button>
-                                </div>
+                                        <button
+                                            type="button"
+                                            className="hover:cursor-pointer"
+                                            title="Delete Reservation"
+                                            onClick={() => setPendingDelete({id: event.id, name: event.name})}
+                                        >
+                                            <Trash2 />
+                                        </button>
+                                    </div>
+                                )
                             ) : <div />}
 
                             <button
