@@ -13,8 +13,35 @@ type RawAppSettingsData = {
     numDaysToShow: number;
 }
 
-interface ParsedAppSettingsData extends CalendarData {
+export interface ParsedAppSettingsData extends CalendarData {
     firstDateToShow: "week" | "day";
+}
+
+type SettingsRequest = {
+    firstDateToShow: "week" | "day";
+    numDaysInput: string;
+    timeStepInput: string;
+    maxResTimeInput: string;
+    startTimeInput: string;
+    endTimeInput: string;
+};
+
+export async function updateAppSettings(request: SettingsRequest): Promise<ParsedAppSettingsData> {
+    const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!res.ok) {
+        const message = await extractErrorMessage(res, "Failed to update app settings!");
+        throw new Error(message);
+    }
+
+    return parseAppDataToAppSettings(await res.json() as RawAppSettingsData);
 }
 
 export async function getAppSettings(): Promise<ParsedAppSettingsData>{
