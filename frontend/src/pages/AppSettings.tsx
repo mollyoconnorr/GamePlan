@@ -1,10 +1,11 @@
 import Button from "../components/Button.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import {useNavigate} from "react-router-dom";
-import type {CalendarData} from "../types.ts";
+import type {CalendarData, ParsedTime} from "../types.ts";
 import dayjs, {type Dayjs} from "dayjs";
 import {useMemo, useState} from "react";
 import Calendar from "../components/calendar/Calendar.tsx";
+import {formatTwoDigits, parseTime, parseWholeNumber} from "../util/Time.ts";
 
 // Parent-owned app settings plus callbacks to persist validated updates.
 interface AppSettingProps extends CalendarData {
@@ -20,8 +21,7 @@ interface AppSettingProps extends CalendarData {
 // Field keys used by validation and dynamic input styling.
 type SettingField = "numDays" | "timeStep" | "maxResTime" | "startTime" | "endTime";
 type FieldErrors = Partial<Record<SettingField, string>>;
-// Parsed time is reused for both alignment checks and start/end comparisons.
-type ParsedTime = {hour: number; minute: number; totalMinutes: number};
+
 // Raw string state mirrors what users are typing into each input.
 type SettingsInputs = {
     numDaysInput: string;
@@ -45,43 +45,6 @@ type ValidationResult = {
 const labelClassName = "mb-1 block text-sm font-semibold text-gray-700";
 const helperTextClassName = "mt-1 text-xs text-gray-500";
 const baseInputClassName = "w-full rounded border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1";
-
-// Ensures hour/minute values render as HH:mm.
-const formatTwoDigits = (value: number) => value.toString().padStart(2, "0");
-
-// Accept only complete integer strings (no decimals and no partial parse).
-const parseWholeNumber = (raw: string): number | null => {
-    const trimmed = raw.trim();
-    if (!trimmed || !/^-?\d+$/.test(trimmed)) {
-        return null;
-    }
-    return Number(trimmed);
-};
-
-// Parse strict 24-hour HH:mm format and include total minutes for comparisons.
-const parseTime = (raw: string): ParsedTime | null => {
-    if (!/^\d{2}:\d{2}$/.test(raw)) {
-        return null;
-    }
-
-    const [hour, minute] = raw.split(":").map(Number);
-    if (
-        Number.isNaN(hour) ||
-        Number.isNaN(minute) ||
-        hour < 0 ||
-        hour > 23 ||
-        minute < 0 ||
-        minute > 59
-    ) {
-        return null;
-    }
-
-    return {
-        hour,
-        minute,
-        totalMinutes: hour * 60 + minute,
-    };
-};
 
 // Centralized validation for all settings, including cross-field constraints.
 const validateSettings = (inputs: SettingsInputs): ValidationResult => {

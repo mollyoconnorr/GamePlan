@@ -121,3 +121,6 @@ export type CalendarData = {
     maxResTime: number;
     numDays: number;
 }
+
+// Parsed time is reused for both alignment checks and start/end comparisons.
+export type ParsedTime = {hour: number; minute: number; totalMinutes: number};
