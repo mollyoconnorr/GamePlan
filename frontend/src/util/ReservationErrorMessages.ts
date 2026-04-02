@@ -18,5 +18,10 @@ export function getFriendlyReservationErrorMessage(rawMessage: string) {
         return "The end time must be after the start time.";
     }
 
+    // Surface backend schedule-block validation in user-friendly terms.
+    if (normalized.includes("blocked by an admin")) {
+        return "This time is blocked off by a trainer or admin. Choose a different time.";
+    }
+
     return rawMessage;
 }
