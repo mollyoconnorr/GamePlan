@@ -3,7 +3,20 @@ package com.carroll.gameplan;
 import com.carroll.gameplan.dto.response.AppSettingsResponseDTO;
 import com.carroll.gameplan.model.AppSettings;
 import com.carroll.gameplan.model.CalendarFirstDay;
+import com.carroll.gameplan.model.Equipment;
+import com.carroll.gameplan.model.EquipmentStatus;
+import com.carroll.gameplan.model.EquipmentType;
+import com.carroll.gameplan.model.Reservation;
+import com.carroll.gameplan.model.ReservationStatus;
+import com.carroll.gameplan.model.User;
+import com.carroll.gameplan.model.UserRole;
 import com.carroll.gameplan.repository.AppSettingsRepository;
+import com.carroll.gameplan.repository.EquipmentRepository;
+import com.carroll.gameplan.repository.EquipmentTypeRepository;
+import com.carroll.gameplan.repository.NotificationRepository;
+import com.carroll.gameplan.repository.ReservationRepository;
+import com.carroll.gameplan.repository.ScheduleBlockRepository;
+import com.carroll.gameplan.repository.UserRepository;
 import com.carroll.gameplan.service.AppSettingsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +26,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,8 +46,32 @@ public class AppSettingsServiceTest {
     @Autowired
     private AppSettingsRepository appSettingsRepository;
 
+    @Autowired
+    private ReservationRepository reservationRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ScheduleBlockRepository scheduleBlockRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private EquipmentRepository equipmentRepository;
+
+    @Autowired
+    private EquipmentTypeRepository equipmentTypeRepository;
+
     @BeforeEach
     void setUp() {
+        reservationRepository.deleteAll();
+        notificationRepository.deleteAll();
+        scheduleBlockRepository.deleteAll();
+        equipmentRepository.deleteAll();
+        equipmentTypeRepository.deleteAll();
+        userRepository.deleteAll();
         appSettingsRepository.deleteAll();
         appSettingsRepository.save(new AppSettings(
                 CalendarFirstDay.WEEK,
@@ -277,5 +315,72 @@ public class AppSettingsServiceTest {
         );
 
         assertEquals("No app settings found", exception.getMessage());
+    }
+
+    @Test
+    void testUpdateAppSettingsCancelsReservationsOutsideNewBounds() {
+        User athlete = new User();
+        athlete.setEmail("athlete@carroll.edu");
+        athlete.setFirstName("Ath");
+        athlete.setLastName("Lete");
+        athlete.setRole(UserRole.ATHLETE);
+        athlete = userRepository.save(athlete);
+
+        EquipmentType type = new EquipmentType();
+        type.setName("Settings Test Type");
+        type.setFieldSchema("{}");
+        type = equipmentTypeRepository.save(type);
+
+        Equipment equipment = new Equipment();
+        equipment.setName("Settings Test Equipment");
+        equipment.setStatus(EquipmentStatus.AVAILABLE);
+        equipment.setEquipmentType(type);
+        equipment = equipmentRepository.save(equipment);
+
+        LocalDateTime baseDate = LocalDate.now().plusDays(1).atStartOfDay();
+
+        Reservation insideBounds = new Reservation();
+        insideBounds.setUser(athlete);
+        insideBounds.setEquipment(equipment);
+        insideBounds.setStartDatetime(baseDate.withHour(9).withMinute(30));
+        insideBounds.setEndDatetime(baseDate.withHour(10).withMinute(0));
+        insideBounds.setStatus(ReservationStatus.ACTIVE);
+        insideBounds = reservationRepository.save(insideBounds);
+
+        Reservation beforeStart = new Reservation();
+        beforeStart.setUser(athlete);
+        beforeStart.setEquipment(equipment);
+        beforeStart.setStartDatetime(baseDate.withHour(8).withMinute(30));
+        beforeStart.setEndDatetime(baseDate.withHour(9).withMinute(0));
+        beforeStart.setStatus(ReservationStatus.ACTIVE);
+        beforeStart = reservationRepository.save(beforeStart);
+
+        Reservation afterEnd = new Reservation();
+        afterEnd.setUser(athlete);
+        afterEnd.setEquipment(equipment);
+        afterEnd.setStartDatetime(baseDate.withHour(15).withMinute(30));
+        afterEnd.setEndDatetime(baseDate.withHour(16).withMinute(30));
+        afterEnd.setStatus(ReservationStatus.ACTIVE);
+        afterEnd = reservationRepository.save(afterEnd);
+
+        AppSettingsResponseDTO request = new AppSettingsResponseDTO(
+                null,
+                LocalTime.of(9, 0),
+                LocalTime.of(16, 0),
+                null,
+                null,
+                null,
+                null
+        );
+
+        appSettingsService.updateAppSettings(request);
+
+        Reservation insideReloaded = reservationRepository.findById(insideBounds.getId()).orElseThrow();
+        Reservation beforeReloaded = reservationRepository.findById(beforeStart.getId()).orElseThrow();
+        Reservation afterReloaded = reservationRepository.findById(afterEnd.getId()).orElseThrow();
+
+        assertEquals(ReservationStatus.ACTIVE, insideReloaded.getStatus());
+        assertEquals(ReservationStatus.CANCELLED, beforeReloaded.getStatus());
+        assertEquals(ReservationStatus.CANCELLED, afterReloaded.getStatus());
     }
 }

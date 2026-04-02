@@ -11,7 +11,9 @@ import com.carroll.gameplan.model.User;
 import com.carroll.gameplan.model.UserRole;
 import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.EquipmentTypeRepository;
+import com.carroll.gameplan.repository.NotificationRepository;
 import com.carroll.gameplan.repository.ReservationRepository;
+import com.carroll.gameplan.repository.ScheduleBlockRepository;
 import com.carroll.gameplan.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,12 +51,20 @@ public class EquipmentControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ScheduleBlockRepository scheduleBlockRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
     private OAuth2AuthenticationToken authToken;
     private Equipment equipment;
 
     @BeforeEach
     void setUp() {
         reservationRepository.deleteAll();
+        notificationRepository.deleteAll();
+        scheduleBlockRepository.deleteAll();
         equipmentRepository.deleteAll();
         equipmentTypeRepository.deleteAll();
         userRepository.deleteAll();

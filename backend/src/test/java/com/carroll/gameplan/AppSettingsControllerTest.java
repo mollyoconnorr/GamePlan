@@ -21,6 +21,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -51,7 +52,7 @@ public class AppSettingsControllerTest {
     }
 
     @Test
-    void testGetAppSettingsReturnsServiceResponseForAdmin() {
+    void testGetAppSettingsReturnsServiceResponse() {
         AppSettingsResponseDTO expected = new AppSettingsResponseDTO(
                 CalendarFirstDay.WEEK,
                 LocalTime.of(8, 0),
@@ -63,11 +64,10 @@ public class AppSettingsControllerTest {
         );
         when(appSettingsService.getAppSettings()).thenReturn(expected);
 
-        AppSettingsResponseDTO result = controller.getAppSettings(authToken);
+        AppSettingsResponseDTO result = controller.getAppSettings();
 
         assertEquals(expected, result);
-        verify(userService).resolveCurrentUser(authToken);
-        verify(userService).requireAdmin(adminUser);
+        verifyNoInteractions(userService);
         verify(appSettingsService).getAppSettings();
     }
 
@@ -102,19 +102,25 @@ public class AppSettingsControllerTest {
     }
 
     @Test
-    void testGetAppSettingsThrowsWhenUserIsNotAdmin() {
+    void testGetAppSettingsDoesNotRequireAdmin() {
+        AppSettingsResponseDTO expected = new AppSettingsResponseDTO(
+                CalendarFirstDay.WEEK,
+                LocalTime.of(8, 0),
+                LocalTime.of(17, 0),
+                15,
+                60,
+                7,
+                LocalDate.now()
+        );
+        when(appSettingsService.getAppSettings()).thenReturn(expected);
         doThrow(new AccessDeniedException("Admin role required"))
                 .when(userService).requireAdmin(adminUser);
 
-        AccessDeniedException exception = assertThrows(
-                AccessDeniedException.class,
-                () -> controller.getAppSettings(authToken)
-        );
+        AppSettingsResponseDTO result = controller.getAppSettings();
 
-        assertEquals("Admin role required", exception.getMessage());
-        verify(userService).resolveCurrentUser(authToken);
-        verify(userService).requireAdmin(adminUser);
-        verify(appSettingsService, never()).getAppSettings();
+        assertEquals(expected, result);
+        verifyNoInteractions(userService);
+        verify(appSettingsService).getAppSettings();
     }
 
     @Test
@@ -143,17 +149,17 @@ public class AppSettingsControllerTest {
     }
 
     @Test
-    void testGetAppSettingsPropagatesUserResolutionFailure() {
-        RuntimeException error = new RuntimeException("User not found");
-        when(userService.resolveCurrentUser(authToken)).thenThrow(error);
+    void testGetAppSettingsPropagatesServiceFailure() {
+        RuntimeException error = new RuntimeException("Settings unavailable");
+        when(appSettingsService.getAppSettings()).thenThrow(error);
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
-                () -> controller.getAppSettings(authToken)
+                () -> controller.getAppSettings()
         );
 
-        assertEquals("User not found", exception.getMessage());
-        verify(userService).resolveCurrentUser(authToken);
-        verify(appSettingsService, never()).getAppSettings();
+        assertEquals("Settings unavailable", exception.getMessage());
+        verifyNoInteractions(userService);
+        verify(appSettingsService).getAppSettings();
     }
 }

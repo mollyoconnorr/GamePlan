@@ -3,6 +3,7 @@ package com.carroll.gameplan;
 import com.carroll.gameplan.model.*;
 import com.carroll.gameplan.repository.EquipmentRepository;
 import com.carroll.gameplan.repository.EquipmentTypeRepository;
+import com.carroll.gameplan.repository.ScheduleBlockRepository;
 import com.carroll.gameplan.repository.UserRepository;
 import com.carroll.gameplan.service.ReservationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +42,9 @@ public class ReservationServiceTest {
     @Autowired
     private EquipmentTypeRepository equipmentTypeRepository;
 
+    @Autowired
+    private ScheduleBlockRepository scheduleBlockRepository;
+
     private User testUser;           // The test user used in reservations
     private Equipment testEquipment; // The test equipment used in reservations
 
@@ -55,6 +59,7 @@ public class ReservationServiceTest {
         testUser.setEmail("testuser@carroll.edu");
         testUser.setFirstName("Test");
         testUser.setLastName("User");
+        testUser.setRole(UserRole.ATHLETE);
         testUser = userRepository.save(testUser);
 
         // ===== Create EquipmentType for test =====
@@ -69,6 +74,8 @@ public class ReservationServiceTest {
         testEquipment.setStatus(EquipmentStatus.AVAILABLE);
         testEquipment.setEquipmentType(type); // associate with equipment type
         testEquipment = equipmentRepository.save(testEquipment);
+
+        scheduleBlockRepository.deleteAll();
     }
 
     /**
@@ -130,5 +137,80 @@ public class ReservationServiceTest {
         // Assertions
         assertEquals(newStart, updated.getStartDatetime(), "Reservation start time should be updated");
         assertEquals(newEnd, updated.getEndDatetime(), "Reservation end time should be updated");
+    }
+
+    @Test
+    public void testCreateReservationRejectsBlockedTime() {
+        User trainer = new User();
+        trainer.setEmail("trainer@carroll.edu");
+        trainer.setFirstName("Trainer");
+        trainer.setLastName("User");
+        trainer.setRole(UserRole.AT);
+        trainer = userRepository.save(trainer);
+
+        LocalDateTime start = LocalDateTime.now().plusHours(3).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime end = start.plusMinutes(30);
+
+        ScheduleBlock block = new ScheduleBlock();
+        block.setCreatedBy(trainer);
+        block.setStartDatetime(start.minusMinutes(15));
+        block.setEndDatetime(end.plusMinutes(15));
+        block.setStatus(ScheduleBlockStatus.ACTIVE);
+        scheduleBlockRepository.save(block);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.createReservation(testUser, testEquipment, start, end)
+        );
+
+        assertEquals("This time slot is blocked by an admin.", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateReservationRejectsBlockedTime() {
+        User trainer = new User();
+        trainer.setEmail("trainer2@carroll.edu");
+        trainer.setFirstName("Trainer");
+        trainer.setLastName("Two");
+        trainer.setRole(UserRole.ADMIN);
+        trainer = userRepository.save(trainer);
+
+        LocalDateTime start = LocalDateTime.now().plusHours(4).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime end = start.plusMinutes(30);
+        Reservation reservation = reservationService.createReservation(testUser, testEquipment, start, end);
+
+        LocalDateTime blockedStart = end.plusMinutes(15);
+        LocalDateTime blockedEnd = blockedStart.plusMinutes(30);
+
+        ScheduleBlock block = new ScheduleBlock();
+        block.setCreatedBy(trainer);
+        block.setStartDatetime(blockedStart.minusMinutes(5));
+        block.setEndDatetime(blockedEnd.plusMinutes(5));
+        block.setStatus(ScheduleBlockStatus.ACTIVE);
+        scheduleBlockRepository.save(block);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.updateReservation(reservation.getId(), blockedStart, blockedEnd, testUser)
+        );
+
+        assertEquals("This time slot is blocked by an admin.", exception.getMessage());
+    }
+
+    @Test
+    public void testCancelReservationAllowsAdmin() {
+        LocalDateTime start = LocalDateTime.now().plusHours(5).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime end = start.plusMinutes(30);
+        Reservation reservation = reservationService.createReservation(testUser, testEquipment, start, end);
+
+        User admin = new User();
+        admin.setEmail("admin@carroll.edu");
+        admin.setFirstName("Admin");
+        admin.setLastName("User");
+        admin.setRole(UserRole.ADMIN);
+        admin = userRepository.save(admin);
+
+        Reservation cancelled = reservationService.cancelReservation(reservation.getId(), admin);
+        assertEquals(ReservationStatus.CANCELLED, cancelled.getStatus(), "Admin should be able to cancel reservations");
     }
 }
