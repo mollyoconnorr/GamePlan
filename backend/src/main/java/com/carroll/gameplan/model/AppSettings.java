@@ -1,8 +1,6 @@
 package com.carroll.gameplan.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 import java.time.LocalTime;
 
@@ -18,6 +16,7 @@ public class AppSettings {
     private final Long id = 1L;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private CalendarFirstDay startDay;
 
     @Column(nullable = false)

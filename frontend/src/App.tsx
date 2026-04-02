@@ -114,7 +114,7 @@ function AppShell() {
                 const settings = await getAppSettings();
 
                 setFirstDateToShow(settings.firstDateToShow);
-                setFirstDate(dayjs().startOf(firstDateToShow));
+                setFirstDate(dayjs().startOf(settings.firstDateToShow));
                 setStartTime(settings.startTime);
                 setEndTime(settings.endTime);
                 setTimeStep(settings.timeStep);
@@ -191,6 +191,7 @@ function AppShell() {
                             timeStep={timeStep}
                             maxResTime={maxResTime}
                             numDays={numDays}
+                            setFirstDate={setFirstDate}
                             setFirstDateToShow={setFirstDateToShow}
                             setStartTime={setStartTime}
                             setEndTime={setEndTime}

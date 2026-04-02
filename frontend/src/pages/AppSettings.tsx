@@ -21,6 +21,7 @@ import {parseRawBlockToEvent, sortEventsByStartIso} from "../util/ParseScheduleB
 interface AppSettingProps extends CalendarData {
     firstDateToShow: "week" | "day";
     setFirstDateToShow: (firstDateToShow: "week" | "day") => void;
+    setFirstDate: (firstDate: Dayjs) => void;
     setStartTime: (startTime: Dayjs) => void;
     setEndTime: (endTime: Dayjs) => void;
     setTimeStep: (timeStep: number) => void;
@@ -375,6 +376,7 @@ export default function AppSettings(props: AppSettingProps) {
 
         const hasErrors = Object.values(next.errors).some(Boolean);
         if (hasErrors) {
+            console.log("Errors found: ", next.errors);
             return;
         }
 
@@ -390,6 +392,7 @@ export default function AppSettings(props: AppSettingProps) {
         }
 
         props.setFirstDateToShow(updated.firstDateToShow);
+        props.setFirstDate(dayjs().startOf(updated.firstDateToShow));
         props.setNumDays(updated.numDays);
         props.setTimeStep(updated.timeStep);
         props.setMaxResTime(updated.maxResTime);
