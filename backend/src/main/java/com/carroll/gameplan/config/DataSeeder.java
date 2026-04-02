@@ -1,11 +1,9 @@
 package com.carroll.gameplan.config;
 
 import com.carroll.gameplan.model.*;
-import com.carroll.gameplan.repository.EquipmentRepository;
-import com.carroll.gameplan.repository.EquipmentTypeRepository;
-import com.carroll.gameplan.repository.ReservationRepository;
-import com.carroll.gameplan.repository.UserRepository;
+import com.carroll.gameplan.repository.*;
 import com.carroll.gameplan.service.ReservationService;
+import com.carroll.gameplan.service.ScheduleBlockService;
 
 
 import org.springframework.boot.CommandLineRunner;
@@ -18,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,8 +30,10 @@ public class DataSeeder {
                            ReservationRepository rr,
                            EquipmentTypeRepository etr,
                            EquipmentRepository er,
-                           ReservationService rs) {
-        return args -> seedData(ur, rr, etr, er, rs);
+                           ReservationService rs,
+                           ScheduleBlockService sbs,
+                           AppSettingsRepository asr) {
+        return args -> seedData(ur, rr, etr, er, rs, sbs, asr);
     }
 
     @Transactional
@@ -40,7 +41,20 @@ public class DataSeeder {
                   ReservationRepository rr,
                   EquipmentTypeRepository etr,
                   EquipmentRepository er,
-                  ReservationService rs) {
+                  ReservationService rs,
+                  ScheduleBlockService sbs,
+                  AppSettingsRepository asr) {
+
+        if (!asr.existsById(1L)) {
+            final AppSettings appSettings = new AppSettings();
+            appSettings.setStartDay(CalendarFirstDay.WEEK);
+            appSettings.setTimeStep(15);
+            appSettings.setMaxReservationTime(30);
+            appSettings.setNumDaysToShow(7);
+            appSettings.setStartTime(LocalTime.of(8,0));
+            appSettings.setEndTime(LocalTime.of(17,0));
+            asr.save(appSettings);
+        }
 
         // ===== USER =====
         User testUser = ur.findByOidcUserId("00uzv9ab25xQEHKRc697").orElse(null);
@@ -51,8 +65,20 @@ public class DataSeeder {
             testUser.setFirstName("test");
             testUser.setLastName("user");
             testUser.setOidcUserId("00uzv9ab25xQEHKRc697");
-            testUser.setRole(UserRole.STUDENT);
+            testUser.setRole(UserRole.ATHLETE);
             ur.save(testUser);
+        }
+
+        User nick = ur.findByOidcUserId("00u102weronEnCEEI698").orElse(null);
+
+        if (nick == null){
+            nick = new User();
+            nick.setEmail("nclouse@carroll.edu");
+            nick.setFirstName("Nick");
+            nick.setLastName("Clouse");
+            nick.setOidcUserId("00u102weronEnCEEI698");
+            nick.setRole(UserRole.ADMIN);
+            ur.save(nick);
         }
 
         // ===== EQUIPMENT TYPES =====
@@ -117,6 +143,29 @@ public class DataSeeder {
         createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8,30), LocalDate.now().plusDays(1).atTime(9,0));
         createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(9,0), LocalDate.now().plusDays(1).atTime(9,30));
 
+        //  schedule blocks
+        createBlockIfPossible(
+                sbs,
+                nick,
+                LocalDate.now().atTime(11, 0),
+                LocalDate.now().atTime(12, 0),
+                "Team lift block"
+        );
+        createBlockIfPossible(
+                sbs,
+                nick,
+                LocalDate.now().plusDays(2).atTime(14, 0),
+                LocalDate.now().plusDays(2).atTime(15, 0),
+                "Facility event"
+        );
+        createBlockIfPossible(
+                sbs,
+                nick,
+                LocalDate.now().plusDays(4).atTime(8, 0),
+                LocalDate.now().plusDays(4).atTime(9, 0),
+                "Coach-only window"
+        );
+
     }
 
     private Equipment createBath(String name, String type, EquipmentType bathType, EquipmentRepository er) {
@@ -165,6 +214,19 @@ public class DataSeeder {
         } catch (IllegalArgumentException e) {
             Logger logger = LoggerFactory.getLogger(DataSeeder.class);
             logger.debug("Skipping reservation during seed: {}", e.getMessage());
+        }
+    }
+
+    private void createBlockIfPossible(ScheduleBlockService sbs,
+                                       User createdBy,
+                                       LocalDateTime start,
+                                       LocalDateTime end,
+                                       String reason) {
+        try {
+            sbs.createBlock(createdBy, start, end, reason);
+        } catch (IllegalArgumentException e) {
+            Logger logger = LoggerFactory.getLogger(DataSeeder.class);
+            logger.debug("Skipping schedule block during seed: {}", e.getMessage());
         }
     }
 }
