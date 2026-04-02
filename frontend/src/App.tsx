@@ -12,13 +12,15 @@ import NotFound from "./pages/NotFound.tsx";
 import Profile from "./pages/Profile.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
 import {type JSX, useCallback, useEffect, useMemo, useState} from "react";
-import type {Reservation} from "./types.ts";
+import type {CalendarEvent, Reservation} from "./types.ts";
 import {getActiveReservationsForAdmin, getReservations} from "./api/Reservations.ts";
+import {getScheduleBlocks} from "./api/Blocks.ts";
 import {
     parseAdminRawResToRes,
     parseRawResToRes,
     parseResToEvent
 } from "./util/ParseReservation.ts";
+import {parseRawBlockToEvent, sortEventsByStartIso} from "./util/ParseScheduleBlock.ts";
 import CreateEquipment from "./pages/CreateEquipment";
 import EquipmentTypes from "./pages/EquipmentTypes";
 import AllEquipment from "./pages/AllEquipment";
@@ -41,25 +43,48 @@ function AppShell() {
     };
 
     const [reservations, setReservations] = useState<Reservation[]>([]);
+    const [globalBlockEvents, setGlobalBlockEvents] = useState<CalendarEvent[]>([]);
 
     const [loading, setLoading] = useState(true);
+
+    // Combine reservations and blocks and sort them by ISO time
     const calendarEvents = useMemo(
-        () => reservations.map(parseResToEvent),
-        [reservations]
+        () => {
+            const reservationEvents = reservations.map(parseResToEvent);
+            return sortEventsByStartIso([...reservationEvents, ...globalBlockEvents]);
+        },
+        [globalBlockEvents, reservations]
     );
 
     // TODO error handling
     const loadReservations = useCallback(async () => {
         setLoading(true);
         try {
+            // Fetch blocks
+            const blocksPromise = getScheduleBlocks()
+                .then((blocks) => sortEventsByStartIso(blocks.map(parseRawBlockToEvent)))
+                .catch((err) => {
+                    console.error("Failed to fetch schedule blocks:", err);
+                    return [] as CalendarEvent[];
+                });
+
             if (hasPrivilegedAccess) {
                 // Get all active reservations if admin
-                const data = await getActiveReservationsForAdmin();
-                setReservations(data.map(parseAdminRawResToRes));
+                const [reservationData, blocks] = await Promise.all([
+                    getActiveReservationsForAdmin(),
+                    blocksPromise,
+                ]);
+
+                setReservations(reservationData.map(parseAdminRawResToRes));
+                setGlobalBlockEvents(blocks);
             } else {
                 // Just get users reservations
-                const data = await getReservations();
+                const [data, blocks] = await Promise.all([
+                    getReservations(),
+                    blocksPromise,
+                ]);
                 setReservations(data.map(parseRawResToRes));
+                setGlobalBlockEvents(blocks);
             }
         } catch (err) {
             console.error(err);
@@ -89,7 +114,7 @@ function AppShell() {
                 const settings = await getAppSettings();
 
                 setFirstDateToShow(settings.firstDateToShow);
-                setFirstDate(settings.firstDate);
+                setFirstDate(dayjs().startOf(firstDateToShow));
                 setStartTime(settings.startTime);
                 setEndTime(settings.endTime);
                 setTimeStep(settings.timeStep);

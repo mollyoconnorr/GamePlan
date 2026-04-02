@@ -70,6 +70,7 @@ export interface CalendarEvent {
     borderColor?: string;
     textColor?: string;
     conflict?: boolean;
+    isBlock?: boolean;
 }
 
 export interface RawAdminReservation {
@@ -80,6 +81,14 @@ export interface RawAdminReservation {
     athleteFirstName: string;
     athleteLastName: string;
     color?: string;
+}
+
+export interface RawScheduleBlock {
+    id: number;
+    start: string;
+    end: string;
+    reason?: string | null;
+    canceledReservations?: number | null;
 }
 
 export interface EquipmentAttribute {
