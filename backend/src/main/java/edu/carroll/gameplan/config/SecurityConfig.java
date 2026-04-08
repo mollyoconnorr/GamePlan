@@ -1,5 +1,7 @@
 package edu.carroll.gameplan.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -18,14 +20,16 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(SecurityProps.class)
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   LogoutSuccessHandler oidcLogoutSuccessHandler) throws Exception {
+                                                   LogoutSuccessHandler oidcLogoutSuccessHandler,
+                                                   @Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps props){
 
         http
-                .csrf(AbstractHttpConfigurer::disable) // change this once we start doing role seperation
+                .csrf(AbstractHttpConfigurer::disable) // change this once we start doing role separation
                 .cors(Customizer.withDefaults())
                 // TODO: REMOVE BEFORE PROD!!! THIS IS DISABLING CSRF PROTECTION
 //                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
@@ -36,7 +40,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth
-                        .defaultSuccessUrl("http://10.39.1.112:8080/app/home", true)
+                        .defaultSuccessUrl(props.getSuccessUrl(), true)
                 )
                 .logout(logout -> logout
                         .logoutUrl("/api/logout")
@@ -47,13 +51,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(@Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps props) {
         final CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "https://gameplan.carroll.edu"
-        ));
+        config.setAllowedOrigins(props.getAllowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "Authorization", "X-XSRF-TOKEN"));
         config.setAllowCredentials(true);
@@ -66,11 +67,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public LogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository) {
+    public LogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository,
+                                                         @Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps props) {
         OidcClientInitiatedLogoutSuccessHandler successHandler =
                 new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
 
-        successHandler.setPostLogoutRedirectUri("http://10.39.1.112:8080/");
+        successHandler.setPostLogoutRedirectUri(props.getLogoutUrl());
         return successHandler;
     }
 }
