@@ -55,27 +55,23 @@ bootRun {
     environment "OKTA_ISSUER", localProperties["OKTA_ISSUER"]
 }
 
-//def frontendDir = layout.projectDirectory.dir("../frontend")
-//def npmCommand = System.getProperty('os.name').toLowerCase().contains('windows') ? 'npm.cmd' : 'npm'
-//
-//tasks.register('installFrontend', Exec) {
-//    workingDir frontendDir.asFile
-//    commandLine npmCommand, 'install'
-//}
-//
-//tasks.register('buildFrontend', Exec) {
-//    dependsOn 'installFrontend'
-//    workingDir frontendDir.asFile
-//    commandLine npmCommand, 'run', 'build'
-//}
-//
-//tasks.named('processResources') {
-//    dependsOn 'buildFrontend'
-//    from(frontendDir.dir("dist")) {
-//        into 'static'
-//    }
-//}
-//
-//tasks.named('bootRun') {
-//    dependsOn 'processResources'
-//}
+def frontendDir = layout.projectDirectory.dir("../frontend")
+def npmCommand = System.getProperty('os.name').toLowerCase().contains('windows') ? 'npm.cmd' : 'npm'
+
+tasks.register('installFrontend', Exec) {
+    workingDir frontendDir.asFile
+    commandLine npmCommand, 'install'
+}
+
+tasks.register('buildFrontend', Exec) {
+    dependsOn 'installFrontend'
+    workingDir frontendDir.asFile
+    commandLine npmCommand, 'run', 'build'
+}
+
+tasks.named('bootJar') {
+    dependsOn 'buildFrontend'
+    from(frontendDir.dir("dist")) {
+        into("BOOT-INF/classes/static")
+    }
+}
