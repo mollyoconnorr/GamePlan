@@ -21,7 +21,7 @@ type HomeLocationState = {
 }
 
 export default function Home(
-    { firstDate,startTime,endTime,timeStep,maxResTime,numDays,
+    { firstDate,startTime,endTime,timeStep,numDays,
         reservations, calendarEvents, loadReservations, loading}: HomeProps
 
 ){
