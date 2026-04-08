@@ -29,6 +29,7 @@ public class EquipmentAttribute {
     /**
      * Value of the attribute (e.g., "M", "red").
      */
+    @Column(name = "attribute_value")
     private String value;
 
     /**
