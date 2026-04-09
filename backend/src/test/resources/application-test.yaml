@@ -11,6 +11,11 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: false
 
-  h2:
-    console:
-      enabled: false
+# Need these in here so they can be passed to securityConfig but I don't think they're actually used.
+app:
+  security:
+    success-url: "http://localhost:5173/app/home"
+    logout-url: "http://localhost:5173/"
+    allowed-origins:
+      - "https://gameplan.carroll.edu"
+      - "http://localhost:5173"

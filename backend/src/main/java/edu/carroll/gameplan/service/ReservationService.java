@@ -73,6 +73,10 @@ public class ReservationService {
             throw new IllegalArgumentException("This time slot is blocked by an admin.");
         }
 
+        if (start.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Given start time has already passed!");
+        }
+
         // Check if equipment is already reserved for overlapping time slots
         final List<Reservation> existingReservations = reservationRepository
                 .findByEquipmentAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(equipment, start, end, ReservationStatus.ACTIVE);
@@ -159,6 +163,10 @@ public class ReservationService {
 
         if (scheduleBlockService.hasActiveBlockConflict(newStart, newEnd)) {
             throw new IllegalArgumentException("This time slot is blocked by an admin.");
+        }
+
+        if (newStart.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Given start time has already passed!");
         }
 
         // Fetch the reservation

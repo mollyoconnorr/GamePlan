@@ -60,7 +60,7 @@ class ReservationServiceUnitTest {
      */
     @Test
     void createReservationThrowsWhenEquipmentReserved() {
-        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime start = LocalDateTime.now().plusMinutes(2L);
         LocalDateTime end = start.plusMinutes(30);
         when(reservationRepository.findByEquipmentAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
                 any(), any(), any(), any()))
@@ -69,6 +69,19 @@ class ReservationServiceUnitTest {
         assertThatThrownBy(() -> reservationService.createReservation(user, equipment, start, end))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("already reserved");
+    }
+
+    /**
+     * Ensures reservation creation is rejected when the start time is in the past.
+     */
+    @Test
+    void createReservationRejectsPastStartTime() {
+        LocalDateTime start = LocalDateTime.now().minusMinutes(1);
+        LocalDateTime end = start.plusMinutes(30);
+
+        assertThatThrownBy(() -> reservationService.createReservation(user, equipment, start, end))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Given start time has already passed!");
     }
 
     /**
@@ -96,5 +109,18 @@ class ReservationServiceUnitTest {
         LocalDateTime start = LocalDateTime.now();
         assertThatThrownBy(() -> reservationService.updateReservation(7L, start, start, user))
                 .hasMessageContaining("End time must be after start time");
+    }
+
+    /**
+     * Ensures reservation updates are rejected when the new start time is in the past.
+     */
+    @Test
+    void updateReservationRejectsPastStartTime() {
+        LocalDateTime newStart = LocalDateTime.now().minusMinutes(1);
+        LocalDateTime newEnd = newStart.plusMinutes(30);
+
+        assertThatThrownBy(() -> reservationService.updateReservation(7L, newStart, newEnd, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Given start time has already passed!");
     }
 }
