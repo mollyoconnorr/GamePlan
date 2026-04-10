@@ -1,10 +1,6 @@
 package edu.carroll.gameplan.service;
 
-import edu.carroll.gameplan.model.Equipment;
-import edu.carroll.gameplan.model.Reservation;
-import edu.carroll.gameplan.model.ReservationStatus;
-import edu.carroll.gameplan.model.User;
-import edu.carroll.gameplan.model.UserRole;
+import edu.carroll.gameplan.model.*;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.ReservationRepository;
 import org.springframework.security.access.AccessDeniedException;
@@ -85,6 +81,10 @@ public class ReservationService {
             throw new IllegalArgumentException("Equipment is already reserved for this time slot.");
         }
 
+        if (equipment.getStatus() != EquipmentStatus.AVAILABLE) {
+            throw new IllegalArgumentException("Equipment is currently under maintenance");
+        }
+
         List<Reservation> userConflicts = reservationRepository
                 .findByUserAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(user, start, end, ReservationStatus.ACTIVE);
 
@@ -156,6 +156,7 @@ public class ReservationService {
      * @param actingUser    User requesting the update
      * @return the updated reservation
      */
+    @Transactional
     public Reservation updateReservation(Long reservationId, LocalDateTime newStart, LocalDateTime newEnd, User actingUser) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -184,6 +185,11 @@ public class ReservationService {
 
         if (reservation.getStartDatetime().isBefore(now)) {
             throw new IllegalArgumentException("Past reservations cannot be edited.");
+        }
+
+        if (reservation.getEquipment().getStatus() != EquipmentStatus.AVAILABLE) {
+            cancelReservation(reservationId, actingUser);
+            throw new IllegalArgumentException("Equipment is currently under maintenance.");
         }
 
         // Check for overlapping reservations for the same equipment

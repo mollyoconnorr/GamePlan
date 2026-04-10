@@ -1,6 +1,7 @@
 package edu.carroll.gameplan.service;
 
 import edu.carroll.gameplan.model.Equipment;
+import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.model.ReservationStatus;
 import edu.carroll.gameplan.model.User;
@@ -18,8 +19,10 @@ import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -69,6 +72,23 @@ class ReservationServiceUnitTest {
         assertThatThrownBy(() -> reservationService.createReservation(user, equipment, start, end))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("already reserved");
+    }
+
+    /**
+     * Ensures reservation creation is rejected when equipment is not available.
+     */
+    @Test
+    void createReservationRejectsUnavailableEquipment() {
+        LocalDateTime start = LocalDateTime.now().plusMinutes(2L);
+        LocalDateTime end = start.plusMinutes(30);
+        equipment.setStatus(EquipmentStatus.MAINTENANCE);
+        when(reservationRepository.findByEquipmentAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
+                any(), any(), any(), any()))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> reservationService.createReservation(user, equipment, start, end))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Equipment is currently under maintenance");
     }
 
     /**
@@ -144,5 +164,33 @@ class ReservationServiceUnitTest {
         assertThatThrownBy(() -> reservationService.updateReservation(7L, newStart, newEnd, user))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Past reservations cannot be edited.");
+    }
+
+    /**
+     * Ensures updates cancel and reject reservations when equipment is unavailable.
+     */
+    @Test
+    void updateReservationCancelsWhenEquipmentUnavailable() {
+        Reservation existing = new Reservation();
+        existing.setId(7L);
+        existing.setUser(user);
+        equipment.setStatus(EquipmentStatus.MAINTENANCE);
+        existing.setEquipment(equipment);
+        existing.setStatus(ReservationStatus.ACTIVE);
+        existing.setStartDatetime(LocalDateTime.now().plusHours(1));
+        existing.setEndDatetime(LocalDateTime.now().plusHours(2));
+
+        when(reservationRepository.findById(7L)).thenReturn(java.util.Optional.of(existing));
+        when(reservationRepository.save(existing)).thenReturn(existing);
+
+        LocalDateTime newStart = LocalDateTime.now().plusHours(3);
+        LocalDateTime newEnd = newStart.plusMinutes(30);
+
+        assertThatThrownBy(() -> reservationService.updateReservation(7L, newStart, newEnd, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Equipment is currently under maintenance.");
+
+        assertThat(existing.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+        verify(reservationRepository).save(existing);
     }
 }

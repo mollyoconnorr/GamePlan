@@ -4,9 +4,12 @@ import edu.carroll.gameplan.dto.request.CreateEquipmentTypeRequest;
 import edu.carroll.gameplan.dto.response.EquipmentAttributeDTO;
 import edu.carroll.gameplan.dto.request.EquipmentTypeUpdateRequest;
 import edu.carroll.gameplan.dto.response.EquipmentTypeDTO;
+import edu.carroll.gameplan.dto.response.EquipmentWithReservationsDTO;
 import edu.carroll.gameplan.model.Equipment;
 import edu.carroll.gameplan.model.EquipmentAttribute;
+import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
+import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,10 +20,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -136,6 +141,41 @@ class EquipmentTypeServiceTest {
         EquipmentTypeDTO dto = equipmentTypeService.updateEquipmentType(1L, request);
 
         assertThat(dto.name()).isEqualTo("New Name");
+    }
+
+    /**
+     * Verifies available-equipment queries include status filtering and DTO mapping.
+     */
+    @Test
+    void getAvailableEquipmentWithReservationsFiltersToAvailableStatus() {
+        Equipment equipment = new Equipment();
+        equipment.setId(5L);
+        equipment.setName("Rack One");
+        equipment.setStatus(EquipmentStatus.AVAILABLE);
+
+        EquipmentAttribute attribute = new EquipmentAttribute();
+        attribute.setName("size");
+        attribute.setValue("L");
+        attribute.setEquipment(equipment);
+        equipment.setAttributes(List.of(attribute));
+
+        Reservation reservation = new Reservation();
+        reservation.setId(10L);
+        reservation.setStartDatetime(LocalDateTime.of(2026, 4, 15, 10, 0));
+        reservation.setEndDatetime(LocalDateTime.of(2026, 4, 15, 11, 0));
+        equipment.setReservations(List.of(reservation));
+
+        when(equipmentRepository.findByTypeAndAttributeAndStatus(1L, "size", "L", EquipmentStatus.AVAILABLE))
+                .thenReturn(List.of(equipment));
+
+        List<EquipmentWithReservationsDTO> result =
+                equipmentTypeService.getAvailableEquipmentWithReservations(1L, "size", "L");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isEqualTo("Rack One");
+        assertThat(result.get(0).attributes()).hasSize(1);
+        assertThat(result.get(0).reservations()).hasSize(1);
+        verify(equipmentRepository).findByTypeAndAttributeAndStatus(1L, "size", "L", EquipmentStatus.AVAILABLE);
     }
 
     private void assignId(EquipmentType target, Long value) {
