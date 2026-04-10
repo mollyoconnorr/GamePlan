@@ -3,13 +3,26 @@ import {useNavigate, useParams} from "react-router-dom";
 import Button from "../components/Button.tsx";
 import Toast from "../components/Toast.tsx";
 import {safeBack} from "../util/Navigation.ts";
-import {getEquipment, getEquipmentTypes, updateEquipment, updateEquipmentStatus, deleteEquipment} from "../api/Equipment.ts";
-import type {EquipmentType, EquipmentDTO, EquipmentUpdateRequest} from "../api/Equipment.ts";
+import {
+    deleteEquipment,
+    getEquipment,
+    getEquipmentTypeAttributes,
+    getEquipmentTypes,
+    updateEquipment,
+    updateEquipmentStatus,
+} from "../api/Equipment.ts";
+import type {
+    EquipmentDTO,
+    EquipmentType,
+    EquipmentTypeAttributeResponse,
+    EquipmentUpdateRequest,
+} from "../api/Equipment.ts";
 
 type AttributeRow = {
     id: string;
     name: string;
     value: string;
+    options: string[];
 };
 
 const statusOptions = [
@@ -52,16 +65,92 @@ export default function EditEquipment() {
             });
     }, []);
 
+    const mapAttributesToRecord = (rows?: EquipmentDTO["attributes"]) =>
+        (rows ?? []).reduce<Record<string, string>>((acc, row) => {
+            const trimmedName = row.name?.trim();
+            if (!trimmedName) {
+                return acc;
+            }
+            acc[trimmedName] = row.value;
+            return acc;
+        }, {});
+
+    const parseTypeAttributes = (rows: EquipmentTypeAttributeResponse[]) => {
+        const grouped = new Map<string, Set<string>>();
+
+        rows.forEach((row) => {
+            if (!grouped.has(row.name)) {
+                grouped.set(row.name, new Set<string>());
+            }
+            const options = Array.isArray(row.options)
+                ? row.options
+                : Array.isArray(row.value)
+                    ? row.value
+                    : typeof row.value === "string"
+                        ? [row.value]
+                        : [];
+
+            options.forEach((option) => {
+                const trimmedOption = option.trim();
+                if (!trimmedOption) return;
+                grouped.get(row.name)?.add(trimmedOption);
+            });
+        });
+
+        return Array.from(grouped.entries()).map(([name, options]) => ({
+            name,
+            options: Array.from(options),
+        }));
+    };
+
+    const buildAttributeRows = (
+        typeAttributes: {name: string; options: string[]}[],
+        currentValues: Record<string, string>
+    ): AttributeRow[] => {
+        return typeAttributes.map((typeAttribute) => {
+            const currentValue = currentValues[typeAttribute.name] ?? "";
+            const hasCurrentInOptions = typeAttribute.options.includes(currentValue);
+            const defaultValue = typeAttribute.options[0] ?? "";
+            const value = typeAttribute.options.length === 0
+                ? currentValue
+                : (hasCurrentInOptions ? currentValue : defaultValue);
+
+            return {
+                id: typeAttribute.name,
+                name: typeAttribute.name,
+                value,
+                options: typeAttribute.options,
+            };
+        });
+    };
+
+    const loadTypeAttributeRows = async (typeId: number, currentValues: Record<string, string>) => {
+        try {
+            const typeAttributeData = await getEquipmentTypeAttributes(typeId);
+            const parsedTypeAttributes = parseTypeAttributes(typeAttributeData);
+            setAttributes(buildAttributeRows(parsedTypeAttributes, currentValues));
+        } catch (error) {
+            console.error(error);
+            setAttributes([]);
+            setToastMessage("Failed to load attributes.");
+        }
+    };
+
     useEffect(() => {
         if (!equipmentId) return;
         setLoading(true);
         void getEquipment(Number(equipmentId))
-            .then((data) => {
+            .then(async (data) => {
                 setEquipment(data);
                 setName(data.name);
                 setSelectedTypeId(data.typeId ?? null);
                 setStatus(data.status ?? "AVAILABLE");
-                setAttributes(mapAttributes(data.attributes));
+
+                if (data.typeId) {
+                    await loadTypeAttributeRows(data.typeId, mapAttributesToRecord(data.attributes));
+                } else {
+                    setAttributes([]);
+                }
             })
             .catch((error) => {
                 console.error(error);
@@ -70,28 +159,10 @@ export default function EditEquipment() {
             .finally(() => setLoading(false));
     }, [equipmentId]);
 
-    const mapAttributes = (rows?: EquipmentDTO["attributes"]) =>
-        (rows ?? []).map((attr) => ({
-            id: `${attr.name}-${attr.value}-${Math.random().toString(36).slice(2, 8)}`,
-            name: attr.name,
-            value: attr.value,
-        }));
-
-    const addAttributeRow = () => {
-        setAttributes((prev) => [
-            ...prev,
-            {id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: "", value: ""},
-        ]);
-    };
-
-    const updateAttributeRow = (id: string, field: "name" | "value", value: string) => {
+    const updateAttributeValue = (id: string, value: string) => {
         setAttributes((prev) =>
-            prev.map((row) => (row.id === id ? {...row, [field]: value} : row))
+            prev.map((row) => (row.id === id ? {...row, value} : row))
         );
-    };
-
-    const removeAttributeRow = (id: string) => {
-        setAttributes((prev) => prev.filter((row) => row.id !== id));
     };
 
     const handleSave = async (event: FormEvent<HTMLFormElement>) => {
@@ -118,7 +189,11 @@ export default function EditEquipment() {
             setEquipment(updated);
             setName(updated.name);
             setSelectedTypeId(updated.typeId ?? null);
-            setAttributes(mapAttributes(updated.attributes));
+            if (updated.typeId) {
+                await loadTypeAttributeRows(updated.typeId, mapAttributesToRecord(updated.attributes));
+            } else {
+                setAttributes([]);
+            }
             setToastMessage("Equipment saved.");
         } catch (error) {
             console.error(error);
@@ -160,6 +235,15 @@ export default function EditEquipment() {
     if (!equipmentId) {
         return <p>Equipment not found.</p>;
     }
+
+    const handleTypeChange = async (nextTypeId: number | null) => {
+        setSelectedTypeId(nextTypeId);
+        if (!nextTypeId) {
+            setAttributes([]);
+            return;
+        }
+        await loadTypeAttributeRows(nextTypeId, {});
+    };
 
     return (
         <>
@@ -211,7 +295,9 @@ export default function EditEquipment() {
                         <div className="flex items-center gap-3">
                             <select
                                 value={selectedTypeId ?? ""}
-                                onChange={(event) => setSelectedTypeId(event.target.value ? Number(event.target.value) : null)}
+                                onChange={(event) =>
+                                    void handleTypeChange(event.target.value ? Number(event.target.value) : null)
+                                }
                                 className="rounded border px-3 py-2 text-sm"
                             >
                                 <option value="">Select a type</option>
@@ -234,36 +320,36 @@ export default function EditEquipment() {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-semibold text-gray-700">Attributes</span>
-                            <button
-                                type="button"
-                                onClick={addAttributeRow}
-                                className="text-sm text-primary underline"
-                            >
-                                Add attribute
-                            </button>
                         </div>
                         <div className="space-y-2">
+                            {attributes.length === 0 && (
+                                <p className="text-sm text-gray-500">No attributes configured for this type.</p>
+                            )}
                             {attributes.map((row) => (
-                                <div key={row.id} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                                <div key={row.id} className="grid gap-2 sm:grid-cols-[1fr_1fr]">
                                     <input
-                                        className="rounded border px-3 py-2 text-sm"
-                                        placeholder="Attribute name"
+                                        className="rounded border bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                         value={row.name}
-                                        onChange={(event) => updateAttributeRow(row.id, "name", event.target.value)}
+                                        readOnly
                                     />
-                                    <input
+                                    <select
                                         className="rounded border px-3 py-2 text-sm"
-                                        placeholder="Value"
                                         value={row.value}
-                                        onChange={(event) => updateAttributeRow(row.id, "value", event.target.value)}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeAttributeRow(row.id)}
-                                        className="text-sm text-red-500"
+                                        onChange={(event) => updateAttributeValue(row.id, event.target.value)}
+                                        disabled={row.options.length === 0}
                                     >
-                                        Remove
-                                    </button>
+                                        {row.options.length === 0 ? (
+                                            <option value="">
+                                                No options configured
+                                            </option>
+                                        ) : (
+                                            row.options.map((option) => (
+                                                <option key={`${row.id}-${option}`} value={option}>
+                                                    {option}
+                                                </option>
+                                            ))
+                                        )}
+                                    </select>
                                 </div>
                             ))}
                         </div>
