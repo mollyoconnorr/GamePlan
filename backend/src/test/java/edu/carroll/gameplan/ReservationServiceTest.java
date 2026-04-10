@@ -239,4 +239,40 @@ public class ReservationServiceTest {
         Reservation cancelled = reservationService.cancelReservation(reservation.getId(), admin);
         assertEquals(ReservationStatus.CANCELLED, cancelled.getStatus(), "Admin should be able to cancel reservations");
     }
+
+    @Test
+    public void testGetActiveReservationsForEquipmentExcludesExpiredReservations() {
+        LocalDateTime now = LocalDateTime.now();
+
+        Reservation pastActive = new Reservation();
+        pastActive.setUser(testUser);
+        pastActive.setEquipment(testEquipment);
+        pastActive.setStatus(ReservationStatus.ACTIVE);
+        pastActive.setStartDatetime(now.minusHours(2));
+        pastActive.setEndDatetime(now.minusHours(1));
+        pastActive = reservationRepository.save(pastActive);
+
+        Reservation futureActive = new Reservation();
+        futureActive.setUser(testUser);
+        futureActive.setEquipment(testEquipment);
+        futureActive.setStatus(ReservationStatus.ACTIVE);
+        futureActive.setStartDatetime(now.plusHours(1));
+        futureActive.setEndDatetime(now.plusHours(2));
+        futureActive = reservationRepository.save(futureActive);
+
+        Reservation futureCancelled = new Reservation();
+        futureCancelled.setUser(testUser);
+        futureCancelled.setEquipment(testEquipment);
+        futureCancelled.setStatus(ReservationStatus.CANCELLED);
+        futureCancelled.setStartDatetime(now.plusHours(3));
+        futureCancelled.setEndDatetime(now.plusHours(4));
+        futureCancelled = reservationRepository.save(futureCancelled);
+
+        var reservations = reservationService.getActiveReservationsForEquipment(testEquipment.getId());
+
+        assertEquals(1, reservations.size());
+        assertEquals(futureActive.getId(), reservations.get(0).getId());
+        assertNotEquals(pastActive.getId(), reservations.get(0).getId());
+        assertNotEquals(futureCancelled.getId(), reservations.get(0).getId());
+    }
 }

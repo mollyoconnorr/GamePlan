@@ -22,6 +22,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -119,6 +120,24 @@ class ReservationServiceUnitTest {
 
         assertThatThrownBy(() -> reservationService.cancelReservation(5L, user))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    /**
+     * Confirms equipment lookups only request non-expired active reservations.
+     */
+    @Test
+    void getActiveReservationsForEquipmentRequestsNonExpiredActiveReservations() {
+        Reservation activeFutureReservation = new Reservation();
+        activeFutureReservation.setId(44L);
+        when(reservationRepository.findByEquipmentIdAndEndDatetimeAfterAndStatusIs(
+                eq(2L), any(LocalDateTime.class), eq(ReservationStatus.ACTIVE)))
+                .thenReturn(List.of(activeFutureReservation));
+
+        List<Reservation> result = reservationService.getActiveReservationsForEquipment(2L);
+
+        assertThat(result).containsExactly(activeFutureReservation);
+        verify(reservationRepository).findByEquipmentIdAndEndDatetimeAfterAndStatusIs(
+                eq(2L), any(LocalDateTime.class), eq(ReservationStatus.ACTIVE));
     }
 
     /**

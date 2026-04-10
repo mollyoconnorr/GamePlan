@@ -131,7 +131,11 @@ public class ReservationService {
 
     @Transactional(readOnly = true)
     public List<Reservation> getActiveReservationsForEquipment(Long equipmentId) {
-        return reservationRepository.findByEquipmentIdAndStatusIs(equipmentId, ReservationStatus.ACTIVE);
+        return reservationRepository.findByEquipmentIdAndEndDatetimeAfterAndStatusIs(
+                equipmentId,
+                LocalDateTime.now(),
+                ReservationStatus.ACTIVE
+        );
     }
 
     /**

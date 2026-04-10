@@ -60,5 +60,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      */
     List<Reservation> findByStatus(ReservationStatus status);
 
-    List<Reservation> findByEquipmentIdAndStatusIs(Long equipmentId, ReservationStatus status);
+    List<Reservation> findByEquipmentIdAndEndDatetimeAfterAndStatusIs(Long equipmentId,
+                                                                       LocalDateTime endDatetime,
+                                                                       ReservationStatus status);
 }
