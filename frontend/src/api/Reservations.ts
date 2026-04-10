@@ -1,4 +1,4 @@
-import type {RawAdminReservation} from "../types.ts";
+import type {RawAdminReservation, RawReservation} from "../types.ts";
 
 async function extractErrorMessage(response: Response, fallback: string) {
     const body = await response.text();
@@ -87,7 +87,7 @@ export async function getEquipmentReservations(id: number) {
         throw new Error("Failed to fetch equipment reservations");
     }
 
-    return res.json();
+    return res.json() as Promise<RawReservation[]>;
 }
 
 interface MakeReservationRequest {
