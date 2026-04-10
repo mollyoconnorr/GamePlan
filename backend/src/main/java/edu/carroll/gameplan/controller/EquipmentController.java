@@ -125,7 +125,7 @@ public class EquipmentController {
                                                 OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         userService.requireTrainer(user);
-        if (!equipmentService.deleteEquipment(id)) {
+        if (!equipmentService.deleteEquipment(id, user)) {
             return ResponseEntity.notFound().build();
         }
 

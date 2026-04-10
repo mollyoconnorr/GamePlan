@@ -1,5 +1,6 @@
 package edu.carroll.gameplan.controller;
 
+import edu.carroll.gameplan.dto.response.AdminPendingCountResponse;
 import edu.carroll.gameplan.dto.response.AdminUserResponse;
 import edu.carroll.gameplan.dto.request.CreateUserRequest;
 import edu.carroll.gameplan.dto.request.UserRoleUpdateRequest;
@@ -64,5 +65,16 @@ public class AdminController {
         userService.requireAdmin(currentUser);
 
         return adminService.updateUserRole(userId, request.role());
+    }
+
+    /**
+     * Provides a count of how many pending student requests exist.
+     */
+    @GetMapping("/users/pending-count")
+    public AdminPendingCountResponse getPendingCount(OAuth2AuthenticationToken authentication) {
+        User currentUser = userService.resolveCurrentUser(authentication);
+        userService.requireAdmin(currentUser);
+
+        return new AdminPendingCountResponse(adminService.countPendingStudents());
     }
 }

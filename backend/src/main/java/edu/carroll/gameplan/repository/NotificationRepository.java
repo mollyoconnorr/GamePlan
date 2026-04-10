@@ -18,4 +18,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
      * @return list of unread notifications
      */
     List<Notification> findByUserAndReadFalse(User user);
+
+    long countByUserAndReadFalse(User user);
 }

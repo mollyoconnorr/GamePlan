@@ -3,6 +3,7 @@ package edu.carroll.gameplan.service;
 import edu.carroll.gameplan.model.Notification;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.repository.NotificationRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,18 +36,38 @@ public class NotificationService {
     }
 
     /**
-     * Fetches unread notifications for the user and marks them as read.
+     * Fetches unread notifications for the user without mutating their state.
      *
      * @param user target user
-     * @return list of notifications that were unread
+     * @return list of notifications that are currently unread
      */
     @Transactional
-    public List<Notification> fetchUnreadAndMarkRead(User user) {
-        List<Notification> unread = notificationRepository.findByUserAndReadFalse(user);
-        if (!unread.isEmpty()) {
-            unread.forEach(notification -> notification.setRead(true));
-            notificationRepository.saveAll(unread);
+    public List<Notification> fetchUnread(User user) {
+        return notificationRepository.findByUserAndReadFalse(user);
+    }
+
+    /**
+     * Marks a specific notification as read when the owning user indicates they're done with it.
+     */
+    @Transactional
+    public void markAsRead(User user, Long notificationId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("Notification not found: " + notificationId));
+
+        if (!notification.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("Cannot mark another user's notification as read.");
         }
-        return unread;
+
+        if (!notification.isRead()) {
+            notification.setRead(true);
+            notificationRepository.save(notification);
+        }
+    }
+    /**
+     * Counts how many unread notifications the user currently has without marking them read.
+     */
+    @Transactional(readOnly = true)
+    public long countUnread(User user) {
+        return notificationRepository.countByUserAndReadFalse(user);
     }
 }

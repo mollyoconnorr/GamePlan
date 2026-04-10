@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Service class for managing reservations.
@@ -24,9 +26,13 @@ import java.util.List;
 @Service
 public class ReservationService {
 
+    private static final DateTimeFormatter NOTIFICATION_FORMATTER =
+            DateTimeFormatter.ofPattern("EEEE, MMM d 'at' h:mm a", Locale.ENGLISH);
+
     private final ReservationRepository reservationRepository;
     private final EquipmentRepository equipmentRepository;
     private final ScheduleBlockService scheduleBlockService;
+    private final NotificationService notificationService;
 
     /**
      * Constructor injection of repositories.
@@ -36,10 +42,12 @@ public class ReservationService {
      */
     public ReservationService(ReservationRepository reservationRepository,
                               EquipmentRepository equipmentRepository,
-                              ScheduleBlockService scheduleBlockService) {
+                              ScheduleBlockService scheduleBlockService,
+                              NotificationService notificationService) {
         this.reservationRepository = reservationRepository;
         this.equipmentRepository = equipmentRepository;
         this.scheduleBlockService = scheduleBlockService;
+        this.notificationService = notificationService;
     }
 
 
@@ -122,7 +130,60 @@ public class ReservationService {
         }
 
         reservation.setStatus(ReservationStatus.CANCELLED);
-        return reservationRepository.save(reservation);
+        Reservation saved = reservationRepository.save(reservation);
+        if (!isOwner) {
+            notifyOwnerOfCancellation(reservation, actingUser);
+        }
+        return saved;
+    }
+
+    private void notifyOwnerOfCancellation(Reservation reservation, User actingUser) {
+        if (reservation == null || reservation.getUser() == null) {
+            return;
+        }
+
+        String equipmentName = reservation.getEquipment() != null && reservation.getEquipment().getName() != null
+                ? reservation.getEquipment().getName()
+                : "your equipment";
+        String formattedStart = reservation.getStartDatetime() != null
+                ? reservation.getStartDatetime().format(NOTIFICATION_FORMATTER)
+                : "the scheduled time";
+        String actorName = formatActingUserName(actingUser);
+
+        String message = String.format(
+                "Your reservation for %s on %s was cancelled by %s.",
+                equipmentName,
+                formattedStart,
+                actorName
+        );
+
+        notificationService.createNotification(reservation.getUser(), message);
+    }
+
+    private String formatActingUserName(User actingUser) {
+        if (actingUser == null) {
+            return "a trainer";
+        }
+
+        String first = actingUser.getFirstName();
+        String last = actingUser.getLastName();
+        StringBuilder builder = new StringBuilder();
+
+        if (first != null && !first.isBlank()) {
+            builder.append(first.trim());
+        }
+        if (last != null && !last.isBlank()) {
+            if (builder.length() > 0) {
+                builder.append(" ");
+            }
+            builder.append(last.trim());
+        }
+
+        if (builder.isEmpty()) {
+            return "a trainer";
+        }
+
+        return builder.toString();
     }
 
     @Transactional(readOnly = true)

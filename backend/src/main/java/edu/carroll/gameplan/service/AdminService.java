@@ -68,6 +68,15 @@ public class AdminService {
         return toResponse(userService.saveUser(targetUser));
     }
 
+    /**
+     * Counts how many pending students are waiting for approval.
+     *
+     * @return number of student requests
+     */
+    public long countPendingStudents() {
+        return userService.countByRole(UserRole.STUDENT);
+    }
+
     private String requireEmail(String email) {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email is required");

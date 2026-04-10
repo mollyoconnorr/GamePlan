@@ -122,10 +122,16 @@ public class EquipmentService {
      * Deletes equipment if it exists.
      */
     @Transactional
-    public boolean deleteEquipment(Long id) {
+    public boolean deleteEquipment(Long id, User actingUser) {
         if (!equipmentRepository.existsById(id)) {
             return false;
         }
+
+        List<Reservation> activeReservations = reservationService.getActiveReservationsForEquipment(id);
+        for (Reservation reservation : activeReservations) {
+            reservationService.cancelReservation(reservation.getId(), actingUser);
+        }
+
         equipmentRepository.deleteById(id);
         return true;
     }

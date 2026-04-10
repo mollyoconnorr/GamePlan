@@ -118,4 +118,14 @@ public class UserService {
     public User saveUser(User user) {
         return userRepository.save(user);
     }
+
+    /**
+     * Counts how many users currently have the requested role.
+     *
+     * @param role target role
+     * @return count of users with that role
+     */
+    public long countByRole(UserRole role) {
+        return userRepository.countByRole(role);
+    }
 }
