@@ -1,9 +1,11 @@
 package edu.carroll.gameplan.service;
 
 import edu.carroll.gameplan.dto.request.CreateEquipmentRequest;
+import edu.carroll.gameplan.dto.request.EquipmentUpdateRequest;
 import edu.carroll.gameplan.dto.response.EquipmentDTO;
 import edu.carroll.gameplan.dto.request.EquipmentStatusUpdateRequest;
 import edu.carroll.gameplan.model.Equipment;
+import edu.carroll.gameplan.model.EquipmentAttribute;
 import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
 import edu.carroll.gameplan.model.Reservation;
@@ -26,7 +28,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -156,6 +157,40 @@ class EquipmentServiceTest {
         assertThatThrownBy(() -> equipmentService.updateEquipmentStatus(15L, invalid, new User()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Invalid equipment status");
+    }
+
+    /**
+     * Ensures attribute updates mutate the existing collection reference (orphan-removal safe).
+     */
+    @Test
+    void updateEquipmentMutatesExistingAttributeCollection() {
+        Equipment equipment = new Equipment();
+        equipment.setId(21L);
+        EquipmentAttribute existingAttribute = new EquipmentAttribute();
+        existingAttribute.setName("size");
+        existingAttribute.setValue("Small");
+        existingAttribute.setEquipment(equipment);
+        List<EquipmentAttribute> existingAttributes = new java.util.ArrayList<>(List.of(existingAttribute));
+        equipment.setAttributes(existingAttributes);
+        equipment.setEquipmentType(equipmentType);
+
+        EquipmentUpdateRequest request = new EquipmentUpdateRequest();
+        request.setName("Updated Name");
+        request.setAttributes(Map.of("size", "Large", "condition", "Good"));
+
+        when(equipmentRepository.findById(21L)).thenReturn(java.util.Optional.of(equipment));
+        when(equipmentRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EquipmentDTO dto = equipmentService.updateEquipment(21L, request);
+
+        assertThat(equipment.getAttributes()).isSameAs(existingAttributes);
+        assertThat(equipment.getAttributes())
+                .extracting(EquipmentAttribute::getName, EquipmentAttribute::getValue)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("size", "Large"),
+                        org.assertj.core.groups.Tuple.tuple("condition", "Good")
+                );
+        assertThat(dto.getAttributes()).hasSize(2);
     }
 
     /**

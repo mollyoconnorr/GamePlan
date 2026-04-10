@@ -94,7 +94,11 @@ public class EquipmentService {
         }
 
         List<EquipmentAttribute> updatedAttributes = buildAttributes(request.getAttributes(), equipment);
-        equipment.setAttributes(updatedAttributes);
+        if (equipment.getAttributes() == null) {
+            equipment.setAttributes(new ArrayList<>());
+        }
+        equipment.getAttributes().clear();
+        equipment.getAttributes().addAll(updatedAttributes);
 
         return toDto(equipmentRepository.save(equipment));
     }
