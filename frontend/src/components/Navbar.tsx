@@ -7,9 +7,14 @@ export default function Navbar({ username, logout }: NavbarProps) {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Tracks when to display hamburger menu
+    const [displayHamMenu, setDisplayHamMenu] = useState(false);
+
     const isHome = location.pathname === "/app/home";
     const isProfile = location.pathname === "/app/profile";
     const handleSignOut = () => {
+        setDisplayHamMenu(false);
+
         // Prefer client-side route so the styled /logout page renders first
         if (location.pathname !== "/logout") {
             navigate("/logout");
@@ -27,10 +32,20 @@ export default function Navbar({ username, logout }: NavbarProps) {
             {
                 label: "Calendar",
                 Icon: Calendar1,
-                action: () => navigate("/app/home"),
+                action: () => {
+                    navigate("/app/home");
+                    setDisplayHamMenu(false);
+                },
                 underline: isHome,
             },
-            { label: username, Icon: CircleUserRound, action: () => navigate("/app/profile"), underline: isProfile },
+            {
+                label: username,
+                Icon: CircleUserRound,
+                action: () => {
+                    navigate("/app/profile");
+                    setDisplayHamMenu(false);
+                },
+                underline: isProfile },
             { label: "Sign out", Icon: LogOut, action: handleSignOut, underline: false }
         ];
 
@@ -48,9 +63,6 @@ export default function Navbar({ username, logout }: NavbarProps) {
             </div>
         ));
     }
-
-    // Tracks when to display hamburger menu
-    const [displayHamMenu, setDisplayHamMenu] = useState(false);
 
     return <header>
         <nav className="bg-primary text-white w-full p-5 flex shadow-md">
