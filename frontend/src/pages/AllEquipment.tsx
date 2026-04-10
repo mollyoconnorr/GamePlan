@@ -2,8 +2,8 @@ import {useEffect, useState} from "react";
 import {safeBack} from "../util/Navigation.ts";
 import Button from "../components/Button.tsx";
 import {useNavigate} from "react-router-dom";
-import type {EquipmentDTO} from "../api/Equipment.ts";
-import {updateEquipmentStatus} from "../api/Equipment.ts";
+import type {EquipmentDTO, EquipmentTypeAttributeResponse} from "../api/Equipment.ts";
+import {getEquipmentTypeAttributes, updateEquipmentStatus} from "../api/Equipment.ts";
 import {getEquipmentReservations} from "../api/Reservations.ts";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Toast from "../components/Toast.tsx";
@@ -27,6 +27,11 @@ type PendingDeleteChange = {
     canceledReservations: number;
 };
 
+type TypeAttributeDefinition = {
+    name: string;
+    options: string[];
+};
+
 const equipmentStatusOptions: StatusOption[] = [
     { value: "AVAILABLE", label: "Available" },
     { value: "MAINTENANCE", label: "Maintenance" }
@@ -41,6 +46,7 @@ export default function AllEquipment() {
     const [toastMessage, setToastMessage] = useState("");
     const [pendingMaintenanceChange, setPendingMaintenanceChange] = useState<PendingMaintenanceChange | null>(null);
     const [pendingDeleteChange, setPendingDeleteChange] = useState<PendingDeleteChange | null>(null);
+    const [typeAttributesByTypeId, setTypeAttributesByTypeId] = useState<Record<number, TypeAttributeDefinition[]>>({});
 
     useEffect(() => {
         if (!toastMessage) return;
@@ -178,17 +184,122 @@ export default function AllEquipment() {
         ? "reservation"
         : "reservations";
 
-    useEffect(() => {
-        fetch("/api/equipment", { credentials: "include" })
-            .then((res) => res.json())
-            .then((data) => {
-                setEquipmentList(data);
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error("Failed to fetch equipment:", err);
-                setLoading(false);
+    const parseTypeAttributes = (rows: EquipmentTypeAttributeResponse[]): TypeAttributeDefinition[] => {
+        const grouped = new Map<string, Set<string>>();
+
+        rows.forEach((row) => {
+            if (!grouped.has(row.name)) {
+                grouped.set(row.name, new Set<string>());
+            }
+
+            const options = Array.isArray(row.options)
+                ? row.options
+                : Array.isArray(row.value)
+                    ? row.value
+                    : typeof row.value === "string"
+                        ? [row.value]
+                        : [];
+
+            options.forEach((option) => {
+                const trimmedOption = option.trim();
+                if (!trimmedOption) return;
+                grouped.get(row.name)?.add(trimmedOption);
             });
+        });
+
+        return Array.from(grouped.entries()).map(([name, options]) => ({
+            name,
+            options: Array.from(options),
+        }));
+    };
+
+    const loadTypeAttributeDefinitions = async (equipment: EquipmentDTO[]) => {
+        const typeIds = Array.from(
+            new Set(
+                equipment
+                    .map((item) => item.typeId)
+                    .filter((typeId): typeId is number => typeof typeId === "number")
+            )
+        );
+
+        if (typeIds.length === 0) {
+            setTypeAttributesByTypeId({});
+            return;
+        }
+
+        const definitionEntries = await Promise.allSettled(
+            typeIds.map(async (typeId) => {
+                const attributes = await getEquipmentTypeAttributes(typeId);
+                return [typeId, parseTypeAttributes(attributes)] as const;
+            })
+        );
+
+        const nextMap: Record<number, TypeAttributeDefinition[]> = {};
+        let hasLoadFailure = false;
+        definitionEntries.forEach((entry) => {
+            if (entry.status === "fulfilled") {
+                const [typeId, definitions] = entry.value;
+                nextMap[typeId] = definitions;
+            } else {
+                hasLoadFailure = true;
+            }
+        });
+
+        if (hasLoadFailure) {
+            setToastMessage("Some attribute definitions failed to load.");
+        }
+
+        setTypeAttributesByTypeId(nextMap);
+    };
+
+    const formatEquipmentAttributes = (equipment: EquipmentDTO) => {
+        const persistedValueMap = new Map(
+            (equipment.attributes ?? []).map((attribute) => [attribute.name, attribute.value])
+        );
+
+        const typeAttributes = equipment.typeId
+            ? (typeAttributesByTypeId[equipment.typeId] ?? [])
+            : [];
+
+        if (typeAttributes.length > 0) {
+            return typeAttributes.map((typeAttribute) => {
+                const persistedValue = persistedValueMap.get(typeAttribute.name);
+                const fallbackValue = typeAttribute.options[0] ?? "";
+                const displayValue = persistedValue?.trim() || fallbackValue || "Not set";
+                return `${typeAttribute.name}: ${displayValue}`;
+            }).join(", ");
+        }
+
+        if (equipment.attributes && equipment.attributes.length > 0) {
+            return equipment.attributes.map((attribute) => `${attribute.name}: ${attribute.value}`).join(", ");
+        }
+
+        return "No attributes";
+    };
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadEquipment = async () => {
+            try {
+                const response = await fetch("/api/equipment", { credentials: "include" });
+                const data = await response.json() as EquipmentDTO[];
+                if (cancelled) return;
+                setEquipmentList(data);
+                await loadTypeAttributeDefinitions(data);
+            } catch (err) {
+                console.error("Failed to fetch equipment:", err);
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        void loadEquipment();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     if (loading) return <p>Loading equipment...</p>;
@@ -272,9 +383,7 @@ export default function AllEquipment() {
                                         </select>
                                     </td>
                                     <td className="border px-4 py-2">
-                                        {eq.attributes && eq.attributes.length > 0
-                                            ? eq.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(", ")
-                                            : 'No attributes'}
+                                        {formatEquipmentAttributes(eq)}
                                     </td>
                                     <td className="border px-4 py-2">
                                         <div className="flex gap-2">
