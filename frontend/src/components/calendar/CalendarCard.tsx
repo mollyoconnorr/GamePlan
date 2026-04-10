@@ -1,10 +1,12 @@
 import {useMemo, useState} from "react";
+import dayjs from "dayjs";
 import type {Dayjs} from "dayjs";
 import type {CalendarEvent, PendingDelete} from "../../types.ts";
 import {SquarePen, Trash2} from "lucide-react";
 import ConfirmDialog from "../ConfirmDialog.tsx";
 import {createPortal} from "react-dom";
 import {getFriendlyReservationErrorMessage} from "../../util/ReservationErrorMessages.ts";
+import {buildTimeOptions, filterPastTimesForDate} from "../../util/TimeOptions.ts";
 
 type CalendarCardProps = {
     event: CalendarEvent;
@@ -49,26 +51,17 @@ export default function CalendarCard({
     const [selectedEndTime, setSelectedEndTime] = useState("");
 
     const timeOptions = useMemo(() => {
-        if (timeStepMin <= 0 || endTime.isBefore(startTime)) return [];
-
-        const options: { value: string; label: string }[] = [];
-        let current = startTime;
-
-        while (current.isBefore(endTime) || current.isSame(endTime)) {
-            options.push({
-                value: current.format("HH:mm"),
-                label: current.format("h:mm A"),
-            });
-            current = current.add(timeStepMin, "minute");
-        }
-
-        return options;
+        return buildTimeOptions(startTime, endTime, timeStepMin);
     }, [startTime, endTime, timeStepMin]);
+
+    const startTimeOptions = useMemo(() => {
+        return filterPastTimesForDate(timeOptions, eventDay);
+    }, [timeOptions, eventDay]);
 
     const endTimeOptions = useMemo(() => {
         if (!selectedStartTime) return [];
-        return timeOptions.filter((option) => option.value > selectedStartTime);
-    }, [selectedStartTime, timeOptions]);
+        return startTimeOptions.filter((option) => option.value > selectedStartTime);
+    }, [selectedStartTime, startTimeOptions]);
 
     const handleConfirmDelete = async () => {
         if (!pendingDelete) return;
@@ -92,11 +85,11 @@ export default function CalendarCard({
     };
 
     const handleOpenEdit = () => {
-        const eventStart = timeOptions.find((option) => option.label === event.startTime)?.value ?? "";
-        const eventEnd = timeOptions.find((option) => option.label === event.endTime)?.value ?? "";
+        const eventStart = startTimeOptions.find((option) => option.label === event.startTime)?.value ?? "";
+        const eventEnd = startTimeOptions.find((option) => option.label === event.endTime)?.value ?? "";
 
-        const boundedStartTime = eventStart || (timeOptions[0]?.value ?? "");
-        const boundedEndTimeOptions = timeOptions.filter((option) => option.value > boundedStartTime);
+        const boundedStartTime = eventStart || (startTimeOptions[0]?.value ?? "");
+        const boundedEndTimeOptions = startTimeOptions.filter((option) => option.value > boundedStartTime);
         const boundedEndTime = boundedEndTimeOptions.some((option) => option.value === eventEnd)
             ? eventEnd
             : (boundedEndTimeOptions[0]?.value ?? "");
@@ -145,6 +138,11 @@ export default function CalendarCard({
             .second(0)
             .millisecond(0);
 
+        if (updatedStart.isBefore(dayjs())) {
+            onShowToast?.("Start time must be now or later.");
+            return;
+        }
+
         try {
             setIsEditing(true);
             await onEditReservation(event.id, updatedStart, updatedEnd);
@@ -162,8 +160,27 @@ export default function CalendarCard({
         }
     };
 
+    const selectedStartDateTime = useMemo(() => {
+        if (!selectedStartTime) {
+            return null;
+        }
+
+        const [startHour, startMinute] = selectedStartTime.split(":").map((value) => Number(value));
+        if (Number.isNaN(startHour) || Number.isNaN(startMinute)) {
+            return null;
+        }
+
+        return eventDay
+            .hour(startHour)
+            .minute(startMinute)
+            .second(0)
+            .millisecond(0);
+    }, [selectedStartTime, eventDay]);
+
+    const editStartIsPast = selectedStartDateTime ? selectedStartDateTime.isBefore(dayjs()) : false;
+
     const editSaveDisabled =
-        isEditing || !selectedStartTime || !selectedEndTime || selectedEndTime <= selectedStartTime;
+        isEditing || !selectedStartTime || !selectedEndTime || selectedEndTime <= selectedStartTime || editStartIsPast;
 
     return (
         <>
@@ -209,12 +226,12 @@ export default function CalendarCard({
                                         }
                                     }}
                                     className="rounded-md border px-3 py-2 font-normal"
-                                >
-                                    <option value="">Select start time</option>
-                                    {timeOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
+                                    >
+                                        <option value="">Select start time</option>
+                                        {startTimeOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
                                     ))}
                                 </select>
                             </label>
@@ -236,6 +253,12 @@ export default function CalendarCard({
                                 </select>
                             </label>
                         </div>
+
+                        {editStartIsPast && (
+                            <p className="mt-3 text-sm text-red-600">
+                                Start time must be now or later.
+                            </p>
+                        )}
 
                         <div className="mt-6 flex justify-end gap-3">
                             <button

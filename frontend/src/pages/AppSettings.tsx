@@ -279,9 +279,11 @@ export default function AppSettings(props: AppSettingProps) {
     ];
 
     // Disable creation until selection is complete and we are not in a conflicting/loading state.
+    const pendingBlockStartsInPast = pendingBlockStart ? pendingBlockStart.isBefore(dayjs()) : false;
     const addBlockDisabled =
         !pendingBlockStart ||
         !pendingBlockEnd ||
+        pendingBlockStartsInPast ||
         pendingBlockConflict ||
         isSavingBlock ||
         blocksLoading;
@@ -641,6 +643,11 @@ export default function AppSettings(props: AppSettingProps) {
                     {pendingBlockConflict && (
                         <p className="text-sm font-semibold text-red-600">
                             This block overlaps an existing block on the preview calendar.
+                        </p>
+                    )}
+                    {pendingBlockStartsInPast && (
+                        <p className="text-sm font-semibold text-red-600">
+                            Block start time must be now or later.
                         </p>
                     )}
                     {blockErrorMessage && (

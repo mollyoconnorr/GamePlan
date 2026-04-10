@@ -8,6 +8,7 @@ import ConfirmDialog from "./ConfirmDialog.tsx";
 import Toast from "./Toast.tsx";
 import { createPortal } from "react-dom";
 import { getFriendlyReservationErrorMessage } from "../util/ReservationErrorMessages.ts";
+import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
 
 type ManageReservationsProps = {
     reservations: Reservation[];
@@ -47,26 +48,21 @@ export default function ManageReservations({
 
     // Build selectable times from the same bounds/step used by Calendar.
     const timeOptions = useMemo(() => {
-        if (timeStepMin <= 0 || endTime.isBefore(startTime)) return [];
+        return buildTimeOptions(startTime, endTime, timeStepMin);
+    }, [startTime, endTime, timeStepMin]);
 
-        const options: { value: string; label: string }[] = [];
-        let current = startTime;
-
-        while (current.isBefore(endTime) || current.isSame(endTime)) {
-            options.push({
-                value: current.format("HH:mm"),
-                label: current.format("h:mm A"),
-            });
-            current = current.add(timeStepMin, "minute");
+    const startTimeOptions = useMemo(() => {
+        if (!pendingEdit) {
+            return timeOptions;
         }
 
-        return options;
-    }, [startTime, endTime, timeStepMin]);
+        return filterPastTimesForDate(timeOptions, pendingEdit.start);
+    }, [pendingEdit, timeOptions]);
 
     const endTimeOptions = useMemo(() => {
         if (!selectedStartTime) return [];
-        return timeOptions.filter((option) => option.value > selectedStartTime);
-    }, [selectedStartTime, timeOptions]);
+        return startTimeOptions.filter((option) => option.value > selectedStartTime);
+    }, [selectedStartTime, startTimeOptions]);
 
     const handleConfirmDelete = async () => {
         if (!pendingDelete) return;
@@ -84,15 +80,16 @@ export default function ManageReservations({
     };
 
     const handleOpenEdit = (reservation: Reservation) => {
+        const availableStartTimeOptions = filterPastTimesForDate(timeOptions, reservation.start);
         const reservationStart = reservation.start.format("HH:mm");
         const reservationEnd = reservation.end.format("HH:mm");
 
         // If current values fall outside allowed bounds, clamp to the first valid option
-        const boundedStartTime = timeOptions.some((option) => option.value === reservationStart)
+        const boundedStartTime = availableStartTimeOptions.some((option) => option.value === reservationStart)
             ? reservationStart
-            : (timeOptions[0]?.value ?? "");
+            : (availableStartTimeOptions[0]?.value ?? "");
 
-        const boundedEndTimeOptions = timeOptions.filter((option) => option.value > boundedStartTime);
+        const boundedEndTimeOptions = availableStartTimeOptions.filter((option) => option.value > boundedStartTime);
         const boundedEndTime = boundedEndTimeOptions.some((option) => option.value === reservationEnd)
             ? reservationEnd
             : (boundedEndTimeOptions[0]?.value ?? "");
@@ -152,6 +149,14 @@ export default function ManageReservations({
         });
     }, [editedRange, reservations, pendingEdit]);
 
+    const editStartIsPast = useMemo(() => {
+        if (!editedRange) {
+            return false;
+        }
+
+        return editedRange.start.isBefore(dayjs());
+    }, [editedRange]);
+
     const handleSaveEdit = async () => {
         if (!pendingEdit || !selectedStartTime || !selectedEndTime) return;
 
@@ -179,6 +184,11 @@ export default function ManageReservations({
             .second(0)
             .millisecond(0);
 
+        if (updatedStart.isBefore(dayjs())) {
+            setEditErrorMessage("Start time must be now or later.");
+            return;
+        }
+
         try {
             setIsEditing(true);
             await onEditReservation(pendingEdit.id, updatedStart, updatedEnd);
@@ -202,6 +212,7 @@ export default function ManageReservations({
         !selectedStartTime ||
         !selectedEndTime ||
         selectedEndTime <= selectedStartTime ||
+        editStartIsPast ||
         editHasConflict;
 
     const dayEventMap: Map<string, { dayLabel: string; events: Reservation[] }> = new Map();
@@ -264,6 +275,7 @@ export default function ManageReservations({
                                         onChange={(e) => {
                                             const nextStartTime = e.target.value;
                                             setSelectedStartTime(nextStartTime);
+                                            setEditErrorMessage("");
 
                                             if (selectedEndTime && selectedEndTime <= nextStartTime) {
                                                 setSelectedEndTime("");
@@ -272,7 +284,7 @@ export default function ManageReservations({
                                         className="rounded-md border px-3 py-2 font-normal"
                                     >
                                         <option value="">Select start time</option>
-                                        {timeOptions.map((option) => (
+                                        {startTimeOptions.map((option) => (
                                             <option key={option.value} value={option.value}>
                                                 {option.label}
                                             </option>
@@ -284,7 +296,10 @@ export default function ManageReservations({
                                     End time
                                     <select
                                         value={selectedEndTime}
-                                        onChange={(e) => setSelectedEndTime(e.target.value)}
+                                        onChange={(e) => {
+                                            setSelectedEndTime(e.target.value);
+                                            setEditErrorMessage("");
+                                        }}
                                         disabled={!selectedStartTime}
                                         className="rounded-md border px-3 py-2 font-normal disabled:bg-gray-100 disabled:text-gray-400"
                                     >
@@ -301,6 +316,11 @@ export default function ManageReservations({
                             {editHasConflict && (
                                 <p className="mt-3 text-sm text-red-600">
                                     The selected time overlaps one of your other reservations. Delete that booking first or pick a different time.
+                                </p>
+                            )}
+                            {editStartIsPast && !editHasConflict && !editErrorMessage && (
+                                <p className="mt-3 text-sm text-red-600">
+                                    Start time must be now or later.
                                 </p>
                             )}
                             {editErrorMessage && !editHasConflict && (

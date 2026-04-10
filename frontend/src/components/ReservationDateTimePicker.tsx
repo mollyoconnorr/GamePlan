@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import type {CalendarData} from "../types.ts";
+import dayjs from "dayjs";
+import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
 
 interface DateTimeRangePickerProps extends CalendarData {
     // controlled values
@@ -15,31 +17,35 @@ interface DateTimeRangePickerProps extends CalendarData {
 
 export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     // Date options, from given start date + numDays
+    const todayKey = dayjs().format("YYYY-MM-DD");
     const dateOptions = useMemo(() => {
-        return Array.from({ length: props.numDays }, (_, i) => {
-            const d = props.firstDate.add(i, "day");
-            return {
-                value: d.format("YYYY-MM-DD"),
-                label: d.format("ddd M/D/YY"),
-            };
-        });
-    }, [props.firstDate, props.numDays]);
+        const today = dayjs();
+
+        return Array.from({ length: props.numDays }, (_, i) => props.firstDate.add(i, "day"))
+            .filter((dateOption) => !dateOption.isBefore(today, "day"))
+            .map((dateOption) => ({
+                value: dateOption.format("YYYY-MM-DD"),
+                label: dateOption.format("ddd M/D/YY"),
+            }));
+    }, [props.firstDate, props.numDays, todayKey]);
 
     // Create time options (between startTime and endTime)
     const timeOptions = useMemo(() => {
-        const options: { value: string; label: string }[] = [];
-        let current = props.startTime;
+        return buildTimeOptions(props.startTime, props.endTime, props.timeStep);
+    }, [props.startTime, props.endTime,props.timeStep]);
 
-        while (current.isBefore(props.endTime) || current.isSame(props.endTime)) {
-            options.push({
-                value: current.format("HH:mm"),
-                label: current.format("h:mm A"),
-            });
-            current = current.add(props.timeStep, "minute");
+    const selectedDay = useMemo(() => {
+        if (!props.selectedDate) {
+            return null;
         }
 
-        return options;
-    }, [props.startTime, props.endTime,props.timeStep]);
+        const parsed = dayjs(props.selectedDate);
+        return parsed.isValid() ? parsed : null;
+    }, [props.selectedDate]);
+
+    const startTimeOptions = useMemo(() => {
+        return filterPastTimesForDate(timeOptions, selectedDay);
+    }, [timeOptions, selectedDay]);
 
     const toMinutes = (time: string) => {
         const [h, m] = time.split(":").map(Number);
@@ -52,10 +58,10 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
 
         const start = toMinutes(props.selectedStartTime);
 
-        return timeOptions.filter((t) => {
+        return startTimeOptions.filter((t) => {
             const val = toMinutes(t.value);
             return val > start && val <= start + props.maxResTime;
-        });    }, [props.selectedStartTime, timeOptions, props.maxResTime]);
+        });    }, [props.selectedStartTime, startTimeOptions, props.maxResTime]);
 
     return (
         <div className="flex flex-col md:flex-row space-x-10 space-y-10">
@@ -93,7 +99,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                     className="border rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-400 max-w-fit"
                 >
                     <option value="">Select start time</option>
-                    {timeOptions.map((t) => (
+                    {startTimeOptions.map((t) => (
                         <option key={t.value} value={t.value}>
                             {t.label}
                         </option>

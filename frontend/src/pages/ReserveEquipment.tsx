@@ -158,6 +158,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         equipmentReservationsWithConflict.some((event) => event.conflict) ||
         userReservationConflict ||
         scheduleBlockConflict;
+    const reservationStartsInPast = previewStart ? previewStart.isBefore(dayjs()) : false;
     const conflictMessage = userReservationConflict
         ? "This overlaps another one of your reservations. Delete or adjust that reservation before booking again."
         : scheduleBlockConflict
@@ -272,6 +273,11 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
     const handleMakeReservation = async () => {
         if (!allResInfoPresent) return;
+
+        if (reservationStartsInPast) {
+            setReservationErrorMessage("Start time must be now or later.");
+            return;
+        }
 
         setLoading(true);
         setReservationErrorMessage("");
@@ -412,6 +418,11 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                             {conflictMessage}
                         </p>
                     )}
+                    {reservationStartsInPast && (
+                        <p className="text-sm font-semibold text-red-600">
+                            Start time must be now or later.
+                        </p>
+                    )}
                     {reservationErrorMessage && (
                         <p className="text-sm font-semibold text-red-600">
                             {reservationErrorMessage}
@@ -421,7 +432,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                       text="Reserve"
                       className="bg-green-400 hover:bg-green-300 border-green-500"
                       onClick={handleMakeReservation}
-                      disabled={hasConflict}
+                      disabled={hasConflict || reservationStartsInPast}
                     />
                   </div>
                 )}
