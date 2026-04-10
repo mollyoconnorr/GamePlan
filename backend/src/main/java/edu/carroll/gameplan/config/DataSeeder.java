@@ -132,11 +132,10 @@ public class DataSeeder {
         List<Equipment> mediumWirelessBoots = createBoots("Medium Wireless Boots", "M", wirelessBootsType, er, 2);
 
         // ===== OPTIONAL: Example reservations =====
-        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().atTime(8, 0), LocalDate.now().atTime(8, 30));
-        createReservationIfPossible(rs, testUser, coldBath2, LocalDate.now().atTime(8, 15), LocalDate.now().atTime(9, 0));
-        createReservationIfPossible(rs, testUser, coldBath3, LocalDate.now().atTime(10, 15), LocalDate.now().atTime(10, 45));
+        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().plusDays(2).atTime(8, 0), LocalDate.now().plusDays(2).atTime(8, 30));
+        createReservationIfPossible(rs, testUser, coldBath2, LocalDate.now().plusDays(2).atTime(8, 15), LocalDate.now().plusDays(2).atTime(9, 0));
+        createReservationIfPossible(rs, testUser, coldBath3, LocalDate.now().plusDays(2).atTime(10, 15), LocalDate.now().plusDays(2).atTime(10, 45));
         createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8, 0), LocalDate.now().plusDays(1).atTime(8, 30));
-        createReservationIfPossible(rs, testUser, coldBath, LocalDate.now().plusDays(1).atTime(8, 0), LocalDate.now().plusDays(1).atTime(8, 30));
         createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(8, 30), LocalDate.now().plusDays(1).atTime(9, 0));
         createReservationIfPossible(rs, testUser, hotBath, LocalDate.now().plusDays(1).atTime(9, 0), LocalDate.now().plusDays(1).atTime(9, 30));
 
