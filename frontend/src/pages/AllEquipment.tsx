@@ -13,9 +13,7 @@ type StatusOption = {
 
 const equipmentStatusOptions: StatusOption[] = [
     { value: "AVAILABLE", label: "Available" },
-    { value: "MAINTENANCE", label: "Maintenance" },
-    { value: "RESERVED", label: "Reserved", disabled: true },
-    { value: "OUT_OF_SERVICE", label: "Out of service", disabled: true },
+    { value: "MAINTENANCE", label: "Maintenance" }
 ];
 
 export default function AllEquipment() {
