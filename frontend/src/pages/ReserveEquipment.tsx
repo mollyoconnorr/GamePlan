@@ -8,7 +8,6 @@ import type {
     CalendarEvent,
     Reservation,
     EquipmentWithReservations,
-    EquipmentAttribute,
     CalendarData
 } from "../types.ts";
 import {getEquipmentReservations, makeReservation} from "../api/Reservations.ts";
@@ -17,6 +16,7 @@ import ReservationDateTimePicker from "../components/ReservationDateTimePicker.t
 import {getFriendlyReservationErrorMessage} from "../util/ReservationErrorMessages.ts";
 import {getScheduleBlocks} from "../api/Blocks.ts";
 import {parseRawBlockToEvent} from "../util/ParseScheduleBlock.ts";
+import {getEquipmentTypeAttributes, type EquipmentTypeAttributeResponse} from "../api/Equipment.ts";
 
 interface ReserveEquipmentProps extends CalendarData {
     reservations: Reservation[];
@@ -25,6 +25,7 @@ interface ReserveEquipmentProps extends CalendarData {
 
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
 type EquipmentTypeResponse = { id: number; name: string };
+type AttributeDefinition = { name: string; options: string[] };
 
 export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                              maxResTime,numDays,reservations, setReservations} : ReserveEquipmentProps) {
@@ -32,16 +33,12 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
     // Backend data
     const [equipmentTypes, setEquipmentTypes] = useState<Option[]>([]);
-    const [attributes, setAttributes] = useState<{ label: string; value: string; name: string }[]>([]);
-    const [equipmentOptions, setEquipmentOptions] = useState<EquipmentWithReservations[]>([]);
+    const [attributeDefinitions, setAttributeDefinitions] = useState<AttributeDefinition[]>([]);
+    const [allEquipmentOptions, setAllEquipmentOptions] = useState<EquipmentWithReservations[]>([]);
 
     // Selections
     const [selectedType, setSelectedType] = useState<number | null>(null);
-    const [selectedAttribute, setSelectedAttribute] = useState<{
-        label: string;
-        value: string;
-        name: string
-    } | null>(null);
+    const [selectedAttributeValues, setSelectedAttributeValues] = useState<Record<string, string>>({});
     const [selectedEquipment, setSelectedEquipment] = useState<number | null>(null);
 
     // Reservations
@@ -69,7 +66,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                 id: selectedEquipment,
                 startTime: previewStart.format("h:mm A"),
                 endTime: previewEnd.format("h:mm A"),
-                name: equipmentOptions.find((option) => option.id === selectedEquipment)?.name ?? "",
+                name: allEquipmentOptions.find((option) => option.id === selectedEquipment)?.name ?? "",
                 date: previewStart.format("ddd M/D"),
                 temp: true
             }
@@ -165,11 +162,47 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
             ? "This time slot is blocked by a trainer or admin. Pick a different slot."
         : "Someone else already has that equipment at this time; delete this pending reservation and try again or pick a different slot.";
 
-    const needsAttribute = attributes.length > 0;
-    const attributeSelected = needsAttribute ? Boolean(selectedAttribute) : true;
+    const needsAttributeSelections = attributeDefinitions.length > 0;
+    const allAttributeValuesSelected = !needsAttributeSelections || attributeDefinitions.every(
+        (definition) => Boolean(selectedAttributeValues[definition.name])
+    );
 
-    const allResInfoPresent = selectedType && attributeSelected && selectedEquipment &&
-        selectedDate && selectedStartTime && selectedEndTime && previewReservation;
+    const equipmentOptions = useMemo(() => {
+        if (!needsAttributeSelections) {
+            return allEquipmentOptions;
+        }
+
+        if (!allAttributeValuesSelected) {
+            return [];
+        }
+
+        return allEquipmentOptions.filter((equipment) => {
+            const valueByAttribute = new Map(
+                equipment.attributes.map((attribute) => [attribute.name, attribute.value])
+            );
+
+            return attributeDefinitions.every((definition) => {
+                const selectedValue = selectedAttributeValues[definition.name];
+                const fallbackValue = definition.options[0] ?? "";
+                const equipmentValue = valueByAttribute.get(definition.name) ?? fallbackValue;
+                return equipmentValue === selectedValue;
+            });
+        });
+    }, [
+        allAttributeValuesSelected,
+        allEquipmentOptions,
+        attributeDefinitions,
+        needsAttributeSelections,
+        selectedAttributeValues,
+    ]);
+
+    const allResInfoPresent = selectedType !== null &&
+        allAttributeValuesSelected &&
+        selectedEquipment !== null &&
+        Boolean(selectedDate) &&
+        Boolean(selectedStartTime) &&
+        Boolean(selectedEndTime) &&
+        Boolean(previewReservation);
 
     // Fetch equipment data whenever one is selected
     useEffect(() => {
@@ -221,54 +254,100 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
             });
     }, []);
 
+    const parseTypeAttributes = (rows: EquipmentTypeAttributeResponse[]): AttributeDefinition[] => {
+        const grouped = new Map<string, Set<string>>();
+
+        rows.forEach((row) => {
+            if (!grouped.has(row.name)) {
+                grouped.set(row.name, new Set<string>());
+            }
+
+            const options = Array.isArray(row.options)
+                ? row.options
+                : Array.isArray(row.value)
+                    ? row.value
+                    : typeof row.value === "string"
+                        ? [row.value]
+                        : [];
+
+            options.forEach((option) => {
+                const trimmedOption = option.trim();
+                if (!trimmedOption) return;
+                grouped.get(row.name)?.add(trimmedOption);
+            });
+        });
+
+        return Array.from(grouped.entries()).map(([name, options]) => ({
+            name,
+            options: Array.from(options),
+        }));
+    };
+
+    const initializeSelectedAttributeValues = (definitions: AttributeDefinition[]) =>
+        definitions.reduce<Record<string, string>>((acc, definition) => {
+            acc[definition.name] = "";
+            return acc;
+        }, {});
+
+    const formatEquipmentAttributes = (equipment: EquipmentWithReservations) => {
+        const valueByAttribute = new Map(
+            equipment.attributes.map((attribute) => [attribute.name, attribute.value])
+        );
+
+        if (attributeDefinitions.length > 0) {
+            return attributeDefinitions.map((definition) => {
+                const fallbackValue = definition.options[0] ?? "";
+                const value = valueByAttribute.get(definition.name) ?? fallbackValue ?? "";
+                return `${definition.name}: ${value || "Not set"}`;
+            }).join(" · ");
+        }
+
+        return equipment.attributes.map((attribute) => `${attribute.name}: ${attribute.value}`).join(" · ");
+    };
+
     // When equipment type changes
     const handleTypeChange = async (typeIdStr: string) => {
-        const typeId = parseInt(typeIdStr);
+        const typeId = Number.parseInt(typeIdStr, 10);
+        if (Number.isNaN(typeId)) {
+            return;
+        }
+
         setSelectedType(typeId);
-        setSelectedAttribute(null);
+        setSelectedAttributeValues({});
         setSelectedEquipment(null);
-        setAttributes([]);
-        setEquipmentOptions([]);
+        setAttributeDefinitions([]);
+        setAllEquipmentOptions([]);
 
-        const res = await fetch(`/api/equipment-types/${typeId}/attributes`, {credentials: "include"});
-        const data = await res.json();
+        try {
+            const [attributeData, equipmentResponse] = await Promise.all([
+                getEquipmentTypeAttributes(typeId),
+                fetch(`/api/equipment-types/${typeId}/equipment`, {credentials: "include"}),
+            ]);
 
-        if (data.length === 0) {
-            // No attributes → fetch equipment immediately
-            const eqRes = await fetch(`/api/equipment-types/${typeId}/equipment`, {credentials: "include"});
-            const eqData = await eqRes.json();
+            if (!equipmentResponse.ok) {
+                throw new Error("Failed to fetch equipment options.");
+            }
 
-            setEquipmentOptions(eqData as EquipmentWithReservations[]);
-        } else {
-            // Map attributes including name & value
-            setAttributes(
-                (data as EquipmentAttribute[]).map((a) => ({
-                    label: a.name + ": " + a.value, // display for user
-                    value: a.value,                // actual value to send to backend
-                    name: a.name                    // name key for backend query
-                }))
-            );
+            const definitions = parseTypeAttributes(attributeData);
+            const equipmentData = await equipmentResponse.json() as EquipmentWithReservations[];
+
+            setAttributeDefinitions(definitions);
+            setSelectedAttributeValues(initializeSelectedAttributeValues(definitions));
+            setAllEquipmentOptions(equipmentData);
+        } catch (error) {
+            console.error(error);
+            setAttributeDefinitions([]);
+            setSelectedAttributeValues({});
+            setAllEquipmentOptions([]);
         }
     };
 
-    // When attribute changes
-    const handleAttributeChange = async (attrValue: string) => {
-        if (!selectedType) return;
-        const attr = attributes.find(a => a.value === attrValue);
-        if (!attr) return;
-
-        setSelectedAttribute(attr);
-        // Reset equipment selection so user must choose after changing attribute.
+    const handleAttributeValueChange = (attributeName: string, value: string) => {
+        setSelectedAttributeValues((prev) => ({
+            ...prev,
+            [attributeName]: value,
+        }));
         setSelectedEquipment(null);
-        setEquipmentOptions([]);
-
-        const res = await fetch(
-            `/api/equipment-types/${selectedType}/equipment?attrName=${encodeURIComponent(attr.name)}&attrValue=${encodeURIComponent(attr.value)}`,
-            {credentials: "include"}
-        );
-        const data = await res.json();
-
-        setEquipmentOptions(data as EquipmentWithReservations[]);
     };
 
     const handleMakeReservation = async () => {
@@ -327,19 +406,24 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                     </div>
 
                     {/* Attribute Selector */}
-                    {attributes.length > 0 && (
-                        <div>
-                            <p className="text-sm lg:text-lg">Select attribute:</p>
+                    {attributeDefinitions.map((attribute) => (
+                        <div key={attribute.name}>
+                            <p className="text-sm lg:text-lg">Select {attribute.name}:</p>
                             <DropdownSelect
-                                value={selectedAttribute?.value ?? ""}
-                                onChange={handleAttributeChange}
-                                options={attributes.map(a => ({label: a.label, value: a.value}))}
+                                value={selectedAttributeValues[attribute.name] ?? ""}
+                                onChange={(value) => handleAttributeValueChange(attribute.name, value)}
+                                options={attribute.options.map((option) => ({label: option, value: option}))}
                             />
                         </div>
-                    )}
+                    ))}
 
                     {/* Equipment Selector */}
-                    {equipmentOptions.length > 0 && (
+                    {needsAttributeSelections && !allAttributeValuesSelected && (
+                        <div className="self-end text-sm text-gray-600">
+                            Select a value for each attribute to see equipment.
+                        </div>
+                    )}
+                    {allAttributeValuesSelected && equipmentOptions.length > 0 && (
                         <div>
                             <p className="text-sm lg:text-lg">Select equipment:</p>
                             <div className="mt-2 grid gap-3 md:grid-cols-2">
@@ -362,9 +446,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                                     {equipment.reservations.length} booked
                                                 </span>
                                             </div>
-                                            {equipment.attributes.length > 0 && (
+                                            {(attributeDefinitions.length > 0 || equipment.attributes.length > 0) && (
                                                 <div className="mt-1 text-xs text-gray-600">
-                                                    {equipment.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(" · ")}
+                                                    {formatEquipmentAttributes(equipment)}
                                                 </div>
                                             )}
                                             <div className="mt-3 flex flex-col gap-1 text-xs text-gray-500">
@@ -389,6 +473,11 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                             </div>
                         </div>
                     )}
+                    {allAttributeValuesSelected && equipmentOptions.length === 0 && selectedType !== null && (
+                        <div className="self-end text-sm text-gray-600">
+                            No available equipment matches the selected attributes.
+                        </div>
+                    )}
                 </div>
 
                 <div>
@@ -408,7 +497,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                     />
                 </div>
 
-                {allResInfoPresent && (
+                {allResInfoPresent && previewReservation && (
                   <div className="space-y-3">
                     <p className="opacity-80">
                       Click below to reserve {previewReservation.name} for {previewReservation.date} from {previewReservation.startTime} to {previewReservation.endTime}
