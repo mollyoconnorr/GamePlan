@@ -3,6 +3,7 @@ package edu.carroll.gameplan;
 import edu.carroll.gameplan.model.*;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
+import edu.carroll.gameplan.repository.ReservationRepository;
 import edu.carroll.gameplan.repository.ScheduleBlockRepository;
 import edu.carroll.gameplan.repository.UserRepository;
 import edu.carroll.gameplan.service.ReservationService;
@@ -41,6 +42,9 @@ public class ReservationServiceTest {
 
     @Autowired
     private EquipmentTypeRepository equipmentTypeRepository;
+
+    @Autowired
+    private ReservationRepository reservationRepository;
 
     @Autowired
     private ScheduleBlockRepository scheduleBlockRepository;
@@ -137,6 +141,28 @@ public class ReservationServiceTest {
         // Assertions
         assertEquals(newStart, updated.getStartDatetime(), "Reservation start time should be updated");
         assertEquals(newEnd, updated.getEndDatetime(), "Reservation end time should be updated");
+    }
+
+    @Test
+    public void testUpdateReservationRejectsPastReservation() {
+        Reservation pastReservation = new Reservation();
+        pastReservation.setUser(testUser);
+        pastReservation.setEquipment(testEquipment);
+        pastReservation.setStatus(ReservationStatus.ACTIVE);
+        pastReservation.setStartDatetime(LocalDateTime.now().minusHours(2));
+        pastReservation.setEndDatetime(LocalDateTime.now().minusHours(1));
+        pastReservation = reservationRepository.save(pastReservation);
+
+        LocalDateTime newStart = LocalDateTime.now().plusHours(1);
+        LocalDateTime newEnd = newStart.plusMinutes(30);
+
+        Reservation finalPastReservation = pastReservation;
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.updateReservation(finalPastReservation.getId(), newStart, newEnd, testUser)
+        );
+
+        assertEquals("Past reservations cannot be edited.", exception.getMessage());
     }
 
     @Test

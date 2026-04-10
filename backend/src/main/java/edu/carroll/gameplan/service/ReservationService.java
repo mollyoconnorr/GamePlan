@@ -157,6 +157,8 @@ public class ReservationService {
      * @return the updated reservation
      */
     public Reservation updateReservation(Long reservationId, LocalDateTime newStart, LocalDateTime newEnd, User actingUser) {
+        LocalDateTime now = LocalDateTime.now();
+
         if (newEnd.isBefore(newStart) || newEnd.equals(newStart)) {
             throw new IllegalArgumentException("End time must be after start time.");
         }
@@ -165,7 +167,7 @@ public class ReservationService {
             throw new IllegalArgumentException("This time slot is blocked by an admin.");
         }
 
-        if (newStart.isBefore(LocalDateTime.now())) {
+        if (newStart.isBefore(now)) {
             throw new IllegalArgumentException("Given start time has already passed!");
         }
 
@@ -178,6 +180,10 @@ public class ReservationService {
 
         if (!isOwner && !isAdmin) {
             throw new AccessDeniedException("Only the reservation owner or an admin can edit this reservation.");
+        }
+
+        if (reservation.getStartDatetime().isBefore(now)) {
+            throw new IllegalArgumentException("Past reservations cannot be edited.");
         }
 
         // Check for overlapping reservations for the same equipment

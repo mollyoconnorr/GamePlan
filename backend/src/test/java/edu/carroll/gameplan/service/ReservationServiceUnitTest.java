@@ -123,4 +123,26 @@ class ReservationServiceUnitTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Given start time has already passed!");
     }
+
+    /**
+     * Ensures updates are rejected when the existing reservation has already started.
+     */
+    @Test
+    void updateReservationRejectsEditingPastReservation() {
+        Reservation existing = new Reservation();
+        existing.setId(7L);
+        existing.setUser(user);
+        existing.setEquipment(equipment);
+        existing.setStartDatetime(LocalDateTime.now().minusHours(2));
+        existing.setEndDatetime(LocalDateTime.now().minusHours(1));
+
+        when(reservationRepository.findById(7L)).thenReturn(java.util.Optional.of(existing));
+
+        LocalDateTime newStart = LocalDateTime.now().plusHours(1);
+        LocalDateTime newEnd = newStart.plusMinutes(30);
+
+        assertThatThrownBy(() -> reservationService.updateReservation(7L, newStart, newEnd, user))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Past reservations cannot be edited.");
+    }
 }
