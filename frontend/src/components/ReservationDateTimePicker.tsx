@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type {CalendarData} from "../types.ts";
 import dayjs from "dayjs";
 import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
+import {formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
 
 interface DateTimeRangePickerProps extends CalendarData {
     // controlled values
@@ -65,18 +66,19 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
         });    }, [props.selectedStartTime, startTimeOptions, props.maxResTime]);
 
     return (
-        <div className="flex flex-col md:flex-row space-x-10 space-y-10">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {/* Date Setter */}
-            <div className="flex flex-col gap-1">
-                <label className="font-medium text-md lg:text-lg">Date</label>
+            <div>
+                <label className={formLabelClassName} htmlFor="reservation-date">Date</label>
                 <select
+                    id="reservation-date"
                     value={props.selectedDate}
                     onChange={(e) => {
                         props.setSelectedDate(e.target.value);
                         props.setSelectedStartTime("");
                         props.setSelectedEndTime("");
                     }}
-                    className="border rounded px-3 py-2 bg-white max-w-fit"
+                    className={selectInputClassName}
                 >
                     <option value="">Select date</option>
                     {dateOptions.map((d) => (
@@ -88,17 +90,18 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
             </div>
 
             {/* Start time setter */}
-            <div className="flex flex-col gap-1 w-56 min-w-0">
-                <label className="font-medium text-md lg:text-lg">Start time</label>
+            <div>
+                <label className={formLabelClassName} htmlFor="reservation-start-time">Start time</label>
 
                 <select
+                    id="reservation-start-time"
                     value={props.selectedStartTime}
                     onChange={(e) => {
                         props.setSelectedStartTime(e.target.value);
                         props.setSelectedEndTime("");
                     }}
                     disabled={!props.selectedDate}
-                    className="border rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-400 w-full min-w-0"
+                    className={selectInputClassName}
                 >
                     <option value="">Select start time</option>
                     {startTimeOptions.map((t) => (
@@ -109,20 +112,21 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                 </select>
 
                 {noStartTimesAvailable && (
-                    <p className="text-sm font-semibold text-red-600 w-full break-words">
+                    <p className="mt-1 text-xs font-semibold text-red-600">
                         No available start times for this date. Select a different date.
                     </p>
                 )}
             </div>
 
             {/*End time setter */}
-            <div className="flex flex-col gap-1">
-                <label className="font-medium text-md lg:text-lg">End time</label>
+            <div>
+                <label className={formLabelClassName} htmlFor="reservation-end-time">End time</label>
                 <select
+                    id="reservation-end-time"
                     value={props.selectedEndTime}
                     onChange={(e) => props.setSelectedEndTime(e.target.value)}
                     disabled={!props.selectedStartTime}
-                    className="border rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-400 max-w-fit"
+                    className={selectInputClassName}
                 >
                     <option value="">Select end time</option>
                     {endTimeOptions.map((t) => (

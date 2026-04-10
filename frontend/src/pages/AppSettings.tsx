@@ -16,6 +16,7 @@ import {
     getScheduleBlocks
 } from "../api/Blocks.ts";
 import {parseRawBlockToEvent, sortEventsByStartIso} from "../util/ParseScheduleBlock.ts";
+import {baseInputClassName, cardPanelClassName, formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
 
 // Parent-owned app settings plus callbacks to persist validated updates.
 interface AppSettingProps extends CalendarData {
@@ -55,9 +56,7 @@ type ValidationResult = {
 };
 
 // Shared Tailwind class fragments to keep form styles consistent.
-const labelClassName = "mb-1 block text-sm font-semibold text-gray-700";
 const helperTextClassName = "mt-1 text-xs text-gray-500";
-const baseInputClassName = "w-full rounded border px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1";
 
 // Centralized validation for all settings, including cross-field constraints.
 const validateSettings = (inputs: SettingsInputs): ValidationResult => {
@@ -449,7 +448,7 @@ export default function AppSettings(props: AppSettingProps) {
                 </div>
 
                 {props.loading && <Spinner/>}
-                {!props.loading && <div className="flex flex-col rounded border bg-white p-6 shadow-sm space-y-6">
+                {!props.loading && <div className={`flex flex-col ${cardPanelClassName} space-y-6`}>
                     {/* Summary banner reflects the current form validity in real time. */}
                     {hasErrors ? (
                         <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3">
@@ -472,10 +471,10 @@ export default function AppSettings(props: AppSettingProps) {
                     <div className="grid gap-5 md:grid-cols-2">
                         {/* This option also resets firstDate so the visible range starts at the selected granularity. */}
                         <div>
-                            <label className={labelClassName} htmlFor="first-date-to-show">First day to show</label>
+                            <label className={formLabelClassName} htmlFor="first-date-to-show">First day to show</label>
                             <select
                                 id="first-date-to-show"
-                                className={`${baseInputClassName} border-gray-300 focus:border-primary focus:ring-primary/30`}
+                                className={selectInputClassName}
                                 value={firstDayInput}
                                 onChange={(e) => {
                                     const value = e.target.value;
@@ -493,7 +492,7 @@ export default function AppSettings(props: AppSettingProps) {
 
                         {/* Numeric and time fields below validate continuously and apply once valid. */}
                         <div>
-                            <label className={labelClassName} htmlFor="number-of-days">Number of days to show</label>
+                            <label className={formLabelClassName} htmlFor="number-of-days">Number of days to show</label>
                             <input
                                 id="number-of-days"
                                 type="number"
@@ -513,7 +512,7 @@ export default function AppSettings(props: AppSettingProps) {
                         </div>
 
                         <div>
-                            <label className={labelClassName} htmlFor="time-step">Time step (minutes)</label>
+                            <label className={formLabelClassName} htmlFor="time-step">Time step (minutes)</label>
                             <input
                                 id="time-step"
                                 type="number"
@@ -532,7 +531,7 @@ export default function AppSettings(props: AppSettingProps) {
                         </div>
 
                         <div>
-                            <label className={labelClassName} htmlFor="max-reservation-time">Max reservation time
+                            <label className={formLabelClassName} htmlFor="max-reservation-time">Max reservation time
                                 (minutes)</label>
                             <input
                                 id="max-reservation-time"
@@ -552,7 +551,7 @@ export default function AppSettings(props: AppSettingProps) {
                         </div>
 
                         <div>
-                            <label className={labelClassName} htmlFor="start-time">Start time</label>
+                            <label className={formLabelClassName} htmlFor="start-time">Start time</label>
                             <input
                                 id="start-time"
                                 type="time"
@@ -570,7 +569,7 @@ export default function AppSettings(props: AppSettingProps) {
                         </div>
 
                         <div>
-                            <label className={labelClassName} htmlFor="end-time">End time</label>
+                            <label className={formLabelClassName} htmlFor="end-time">End time</label>
                             <input
                                 id="end-time"
                                 type="time"
@@ -602,7 +601,7 @@ export default function AppSettings(props: AppSettingProps) {
                     />
                 </div>}
 
-                <div className="rounded border bg-white p-6 shadow-sm space-y-4">
+                <div className={`${cardPanelClassName} space-y-4`}>
                     <h2 className="text-2xl font-bold text-gray-900">Block Time Slots</h2>
                     <p className="text-sm text-gray-500">
                         Add persisted block events to mark unavailable windows.
@@ -624,7 +623,7 @@ export default function AppSettings(props: AppSettingProps) {
                     />
 
                     <div className="max-w-xl">
-                        <label className={labelClassName} htmlFor="block-reason">
+                        <label className={formLabelClassName} htmlFor="block-reason">
                             Block reason (optional)
                         </label>
                         <input
@@ -633,7 +632,7 @@ export default function AppSettings(props: AppSettingProps) {
                             value={blockReasonInput}
                             onChange={(event) => setBlockReasonInput(event.target.value)}
                             placeholder="Example: Team lift, facility event, maintenance window"
-                            className={`${baseInputClassName} border-gray-300 focus:border-primary focus:ring-primary/30`}
+                            className={selectInputClassName}
                         />
                         <p className={helperTextClassName}>
                             This note appears on the calendar when someone opens the blocked time slot.

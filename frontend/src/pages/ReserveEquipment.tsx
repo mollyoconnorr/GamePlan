@@ -17,6 +17,7 @@ import {getFriendlyReservationErrorMessage} from "../util/ReservationErrorMessag
 import {getScheduleBlocks} from "../api/Blocks.ts";
 import {parseRawBlockToEvent} from "../util/ParseScheduleBlock.ts";
 import {getEquipmentTypeAttributes, type EquipmentTypeAttributeResponse} from "../api/Equipment.ts";
+import {cardPanelClassName, formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
 
 interface ReserveEquipmentProps extends CalendarData {
     reservations: Reservation[];
@@ -391,49 +392,72 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                 onClick={() => safeBack(navigate)}
             />
 
-            <section className="mx-5 md:mx-30 space-y-10">
+            <section className="mx-5 md:mx-30 space-y-6">
                 <h1 className="text-3xl font-bold text-gray-900">Reserve Equipment</h1>
 
-                <div className="flex flex-col md:flex-row space-x-10 space-y-10">
-                    {/* Equipment Type */}
+                <div className={`${cardPanelClassName} space-y-6`}>
                     <div>
-                        <p className="text-sm lg:text-lg">Select equipment type:</p>
-                        <DropdownSelect
-                            value={selectedType?.toString() ?? ""}
-                            onChange={handleTypeChange}
-                            options={equipmentTypes}
-                        />
+                        <h2 className="text-xl font-semibold text-gray-900">Equipment Details</h2>
+                        <p className="text-sm text-gray-500">
+                            Choose a type, filter attributes, then pick the exact equipment to reserve.
+                        </p>
                     </div>
 
-                    {/* Attribute Selector */}
-                    {attributeDefinitions.map((attribute) => (
-                        <div key={attribute.name}>
-                            <p className="text-sm lg:text-lg">Select {attribute.name}:</p>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                            <label className={formLabelClassName} htmlFor="equipment-type-select">Equipment type</label>
                             <DropdownSelect
-                                value={selectedAttributeValues[attribute.name] ?? ""}
-                                onChange={(value) => handleAttributeValueChange(attribute.name, value)}
-                                options={attribute.options.map((option) => ({label: option, value: option}))}
+                                id="equipment-type-select"
+                                value={selectedType?.toString() ?? ""}
+                                onChange={handleTypeChange}
+                                options={equipmentTypes}
+                                placeholder="Select equipment type"
                             />
                         </div>
-                    ))}
 
-                    {/* Equipment Selector */}
-                    {needsAttributeSelections && !allAttributeValuesSelected && (
-                        <div className="self-end text-sm text-gray-600">
-                            Select a value for each attribute to see equipment.
-                        </div>
-                    )}
+                        {attributeDefinitions.map((attribute) => {
+                            const normalizedAttributeName = attribute.name.toLowerCase().replace(/\s+/g, "-");
+                            const attributeSelectId = `equipment-attribute-${normalizedAttributeName}`;
+
+                            return (
+                                <div key={attribute.name}>
+                                    <label className={formLabelClassName} htmlFor={attributeSelectId}>
+                                        Select {attribute.name}
+                                    </label>
+                                    <DropdownSelect
+                                        id={attributeSelectId}
+                                        value={selectedAttributeValues[attribute.name] ?? ""}
+                                        onChange={(value) => handleAttributeValueChange(attribute.name, value)}
+                                        options={attribute.options.map((option) => ({label: option, value: option}))}
+                                        placeholder={`Select ${attribute.name}`}
+                                    />
+                                </div>
+                            );
+                        })}
+
+                        {needsAttributeSelections && !allAttributeValuesSelected && (
+                            <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 sm:col-span-2 lg:col-span-3">
+                                Select a value for each attribute to see equipment options.
+                            </p>
+                        )}
+                        {allAttributeValuesSelected && equipmentOptions.length === 0 && selectedType !== null && (
+                            <p className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 sm:col-span-2 lg:col-span-3">
+                                No available equipment matches the selected attributes.
+                            </p>
+                        )}
+                    </div>
+
                     {allAttributeValuesSelected && equipmentOptions.length > 0 && (
-                        <div>
-                            <p className="text-sm lg:text-lg">Select equipment:</p>
-                            <div className="mt-2 grid gap-3 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <p className="text-sm font-semibold text-gray-700">Select equipment</p>
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                 {equipmentOptions.map((equipment) => {
                                     const isSelected = equipment.id === selectedEquipment;
                                     return (
                                         <button
                                             key={equipment.id}
                                             type="button"
-                                            className={`rounded-lg border p-4 text-left transition duration-150 hover:cursor-pointer ${
+                                            className={`rounded-lg border p-4 text-left shadow-sm transition duration-150 hover:cursor-pointer ${
                                                 isSelected
                                                     ? "border-primary bg-primary/10"
                                                     : "border-gray-200 bg-white hover:border-primary/70"
@@ -473,28 +497,29 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                             </div>
                         </div>
                     )}
-                    {allAttributeValuesSelected && equipmentOptions.length === 0 && selectedType !== null && (
-                        <div className="self-end text-sm text-gray-600">
-                            No available equipment matches the selected attributes.
-                        </div>
-                    )}
-                </div>
 
-                <div>
-                    <ReservationDateTimePicker
-                        firstDate={firstDate}
-                        numDays={numDays}
-                        startTime={startTime}
-                        timeStep={timeStep}
-                        endTime={endTime}
-                        maxResTime={maxResTime}
-                        selectedDate={selectedDate}
-                        selectedStartTime={selectedStartTime}
-                        selectedEndTime={selectedEndTime}
-                        setSelectedDate={setSelectedDate}
-                        setSelectedStartTime={setSelectedStartTime}
-                        setSelectedEndTime={setSelectedEndTime}
-                    />
+                    <div className="border-t border-gray-200 pt-5 space-y-4">
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-900">Date and Time</h2>
+                            <p className="text-sm text-gray-500">
+                                Pick your reservation window.
+                            </p>
+                        </div>
+                        <ReservationDateTimePicker
+                            firstDate={firstDate}
+                            numDays={numDays}
+                            startTime={startTime}
+                            timeStep={timeStep}
+                            endTime={endTime}
+                            maxResTime={maxResTime}
+                            selectedDate={selectedDate}
+                            selectedStartTime={selectedStartTime}
+                            selectedEndTime={selectedEndTime}
+                            setSelectedDate={setSelectedDate}
+                            setSelectedStartTime={setSelectedStartTime}
+                            setSelectedEndTime={setSelectedEndTime}
+                        />
+                    </div>
                 </div>
 
                 {allResInfoPresent && previewReservation && (
@@ -564,22 +589,27 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 }
 
 function DropdownSelect({
+                            id,
                             value,
                             onChange,
                             options,
+                            placeholder,
                         }: {
+    id?: string;
     value: string;
     onChange: (v: string) => void;
     options: Option[];
+    placeholder: string;
 }) {
     return (
         <select
-            className="border rounded px-2 py-1"
+            id={id}
+            className={selectInputClassName}
             value={value}
             onChange={(e) => onChange(e.target.value)}
         >
-            <option value="" disabled>
-                Select an option
+            <option value="">
+                {placeholder}
             </option>
             {options.map((o) => (
                 <option key={o.value} value={o.value}>
