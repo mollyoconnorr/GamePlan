@@ -17,6 +17,7 @@ type ManageReservationsProps = {
     timeStepMin: number;
     onEditReservation: (id: number, start: Dayjs, end: Dayjs) => Promise<void> | void;
     onDeleteReservation: (id: number) => Promise<void> | void;
+    isPrivileged: boolean;
 };
 
 export default function ManageReservations({
@@ -27,6 +28,7 @@ export default function ManageReservations({
     timeStepMin,
     onEditReservation,
     onDeleteReservation,
+    isPrivileged
 }: ManageReservationsProps) {
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -349,7 +351,7 @@ export default function ManageReservations({
                                     name={e.name}
                                     id={e.id}
                                     color={e.color}
-                                    description={e.description}
+                                    description={isPrivileged ? e.description : undefined}
                                     onRequestEdit={() => handleOpenEdit(e)}
                                     onRequestDelete={(id, name) => setPendingDelete({ id, name })}
                                 />

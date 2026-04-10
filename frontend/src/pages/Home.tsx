@@ -28,7 +28,7 @@ export default function Home(
     const user = useAuthedUser();
     const isAdmin = user.role === "ADMIN"; //TODO FIX: AT != ADMIN
     const isTrainer = user.role === "AT";
-    const isPriveleged = isTrainer || isAdmin;
+    const isPrivileged = isTrainer || isAdmin;
     const isStudent = user.role === "STUDENT";
 
     const navigate = useNavigate();
@@ -120,7 +120,7 @@ export default function Home(
                 >Hello, {user.firstName}</h1>
 
                 <div className="mr-auto sm:mr-0 sm:ml-auto space-x-10">
-                    {!isPriveleged && (
+                    {!isPrivileged && (
                         <Button
                             text="Reserve Equipment"
                             className="bg-green-400 hover:bg-green-300 border-green-500"
@@ -145,7 +145,7 @@ export default function Home(
                                 </div>
                             )}
 
-                            {isPriveleged && (
+                            {isPrivileged && (
                                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto text-nowrap">
                                     <Button
                                         text="Equipment Types"
@@ -208,6 +208,7 @@ export default function Home(
                     timeStepMin={timeStep}
                     onEditReservation={handleEditReservation}
                     onDeleteReservation={handleDeleteReservation}
+                    isPrivileged={isPrivileged}
                 />}
             </section>
         </>
