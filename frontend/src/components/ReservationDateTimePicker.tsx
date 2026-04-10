@@ -46,6 +46,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     const startTimeOptions = useMemo(() => {
         return filterPastTimesForDate(timeOptions, selectedDay);
     }, [timeOptions, selectedDay]);
+    const noStartTimesAvailable = Boolean(props.selectedDate) && startTimeOptions.length === 0;
 
     const toMinutes = (time: string) => {
         const [h, m] = time.split(":").map(Number);
@@ -87,8 +88,9 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
             </div>
 
             {/* Start time setter */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 w-56 min-w-0">
                 <label className="font-medium text-md lg:text-lg">Start time</label>
+
                 <select
                     value={props.selectedStartTime}
                     onChange={(e) => {
@@ -96,7 +98,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                         props.setSelectedEndTime("");
                     }}
                     disabled={!props.selectedDate}
-                    className="border rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-400 max-w-fit"
+                    className="border rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-400 w-full min-w-0"
                 >
                     <option value="">Select start time</option>
                     {startTimeOptions.map((t) => (
@@ -105,6 +107,12 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                         </option>
                     ))}
                 </select>
+
+                {noStartTimesAvailable && (
+                    <p className="text-sm font-semibold text-red-600 w-full break-words">
+                        No available start times for this date. Select a different date.
+                    </p>
+                )}
             </div>
 
             {/*End time setter */}
