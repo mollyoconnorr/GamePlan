@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -176,6 +177,42 @@ class EquipmentTypeServiceTest {
         assertThat(result.get(0).attributes()).hasSize(1);
         assertThat(result.get(0).reservations()).hasSize(1);
         verify(equipmentRepository).findByTypeAndAttributeAndStatus(1L, "size", "L", EquipmentStatus.AVAILABLE);
+    }
+
+    /**
+     * Ensures new type attributes are added to existing equipment with the first option as default.
+     */
+    @Test
+    void updateEquipmentTypeAppliesDefaultForNewAttributes() {
+        type.setFieldSchema("""
+                {"size":{"type":"enum","options":["Small","Large"]}}
+                """);
+
+        Equipment equipment = new Equipment();
+        EquipmentAttribute sizeAttribute = new EquipmentAttribute();
+        sizeAttribute.setName("size");
+        sizeAttribute.setValue("Large");
+        sizeAttribute.setEquipment(equipment);
+        equipment.setAttributes(new ArrayList<>(List.of(sizeAttribute)));
+        type.setEquipmentList(List.of(equipment));
+
+        when(equipmentTypeRepository.findById(1L)).thenReturn(java.util.Optional.of(type));
+        when(equipmentTypeRepository.save(type)).thenReturn(type);
+
+        EquipmentTypeUpdateRequest request = new EquipmentTypeUpdateRequest();
+        request.setFieldSchema("""
+                {"size":{"type":"enum","options":["Small","Large"]},"condition":{"type":"enum","options":["Good","Fair"]}}
+                """);
+
+        equipmentTypeService.updateEquipmentType(1L, request);
+
+        assertThat(equipment.getAttributes()).hasSize(2);
+        assertThat(equipment.getAttributes())
+                .anySatisfy(attribute -> {
+                    assertThat(attribute.getName()).isEqualTo("condition");
+                    assertThat(attribute.getValue()).isEqualTo("Good");
+                });
+        verify(equipmentRepository).saveAll(type.getEquipmentList());
     }
 
     private void assignId(EquipmentType target, Long value) {

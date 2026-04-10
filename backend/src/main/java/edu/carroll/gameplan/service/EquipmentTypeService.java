@@ -4,6 +4,7 @@ import edu.carroll.gameplan.dto.request.CreateEquipmentTypeRequest;
 import edu.carroll.gameplan.dto.request.EquipmentTypeUpdateRequest;
 import edu.carroll.gameplan.dto.response.*;
 import edu.carroll.gameplan.model.Equipment;
+import edu.carroll.gameplan.model.EquipmentAttribute;
 import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
 import edu.carroll.gameplan.repository.EquipmentRepository;
@@ -11,10 +12,13 @@ import edu.carroll.gameplan.repository.EquipmentTypeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Service class for handling business logic related to {@link EquipmentType}.
@@ -118,6 +122,7 @@ public class EquipmentTypeService {
     /**
      * Updates the metadata of an existing equipment type.
      */
+    @Transactional
     public EquipmentTypeDTO updateEquipmentType(Long id, EquipmentTypeUpdateRequest request) {
         EquipmentType type = fetchEquipmentType(id);
 
@@ -132,7 +137,9 @@ public class EquipmentTypeService {
         }
 
         if (request.getFieldSchema() != null) {
-            type.setFieldSchema(trimToNull(request.getFieldSchema()));
+            String nextFieldSchema = trimToNull(request.getFieldSchema());
+            applyDefaultsForNewAttributes(type, nextFieldSchema);
+            type.setFieldSchema(nextFieldSchema);
         }
 
         return toDto(equipmentTypeRepository.save(type));
@@ -252,6 +259,77 @@ public class EquipmentTypeService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void applyDefaultsForNewAttributes(EquipmentType type, String nextFieldSchema) {
+        if (type == null || nextFieldSchema == null || nextFieldSchema.isBlank()) {
+            return;
+        }
+
+        List<EquipmentTypeAttributeDTO> previousAttributes = getAttributesFromSchema(type.getFieldSchema());
+        List<EquipmentTypeAttributeDTO> nextAttributes = getAttributesFromSchema(nextFieldSchema);
+        if (nextAttributes.isEmpty()) {
+            return;
+        }
+
+        Set<String> previousNames = previousAttributes.stream()
+                .map(EquipmentTypeAttributeDTO::name)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+        List<EquipmentTypeAttributeDTO> newAttributes = nextAttributes.stream()
+                .filter(attribute -> attribute.name() != null && !previousNames.contains(attribute.name()))
+                .toList();
+
+        if (newAttributes.isEmpty() || type.getEquipmentList() == null || type.getEquipmentList().isEmpty()) {
+            return;
+        }
+
+        boolean updatedAnyEquipment = false;
+        for (Equipment equipment : type.getEquipmentList()) {
+            if (equipment == null) {
+                continue;
+            }
+
+            if (equipment.getAttributes() == null) {
+                equipment.setAttributes(new ArrayList<>());
+            }
+
+            Set<String> existingAttributeNames = new HashSet<>();
+            equipment.getAttributes().forEach((attribute) -> {
+                if (attribute.getName() != null) {
+                    existingAttributeNames.add(attribute.getName());
+                }
+            });
+
+            for (EquipmentTypeAttributeDTO newAttribute : newAttributes) {
+                String attributeName = newAttribute.name();
+                if (attributeName == null || existingAttributeNames.contains(attributeName)) {
+                    continue;
+                }
+
+                String defaultValue = newAttribute.options() == null
+                        ? ""
+                        : newAttribute.options().stream()
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(option -> !option.isEmpty())
+                        .findFirst()
+                        .orElse("");
+
+                EquipmentAttribute equipmentAttribute = new EquipmentAttribute();
+                equipmentAttribute.setName(attributeName);
+                equipmentAttribute.setValue(defaultValue);
+                equipmentAttribute.setEquipment(equipment);
+                equipment.getAttributes().add(equipmentAttribute);
+                existingAttributeNames.add(attributeName);
+                updatedAnyEquipment = true;
+            }
+        }
+
+        if (updatedAnyEquipment) {
+            equipmentRepository.saveAll(type.getEquipmentList());
+        }
     }
 
     private EquipmentTypeDTO toDto(EquipmentType type) {
