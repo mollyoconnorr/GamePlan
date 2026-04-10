@@ -53,7 +53,7 @@ export default function AllEquipment() {
         try {
             const updated = await updateEquipmentStatus(id, nextStatus);
             setEquipmentList((prev) =>
-                prev.map((eq) => (eq.id === updated.id ? updated : eq))
+                prev.map((eq) => (eq.id === updated.equipment.id ? updated.equipment : eq))
             );
         } catch (error) {
             console.error("Failed to update equipment status:", error);
