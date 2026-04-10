@@ -82,3 +82,18 @@ export async function createAdminUser(request: CreateAdminUserRequest) {
 
     return await res.json() as Promise<AdminUser>;
 }
+
+export async function fetchPendingUserCount(): Promise<number> {
+    const res = await fetch("/api/admin/users/pending-count", {
+        method: "GET",
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const message = await extractErrorMessage(res, "Failed to fetch pending count");
+        throw new Error(message);
+    }
+
+    const payload = await res.json() as { pending: number };
+    return payload.pending;
+}

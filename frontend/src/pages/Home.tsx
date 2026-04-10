@@ -4,8 +4,10 @@ import {useAuthedUser} from "../auth/AuthContext.tsx";
 import Button from "../components/Button.tsx";
 import {useLocation, useNavigate} from "react-router-dom";
 import ManageReservations from "../components/ManageReservations.tsx";
-import type {CalendarData, CalendarEvent, Reservation} from "../types.ts";
+import type {CalendarData, CalendarEvent, Notification, Reservation} from "../types.ts";
 import {deleteReservation, updateReservation} from "../api/Reservations.ts";
+import {fetchPendingUserCount} from "../api/Admin.ts";
+import {getNotifications, getUnreadNotificationCount, markNotificationAsRead} from "../api/Notifications.ts";
 import Toast from "../components/Toast.tsx";
 
 interface HomeProps extends CalendarData {
@@ -41,6 +43,18 @@ export default function Home(
         const stored = localStorage.getItem("showCalendar");
         return stored !== null ? JSON.parse(stored) : true;
     });
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+    const [notificationsError, setNotificationsError] = useState<string | null>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [loadingUnreadCount, setLoadingUnreadCount] = useState(false);
+    const [unreadCountError, setUnreadCountError] = useState<string | null>(null);
+    const [pendingUserCount, setPendingUserCount] = useState(0);
+    const [loadingPendingUserCount, setLoadingPendingUserCount] = useState(false);
+    const [pendingCountError, setPendingCountError] = useState<string | null>(null);
+    const [markingNotificationId, setMarkingNotificationId] = useState<number | null>(null);
+    const [markError, setMarkError] = useState<string | null>(null);
 
     // Update local storage when showCalendar changes
     useEffect(() => {
@@ -61,12 +75,90 @@ export default function Home(
         return () => clearTimeout(timeout);
     }, [location.pathname, navigate, toastMessage]);
 
+    useEffect(() => {
+        if (isAdmin || !showNotifications) {
+            return;
+        }
+
+        let active = true;
+        setNotificationsError(null);
+        setLoadingNotifications(true);
+        setNotifications([]);
+        setMarkError(null);
+
+        getNotifications()
+            .then((result) => {
+                if (!active) return;
+                setNotifications(result);
+                setUnreadCount(0);
+            })
+            .catch((error) => {
+                if (!active) return;
+                const message = error instanceof Error ? error.message : "Failed to load notifications";
+                setNotificationsError(message);
+            })
+            .finally(() => {
+                if (active) {
+                    setLoadingNotifications(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [isAdmin, showNotifications]);
+
+    useEffect(() => {
+        if (isAdmin || showNotifications) {
+            return;
+        }
+
+        let active = true;
+        setUnreadCountError(null);
+        setLoadingUnreadCount(true);
+
+        getUnreadNotificationCount()
+            .then((count) => {
+                if (!active) return;
+                setUnreadCount(count);
+            })
+            .catch((error) => {
+                if (!active) return;
+                const message = error instanceof Error ? error.message : "Failed to load notification count";
+                setUnreadCountError(message);
+            })
+            .finally(() => {
+                if (active) {
+                    setLoadingUnreadCount(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [isAdmin, showNotifications]);
+
     const handleDeleteReservation = async (id: number) => {
         try {
             await deleteReservation(id);
             await loadReservations();
         } catch (err) {
             console.error(err);
+        }
+    }
+
+    const handleMarkAsRead = async (id: number) => {
+        setMarkError(null);
+        setMarkingNotificationId(id);
+        try {
+            await markNotificationAsRead(id);
+            setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+            setUnreadCount((prev) => Math.max(prev - 1, 0));
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to mark notification as read";
+            setMarkError(message);
+        } finally {
+            setMarkingNotificationId(null);
         }
     }
 
@@ -86,6 +178,39 @@ export default function Home(
             throw err;
         }
     }
+
+    useEffect(() => {
+        if (!isAdmin) {
+            setPendingUserCount(0);
+            setPendingCountError(null);
+            setLoadingPendingUserCount(false);
+            return;
+        }
+
+        let active = true;
+        setPendingCountError(null);
+        setLoadingPendingUserCount(true);
+
+        fetchPendingUserCount()
+            .then((count) => {
+                if (!active) return;
+                setPendingUserCount(count);
+            })
+            .catch((error) => {
+                if (!active) return;
+                const message = error instanceof Error ? error.message : "Failed to load pending users";
+                setPendingCountError(message);
+            })
+            .finally(() => {
+                if (active) {
+                    setLoadingPendingUserCount(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [isAdmin]);
 
     if (isStudent) {
         return (
@@ -128,32 +253,47 @@ export default function Home(
 
                     {isAdmin && (
                         <div className="ml-auto flex flex-wrap items-center gap-2">
-                            <Button
-                                text="App Settings"
-                                className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
-                                onClick={() => navigate("/app/admin/settings")}
-                            />
+                        <Button
+                            text="App Settings"
+                            className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                            onClick={() => navigate("/app/admin/settings")}
+                        />
+                        <div className="relative">
                             <Button
                                 text="Manage users"
                                 className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
                                 onClick={() => navigate("/app/admin/users")}
                             />
-                            <Button
-                                text="Equipment Types"
-                                className="bg-primary text-white hover:bg-primary-hover border-black"
-                                onClick={() => navigate("/app/equipmentTypes")}
-                            />
-                            <Button
-                                text="All Equipment"
-                                className="bg-primary text-white hover:bg-primary-hover border-black"
-                                onClick={() => navigate("/app/allEquipment")}
-                            />
-                            <Button
-                                text="Create Equipment"
-                                className="bg-primary text-white hover:bg-primary-hover border-black"
-                                onClick={() => navigate("/app/createEquipment")}
-                            />
+                            {pendingUserCount > 0 && (
+                                <span
+                                    aria-hidden="true"
+                                    className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white"
+                                >
+                                    {pendingUserCount}
+                                </span>
+                            )}
                         </div>
+                        {pendingCountError ? (
+                            <p className="text-xs text-red-500">{pendingCountError}</p>
+                        ) : loadingPendingUserCount ? (
+                            <p className="text-xs text-gray-500">Checking for pending users…</p>
+                        ) : null}
+                        <Button
+                            text="Equipment Types"
+                            className="bg-primary text-white hover:bg-primary-hover border-black"
+                            onClick={() => navigate("/app/equipmentTypes")}
+                        />
+                        <Button
+                            text="All Equipment"
+                            className="bg-primary text-white hover:bg-primary-hover border-black"
+                            onClick={() => navigate("/app/allEquipment")}
+                        />
+                        <Button
+                            text="Create Equipment"
+                            className="bg-primary text-white hover:bg-primary-hover border-black"
+                            onClick={() => navigate("/app/createEquipment")}
+                        />
+                    </div>
                     )}
                 </div>
 
@@ -175,6 +315,82 @@ export default function Home(
                                 color: showCalendar ? "black" : "white"}}
                     />
                 </div>
+
+                {!isAdmin && (
+                    <div className="flex flex-col space-y-3">
+                        <div className="relative inline-flex">
+                            <Button
+                                text={showNotifications ? "Hide notifications" : "Show notifications"}
+                                className={`!px-4 !py-2 border ${unreadCount > 0 ? "border-red-400 bg-red-50 text-red-700" : "border-gray-300 bg-white text-gray-800"} hover:bg-gray-100`}
+                                onClick={() => setShowNotifications((prev) => !prev)}
+                            />
+                            {!showNotifications && unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white">
+                                    {unreadCount}
+                                </span>
+                            )}
+                            {unreadCount > 0 && (
+                                <span
+                                    aria-hidden="true"
+                                    className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-red-500"
+                                />
+                            )}
+                        </div>
+                        {unreadCountError ? (
+                            <p className="text-xs text-red-500">{unreadCountError}</p>
+                        ) : loadingUnreadCount ? (
+                            <p className="text-xs text-gray-500">Checking for new notifications...</p>
+                        ) : null}
+
+                        {showNotifications && (
+                            <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                                    {loadingNotifications && (
+                                        <span className="text-xs text-gray-500">Loading...</span>
+                                    )}
+                                </div>
+
+                            {notificationsError ? (
+                                <p className="mt-2 text-sm text-red-500">{notificationsError}</p>
+                            ) : notifications.length === 0 ? (
+                                <p className="mt-2 text-sm text-gray-500">
+                                    {loadingNotifications ? "Loading notifications..." : "No new notifications."}
+                                </p>
+                            ) : (
+                                <>
+                                    {markError && (
+                                        <p className="mt-2 text-xs text-red-500">{markError}</p>
+                                    )}
+                                    <ul className="mt-3 space-y-3 text-sm text-gray-700">
+                                        {notifications.map((notification) => (
+                                            <li
+                                                key={notification.id}
+                                                className="rounded border border-gray-100 bg-gray-50 p-3"
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">
+                                                            {notification.message}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">{notification.createdAt}</p>
+                                                    </div>
+                                                    <Button
+                                                        text="Mark as read"
+                                                        className="ml-4 whitespace-nowrap border border-gray-200 bg-white text-xs text-gray-800 hover:bg-gray-100"
+                                                        onClick={() => handleMarkAsRead(notification.id)}
+                                                        disabled={markingNotificationId === notification.id}
+                                                    />
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {showCalendar && <Calendar
                     firstDate={firstDate}
