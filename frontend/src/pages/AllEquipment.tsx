@@ -21,6 +21,12 @@ type PendingMaintenanceChange = {
     canceledReservations: number;
 };
 
+type PendingDeleteChange = {
+    equipmentId: number;
+    equipmentName: string;
+    canceledReservations: number;
+};
+
 const equipmentStatusOptions: StatusOption[] = [
     { value: "AVAILABLE", label: "Available" },
     { value: "MAINTENANCE", label: "Maintenance" }
@@ -31,8 +37,10 @@ export default function AllEquipment() {
     const [equipmentList, setEquipmentList] = useState<EquipmentDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
+    const [deleteBusyId, setDeleteBusyId] = useState<number | null>(null);
     const [toastMessage, setToastMessage] = useState("");
     const [pendingMaintenanceChange, setPendingMaintenanceChange] = useState<PendingMaintenanceChange | null>(null);
+    const [pendingDeleteChange, setPendingDeleteChange] = useState<PendingDeleteChange | null>(null);
 
     useEffect(() => {
         if (!toastMessage) return;
@@ -40,7 +48,8 @@ export default function AllEquipment() {
         return () => clearTimeout(timeout);
     }, [toastMessage]);
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: number, canceledReservations = 0) => {
+        setDeleteBusyId(id);
         try {
             const response = await fetch(`/api/equipment/${id}`, {
                 method: "DELETE",
@@ -50,12 +59,19 @@ export default function AllEquipment() {
             if (response.ok) {
                 // Remove from state so table updates immediately
                 setEquipmentList((prev) => prev.filter((eq) => eq.id !== id));
+                const suffix = canceledReservations === 1 ? "" : "s";
+                const canceledMessage = canceledReservations > 0
+                    ? ` ${canceledReservations} reservation${suffix} canceled.`
+                    : "";
+                setToastMessage(`Equipment deleted.${canceledMessage}`);
             } else {
                 setToastMessage("Failed to delete equipment");
             }
         } catch (error) {
             console.error(error);
             setToastMessage("Error deleting equipment");
+        } finally {
+            setDeleteBusyId(null);
         }
     };
 
@@ -127,7 +143,38 @@ export default function AllEquipment() {
         }
     };
 
+    const handleOpenDeleteChange = async (equipment: EquipmentDTO) => {
+        setDeleteBusyId(equipment.id);
+        try {
+            const activeReservations = await getEquipmentReservations(equipment.id);
+            setPendingDeleteChange({
+                equipmentId: equipment.id,
+                equipmentName: equipment.name,
+                canceledReservations: activeReservations.length,
+            });
+        } catch (error) {
+            console.error("Failed to fetch equipment reservations:", error);
+            setToastMessage("Failed to verify active reservations.");
+        } finally {
+            setDeleteBusyId(null);
+        }
+    };
+
+    const handleConfirmDeleteChange = async () => {
+        if (!pendingDeleteChange) return;
+
+        const {equipmentId, canceledReservations} = pendingDeleteChange;
+        try {
+            await handleDelete(equipmentId, canceledReservations);
+        } finally {
+            setPendingDeleteChange(null);
+        }
+    };
+
     const pendingReservationLabel = pendingMaintenanceChange?.canceledReservations === 1
+        ? "reservation"
+        : "reservations";
+    const pendingDeleteReservationLabel = pendingDeleteChange?.canceledReservations === 1
         ? "reservation"
         : "reservations";
 
@@ -161,6 +208,20 @@ export default function AllEquipment() {
                 loading={pendingMaintenanceChange !== null && statusUpdatingId === pendingMaintenanceChange.equipmentId}
                 onCancel={() => setPendingMaintenanceChange(null)}
                 onConfirm={() => void handleConfirmMaintenanceChange()}
+            />
+
+            <ConfirmDialog
+                open={pendingDeleteChange !== null}
+                title="Delete equipment?"
+                message={pendingDeleteChange
+                    ? pendingDeleteChange.canceledReservations === 0 ? `Are you sure you want to delete ${pendingDeleteChange.equipmentName}?` :
+                        `Deleting ${pendingDeleteChange.equipmentName} will cancel ${pendingDeleteChange.canceledReservations} active ${pendingDeleteReservationLabel}. Continue?`
+                    : ""}
+                confirmText="Delete"
+                cancelText="Cancel"
+                loading={pendingDeleteChange !== null && deleteBusyId === pendingDeleteChange.equipmentId}
+                onCancel={() => setPendingDeleteChange(null)}
+                onConfirm={() => void handleConfirmDeleteChange()}
             />
 
             <Button
@@ -223,10 +284,11 @@ export default function AllEquipment() {
                                                 onClick={() => navigate(`/app/equipment/${eq.id}/edit`)}
                                             />
                                             <button
-                                                onClick={() => handleDelete(eq.id)}
-                                                className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded"
+                                                onClick={() => void handleOpenDeleteChange(eq)}
+                                                disabled={deleteBusyId === eq.id}
+                                                className="bg-red-500 hover:bg-red-700 hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 text-white px-2 py-1 rounded"
                                             >
-                                                Delete
+                                                {deleteBusyId === eq.id ? "Checking..." : "Delete"}
                                             </button>
                                         </div>
                                     </td>
