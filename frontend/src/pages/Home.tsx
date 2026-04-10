@@ -26,7 +26,9 @@ export default function Home(
 
 ){
     const user = useAuthedUser();
-    const isAdmin = user.role === "AT" || user.role === "ADMIN"; //TODO FIX: AT != ADMIN
+    const isAdmin = user.role === "ADMIN"; //TODO FIX: AT != ADMIN
+    const isTrainer = user.role === "AT";
+    const isPriveleged = isTrainer || isAdmin;
     const isStudent = user.role === "STUDENT";
 
     const navigate = useNavigate();
@@ -117,8 +119,8 @@ export default function Home(
                     className="text-3xl font-bold text-gray-900"
                 >Hello, {user.firstName}</h1>
 
-                <div className="ml-auto mr-0 space-x-10">
-                    {!isAdmin && (
+                <div className="mr-auto sm:mr-0 sm:ml-auto space-x-10">
+                    {!isPriveleged && (
                         <Button
                             text="Reserve Equipment"
                             className="bg-green-400 hover:bg-green-300 border-green-500"
@@ -127,32 +129,41 @@ export default function Home(
                     )}
 
                     {isAdmin && (
-                        <div className="ml-auto flex flex-wrap items-center gap-2">
-                            <Button
-                                text="App Settings"
-                                className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
-                                onClick={() => navigate("/app/admin/settings")}
-                            />
-                            <Button
-                                text="Manage users"
-                                className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
-                                onClick={() => navigate("/app/admin/users")}
-                            />
-                            <Button
-                                text="Equipment Types"
-                                className="bg-primary text-white hover:bg-primary-hover border-black"
-                                onClick={() => navigate("/app/equipmentTypes")}
-                            />
-                            <Button
-                                text="All Equipment"
-                                className="bg-primary text-white hover:bg-primary-hover border-black"
-                                onClick={() => navigate("/app/allEquipment")}
-                            />
-                            <Button
-                                text="Create Equipment"
-                                className="bg-primary text-white hover:bg-primary-hover border-black"
-                                onClick={() => navigate("/app/createEquipment")}
-                            />
+                        <div className="flex flex-row sm:items-center gap-2">
+                            {isAdmin && (
+                                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto text-nowrap">
+                                    <Button
+                                        text="App Settings"
+                                        className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                                        onClick={() => navigate("/app/admin/settings")}
+                                    />
+                                    <Button
+                                        text="Manage users"
+                                        className="bg-white border border-gray-300 text-gray-800 hover:bg-gray-100"
+                                        onClick={() => navigate("/app/admin/users")}
+                                    />
+                                </div>
+                            )}
+
+                            {isPriveleged && (
+                                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto text-nowrap">
+                                    <Button
+                                        text="Equipment Types"
+                                        className="bg-primary text-white hover:bg-primary-hover border-black"
+                                        onClick={() => navigate("/app/equipmentTypes")}
+                                    />
+                                    <Button
+                                        text="All Equipment"
+                                        className="bg-primary text-white hover:bg-primary-hover border-black"
+                                        onClick={() => navigate("/app/allEquipment")}
+                                    />
+                                    <Button
+                                        text="Create Equipment"
+                                        className="bg-primary text-white hover:bg-primary-hover border-black"
+                                        onClick={() => navigate("/app/createEquipment")}
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
