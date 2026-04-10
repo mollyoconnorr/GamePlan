@@ -92,67 +92,69 @@ export default function AllEquipment() {
                 {equipmentList.length === 0 ? (
                     <p>No equipment found.</p>
                 ) : (
-                    <table className="border-collapse border border-gray-400 w-full">
-                        <thead>
-                        <tr className="bg-gray-200">
-                            <th className="border px-4 py-2">ID</th>
-                            <th className="border px-4 py-2">Name</th>
-                            <th className="border px-4 py-2">Type</th>
-                            <th className="border px-4 py-2">Status</th>
-                            <th className="border px-4 py-2">Attributes</th>
-                            <th className="border px-4 py-2">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {equipmentList.map((eq) => (
-                            <tr key={eq.id} className="hover:bg-gray-100">
-                                <td className="border px-4 py-2">{eq.id}</td>
-                                <td className="border px-4 py-2">{eq.name}</td>
-                                <td className="border px-4 py-2">{eq.typeName ?? "No type"}</td>
-                                {/* safe */}
-                                <td className="border px-4 py-2">
-                                    <select
-                                        value={eq.status ?? "AVAILABLE"}
-                                        onChange={(event) => handleStatusChange(eq.id, event.target.value)}
-                                        disabled={statusUpdatingId === eq.id}
-                                        className="w-full rounded border px-2 py-1 text-sm"
-                                    >
-                                        {equipmentStatusOptions.map((statusOption) => (
-                                            <option
-                                                key={statusOption.value}
-                                                value={statusOption.value}
-                                                disabled={statusOption.disabled}
-                                            >
-                                                {statusOption.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </td>
-                                <td className="border px-4 py-2">
-                                    {eq.attributes && eq.attributes.length > 0
-                                        ? eq.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(", ")
-                                        : 'No attributes'}
-                                </td>
-                                <td className="border px-4 py-2">
-                                    <div className="flex gap-2">
-                                        <Button
-                                            text="Edit"
-                                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
-                                            onClick={() => navigate(`/app/equipment/${eq.id}/edit`)}
-                                        />
-                                        <button
-                                            onClick={() => handleDelete(eq.id)}
-                                            className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
+                    <div className="overflow-x-auto">
+                        <table className="border-collapse border border-gray-400 w-full">
+                            <thead>
+                            <tr className="bg-gray-200">
+                                <th className="border px-4 py-2">ID</th>
+                                <th className="border px-4 py-2">Name</th>
+                                <th className="border px-4 py-2">Type</th>
+                                <th className="border px-4 py-2">Status</th>
+                                <th className="border px-4 py-2">Attributes</th>
+                                <th className="border px-4 py-2">Actions</th>
                             </tr>
-                        ))}
-                        </tbody>
+                            </thead>
+                            <tbody>
+                            {equipmentList.map((eq) => (
+                                <tr key={eq.id} className="hover:bg-gray-100">
+                                    <td className="border px-4 py-2">{eq.id}</td>
+                                    <td className="border px-4 py-2">{eq.name}</td>
+                                    <td className="border px-4 py-2">{eq.typeName ?? "No type"}</td>
+                                    {/* safe */}
+                                    <td className="border px-4 py-2">
+                                        <select
+                                            value={eq.status ?? "AVAILABLE"}
+                                            onChange={(event) => handleStatusChange(eq.id, event.target.value)}
+                                            disabled={statusUpdatingId === eq.id}
+                                            className="w-full rounded border px-2 py-1 text-sm"
+                                        >
+                                            {equipmentStatusOptions.map((statusOption) => (
+                                                <option
+                                                    key={statusOption.value}
+                                                    value={statusOption.value}
+                                                    disabled={statusOption.disabled}
+                                                >
+                                                    {statusOption.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        {eq.attributes && eq.attributes.length > 0
+                                            ? eq.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(", ")
+                                            : 'No attributes'}
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        <div className="flex gap-2">
+                                            <Button
+                                                text="Edit"
+                                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
+                                                onClick={() => navigate(`/app/equipment/${eq.id}/edit`)}
+                                            />
+                                            <button
+                                                onClick={() => handleDelete(eq.id)}
+                                                className="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
 
-                    </table>
+                        </table>
+                    </div>
                 )}
             </section>
         </>
