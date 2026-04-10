@@ -62,6 +62,13 @@ export default function CalendarCard({
         if (!selectedStartTime) return [];
         return startTimeOptions.filter((option) => option.value > selectedStartTime);
     }, [selectedStartTime, startTimeOptions]);
+    const eventStartsInPast = useMemo(() => {
+        if (event.startIso) {
+            return dayjs(event.startIso).isBefore(dayjs());
+        }
+
+        return eventDay.isBefore(dayjs(), "day");
+    }, [event.startIso, eventDay]);
 
     const handleConfirmDelete = async () => {
         if (!pendingDelete) return;
@@ -85,6 +92,10 @@ export default function CalendarCard({
     };
 
     const handleOpenEdit = () => {
+        if (eventStartsInPast) {
+            return;
+        }
+
         const eventStart = startTimeOptions.find((option) => option.label === event.startTime)?.value ?? "";
         const eventEnd = startTimeOptions.find((option) => option.label === event.endTime)?.value ?? "";
 
@@ -362,9 +373,10 @@ export default function CalendarCard({
                                     <div className="flex items-center gap-3">
                                         <button
                                             type="button"
-                                            className="hover:cursor-pointer"
-                                            title="Edit Reservation"
+                                            className="hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                                            title={eventStartsInPast ? "Past reservations cannot be edited" : "Edit Reservation"}
                                             onClick={handleOpenEdit}
+                                            disabled={eventStartsInPast}
                                         >
                                             <SquarePen />
                                         </button>

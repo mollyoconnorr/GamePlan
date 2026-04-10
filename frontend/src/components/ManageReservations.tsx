@@ -80,6 +80,10 @@ export default function ManageReservations({
     };
 
     const handleOpenEdit = (reservation: Reservation) => {
+        if (reservation.start.isBefore(dayjs())) {
+            return;
+        }
+
         const availableStartTimeOptions = filterPastTimesForDate(timeOptions, reservation.start);
         const reservationStart = reservation.start.format("HH:mm");
         const reservationEnd = reservation.end.format("HH:mm");
@@ -232,6 +236,7 @@ export default function ManageReservations({
     const dayEventArr = [...dayEventMap.entries()]
         .sort(([a], [b]) => dayjs(a).valueOf() - dayjs(b).valueOf())
         .map(([dayKey, { dayLabel, events }]) => ({ dayKey, dayLabel, events }));
+    const now = dayjs();
 
     return (
         <>
@@ -372,6 +377,7 @@ export default function ManageReservations({
                                     id={e.id}
                                     color={e.color}
                                     description={isPrivileged ? e.description : undefined}
+                                    canEdit={!e.start.isBefore(now)}
                                     onRequestEdit={() => handleOpenEdit(e)}
                                     onRequestDelete={(id, name) => setPendingDelete({ id, name })}
                                 />
@@ -393,7 +399,8 @@ function ReservationCard({
     onRequestEdit,
     onRequestDelete,
     color,
-    description
+    description,
+    canEdit
 }: {
     startTime: string;
     endTime: string;
@@ -403,6 +410,7 @@ function ReservationCard({
     onRequestDelete: (id: number, name: string) => void;
     color: string | undefined;
     description: string | undefined;
+    canEdit: boolean;
 }) {
     return (
         <div className="flex w-full justify-between items-center border shadow-md rounded-md px-2 max-w-[80%] text-xs md:text-sm lg:text-lg"
@@ -420,9 +428,10 @@ function ReservationCard({
             <div className="flex flex-col p-2 space-y-6">
                 <button
                     type="button"
-                    className="hover:cursor-pointer"
-                    title="Edit Reservation"
+                    className="hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                    title={canEdit ? "Edit Reservation" : "Past reservations cannot be edited"}
                     onClick={onRequestEdit}
+                    disabled={!canEdit}
                 >
                     <SquarePen />
                 </button>
