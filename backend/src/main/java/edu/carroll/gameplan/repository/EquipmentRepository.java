@@ -1,6 +1,7 @@
 package edu.carroll.gameplan.repository;
 
 import edu.carroll.gameplan.model.Equipment;
+import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -54,8 +55,9 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
                 WHERE e.equipmentType.id = :typeId
                 AND (:attrName IS NULL OR a.name = :attrName)
                 AND (:attrValue IS NULL OR a.value = :attrValue)
+                AND (:status IS NULL OR e.status = :status)
             """)
-    List<Equipment> findByTypeAndAttribute(Long typeId, String attrName, String attrValue);
+    List<Equipment> findByTypeAndAttributeAndStatus(Long typeId, String attrName, String attrValue, EquipmentStatus status);
 
     /**
      * Finds a piece of equipment by its name and type.

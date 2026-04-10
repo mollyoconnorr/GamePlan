@@ -4,6 +4,7 @@ import edu.carroll.gameplan.dto.request.CreateEquipmentTypeRequest;
 import edu.carroll.gameplan.dto.request.EquipmentTypeUpdateRequest;
 import edu.carroll.gameplan.dto.response.*;
 import edu.carroll.gameplan.model.Equipment;
+import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
@@ -157,10 +158,10 @@ public class EquipmentTypeService {
     /**
      * Returns equipment along with existing reservations, optionally filtering by attribute.
      */
-    public List<EquipmentWithReservationsDTO> getEquipmentWithReservations(Long typeId,
+    public List<EquipmentWithReservationsDTO> getAvailableEquipmentWithReservations(Long typeId,
                                                                            String attrName,
                                                                            String attrValue) {
-        return equipmentRepository.findByTypeAndAttribute(typeId, attrName, attrValue)
+        return equipmentRepository.findByTypeAndAttributeAndStatus(typeId, attrName, attrValue, EquipmentStatus.AVAILABLE)
                 .stream()
                 .map(this::toEquipmentWithReservations)
                 .toList();

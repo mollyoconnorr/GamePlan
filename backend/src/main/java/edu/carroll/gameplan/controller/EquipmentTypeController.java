@@ -97,7 +97,7 @@ public class EquipmentTypeController {
             @RequestParam(required = false) String attrName,
             @RequestParam(required = false) String attrValue) {
 
-        return equipmentTypeService.getEquipmentWithReservations(typeId, attrName, attrValue);
+        return equipmentTypeService.getAvailableEquipmentWithReservations(typeId, attrName, attrValue);
     }
 
     /**
