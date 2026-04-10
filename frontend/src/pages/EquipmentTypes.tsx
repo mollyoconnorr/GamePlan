@@ -7,6 +7,70 @@ import {getEquipmentTypes, updateEquipmentType} from "../api/Equipment.ts";
 import {getEquipmentReservations} from "../api/Reservations.ts";
 import type {EquipmentDTO, EquipmentType} from "../api/Equipment.ts";
 
+type EquipmentTypeAttributeDraft = {
+    id: string;
+    name: string;
+    options: string;
+};
+
+const createAttributeDraftId = () =>
+    `attr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const parseFieldSchemaToDrafts = (fieldSchema?: string | null): EquipmentTypeAttributeDraft[] => {
+    if (!fieldSchema || !fieldSchema.trim()) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(fieldSchema) as Record<string, unknown>;
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+            return [];
+        }
+
+        return Object.entries(parsed)
+            .map(([name, config]) => {
+                let options: string[] = [];
+
+                if (config && typeof config === "object" && !Array.isArray(config)) {
+                    const maybeOptions = (config as {options?: unknown}).options;
+                    if (Array.isArray(maybeOptions)) {
+                        options = maybeOptions
+                            .map((option) => `${option}`.trim())
+                            .filter((option) => option.length > 0);
+                    }
+                }
+
+                return {
+                    id: createAttributeDraftId(),
+                    name,
+                    options: options.join(", "),
+                };
+            })
+            .filter((attribute) => attribute.name.trim().length > 0);
+    } catch {
+        return [];
+    }
+};
+
+const buildFieldSchema = (attributes: EquipmentTypeAttributeDraft[]) => {
+    const schema: Record<string, { type: "enum"; options: string[] }> = {};
+
+    attributes.forEach((attribute) => {
+        const trimmedName = attribute.name.trim();
+        if (!trimmedName) return;
+
+        schema[trimmedName] = {
+            type: "enum",
+            options: attribute.options
+                .split(",")
+                .map((option) => option.trim())
+                .filter((option) => option.length > 0),
+        };
+    });
+
+    return JSON.stringify(schema);
+};
+
 export default function EquipmentTypes() {
     const navigate = useNavigate();
     const [types, setTypes] = useState<EquipmentType[]>([]);
@@ -19,7 +83,7 @@ export default function EquipmentTypes() {
     const [editingType, setEditingType] = useState<EquipmentType | null>(null);
     const [formName, setFormName] = useState("");
     const [formColor, setFormColor] = useState("");
-    const [formSchema, setFormSchema] = useState("");
+    const [formAttributes, setFormAttributes] = useState<EquipmentTypeAttributeDraft[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -123,24 +187,44 @@ export default function EquipmentTypes() {
         setEditingType(type);
         setFormName(type.name);
         setFormColor(type.color ?? "");
-        setFormSchema(type.fieldSchema ?? "");
+        setFormAttributes(parseFieldSchemaToDrafts(type.fieldSchema));
     };
 
     const cancelEdit = () => {
         setEditingType(null);
         setFormName("");
         setFormColor("");
-        setFormSchema("");
+        setFormAttributes([]);
+    };
+
+    const addFormAttribute = () => {
+        setFormAttributes((prev) => [
+            ...prev,
+            {id: createAttributeDraftId(), name: "", options: ""},
+        ]);
+    };
+
+    const updateFormAttribute = (id: string, field: "name" | "options", value: string) => {
+        setFormAttributes((prev) =>
+            prev.map((attribute) =>
+                attribute.id === id ? {...attribute, [field]: value} : attribute
+            )
+        );
+    };
+
+    const removeFormAttribute = (id: string) => {
+        setFormAttributes((prev) => prev.filter((attribute) => attribute.id !== id));
     };
 
     const saveEdit = async () => {
         if (!editingType) return;
         setIsSaving(true);
+        const nextFieldSchema = buildFieldSchema(formAttributes);
         try {
             await updateEquipmentType(editingType.id, {
                 name: formName.trim(),
                 color: formColor.trim() || undefined,
-                fieldSchema: formSchema.trim() || undefined,
+                fieldSchema: nextFieldSchema,
             });
             setToastMessage("Equipment type updated.");
             await loadTypes();
@@ -168,11 +252,11 @@ export default function EquipmentTypes() {
                     <p>No equipment types found.</p>
                 ) : (
                     <div className="space-y-4">
-                        {types.map((type) => (
-                            <div
-                                key={type.id}
-                                className="border p-4 rounded shadow"
-                            >
+                        {types.map((type) => {
+                            const typeAttributes = parseFieldSchemaToDrafts(type.fieldSchema);
+
+                            return (
+                                <div key={type.id} className="border p-4 rounded shadow">
                                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                                     <div>
                                         <h2 className="text-lg font-semibold">
@@ -203,12 +287,33 @@ export default function EquipmentTypes() {
                                     </div>
                                 </div>
 
-                                {/* Raw schema display */}
-                                <pre className="mt-2 text-sm bg-gray-100 p-2 rounded">
-                                    {type.fieldSchema || "No schema defined."}
-                                </pre>
+                                <div className="mt-3 rounded bg-gray-50 p-3">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Attributes
+                                    </p>
+                                    {typeAttributes.length === 0 ? (
+                                        <p className="mt-1 text-sm text-gray-500">No attributes defined.</p>
+                                    ) : (
+                                        <div className="mt-2 space-y-2">
+                                            {typeAttributes.map((attribute, index) => (
+                                                <div
+                                                    key={`${type.id}-${attribute.name}-${index}`}
+                                                    className="grid gap-1 rounded border border-gray-200 bg-white px-3 py-2 text-sm md:grid-cols-[170px_1fr]"
+                                                >
+                                                    <span className="font-semibold text-gray-700">
+                                                        {attribute.name}
+                                                    </span>
+                                                    <span className="text-gray-600">
+                                                        {attribute.options || "No options"}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </section>
@@ -283,15 +388,71 @@ export default function EquipmentTypes() {
                                 Current selection: {formColor || "None"}.
                             </p>
                         </label>
-                        <label className="text-sm font-medium text-gray-700">
-                            Field schema (JSON)
-                            <textarea
-                                className="mt-1 w-full rounded border px-3 py-2 text-sm"
-                                rows={4}
-                                value={formSchema}
-                                onChange={(event) => setFormSchema(event.target.value)}
-                            />
-                        </label>
+                        <div className="text-sm font-medium text-gray-700">
+                            <div className="flex items-center justify-between">
+                                <span>Attributes</span>
+                                <Button
+                                    text="+ Add Attribute"
+                                    className="border-gray-300 bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
+                                    onClick={addFormAttribute}
+                                />
+                            </div>
+                            <div className="mt-2 space-y-3">
+                                {formAttributes.length === 0 && (
+                                    <p className="text-sm text-gray-500">No attributes added yet.</p>
+                                )}
+                                {formAttributes.map((attribute, index) => (
+                                    <div
+                                        key={attribute.id}
+                                        className="grid gap-3 rounded border border-gray-200 p-3 md:grid-cols-[1fr_1fr_auto]"
+                                    >
+                                        <div>
+                                            <label
+                                                htmlFor={`edit-attr-name-${attribute.id}`}
+                                                className="mb-1 block text-xs font-semibold text-gray-600"
+                                            >
+                                                Attribute name
+                                            </label>
+                                            <input
+                                                id={`edit-attr-name-${attribute.id}`}
+                                                className="w-full rounded border px-3 py-2 text-sm"
+                                                placeholder={`Attribute ${index + 1}`}
+                                                value={attribute.name}
+                                                onChange={(event) =>
+                                                    updateFormAttribute(attribute.id, "name", event.target.value)
+                                                }
+                                            />
+                                        </div>
+                                        <div>
+                                            <label
+                                                htmlFor={`edit-attr-options-${attribute.id}`}
+                                                className="mb-1 block text-xs font-semibold text-gray-600"
+                                            >
+                                                Options (comma separated)
+                                            </label>
+                                            <input
+                                                id={`edit-attr-options-${attribute.id}`}
+                                                className="w-full rounded border px-3 py-2 text-sm"
+                                                placeholder="Small, Medium, Large"
+                                                value={attribute.options}
+                                                onChange={(event) =>
+                                                    updateFormAttribute(attribute.id, "options", event.target.value)
+                                                }
+                                            />
+                                        </div>
+                                        <div className="self-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFormAttribute(attribute.id)}
+                                                className="rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:cursor-pointer hover:bg-red-50"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <div className="flex justify-end gap-3">
                             <Button
                                 text="Cancel"
