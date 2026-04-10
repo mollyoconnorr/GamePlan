@@ -4,7 +4,8 @@ import Button from "../components/Button.tsx";
 import Toast from "../components/Toast.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import {getEquipmentTypes, updateEquipmentType} from "../api/Equipment.ts";
-import type {EquipmentType} from "../api/Equipment.ts";
+import {getEquipmentReservations} from "../api/Reservations.ts";
+import type {EquipmentDTO, EquipmentType} from "../api/Equipment.ts";
 
 export default function EquipmentTypes() {
     const navigate = useNavigate();
@@ -12,6 +13,8 @@ export default function EquipmentTypes() {
     const [toastMessage, setToastMessage] = useState("");
     const [deletingType, setDeletingType] = useState<EquipmentType | null>(null);
     const [confirmInput, setConfirmInput] = useState("");
+    const [pendingDeleteReservationCount, setPendingDeleteReservationCount] = useState(0);
+    const [preparingDeleteTypeId, setPreparingDeleteTypeId] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [editingType, setEditingType] = useState<EquipmentType | null>(null);
     const [formName, setFormName] = useState("");
@@ -38,14 +41,47 @@ export default function EquipmentTypes() {
         loadTypes();
     }, []);
 
-    const handleDeleteType = (type: EquipmentType) => {
-        setDeletingType(type);
-        setConfirmInput("");
+    const loadActiveReservationCountForType = async (typeId: number) => {
+        const equipmentResponse = await fetch("/api/equipment", {credentials: "include"});
+        if (!equipmentResponse.ok) {
+            throw new Error("Failed to load equipment for type deletion.");
+        }
+
+        const allEquipment = await equipmentResponse.json() as EquipmentDTO[];
+        const matchingEquipment = allEquipment.filter((equipment) => equipment.typeId === typeId);
+
+        if (matchingEquipment.length === 0) {
+            return 0;
+        }
+
+        const reservationLists = await Promise.all(
+            matchingEquipment.map((equipment) => getEquipmentReservations(equipment.id))
+        );
+
+        return reservationLists.reduce((total, reservations) => total + reservations.length, 0);
     };
+
+    const handleDeleteType = async (type: EquipmentType) => {
+        setPreparingDeleteTypeId(type.id);
+        try {
+            const reservationCount = await loadActiveReservationCountForType(type.id);
+            setPendingDeleteReservationCount(reservationCount);
+            setDeletingType(type);
+            setConfirmInput("");
+        } catch (error) {
+            console.error(error);
+            setToastMessage("Failed to verify active reservations.");
+        } finally {
+            setPreparingDeleteTypeId(null);
+        }
+    };
+
+    const deleteReservationSuffix = pendingDeleteReservationCount === 1 ? "" : "s";
 
     const cancelDelete = () => {
         setDeletingType(null);
         setConfirmInput("");
+        setPendingDeleteReservationCount(0);
     };
 
     const confirmDelete = async () => {
@@ -67,7 +103,10 @@ export default function EquipmentTypes() {
 
             if (response.ok) {
                 await loadTypes();
-                setToastMessage("Type deleted along with its equipment.");
+                const canceledMessage = pendingDeleteReservationCount > 0
+                    ? ` ${pendingDeleteReservationCount} reservation${deleteReservationSuffix} canceled.`
+                    : "";
+                setToastMessage(`Type deleted along with its equipment.${canceledMessage}`);
                 cancelDelete();
             } else {
                 setToastMessage("Failed to delete equipment type.");
@@ -156,9 +195,10 @@ export default function EquipmentTypes() {
                                             onClick={() => startEdit(type)}
                                         />
                                         <Button
-                                            text="Delete"
+                                            text={preparingDeleteTypeId === type.id ? "Checking..." : "Delete"}
                                             className="bg-red-500 hover:bg-red-700 text-white px-2 py-1"
-                                            onClick={() => handleDeleteType(type)}
+                                            onClick={() => void handleDeleteType(type)}
+                                            disabled={preparingDeleteTypeId === type.id}
                                         />
                                     </div>
                                 </div>
@@ -181,8 +221,8 @@ export default function EquipmentTypes() {
                         </h3>
                         <p className="mt-2 text-sm text-gray-700">
                             Deleting an equipment type will also remove every piece of equipment
-                            and reservation tied to it. Type <strong>confirm</strong> below to
-                            proceed.
+                            tied to it and cancel <strong>{pendingDeleteReservationCount}</strong> active reservation
+                            {deleteReservationSuffix}. Type <strong>confirm</strong> below to proceed.
                         </p>
                         <input
                             className="mt-4 w-full rounded border px-3 py-2 text-sm"
