@@ -330,7 +330,7 @@ export default function ManageReservations({
                     document.body
                 )}
 
-            <section className="mx-5 md:mx-30">
+            <section className="mx-0 lg:mx-30">
                 {loading && <Spinner />}
 
                 {!loading &&
@@ -383,11 +383,11 @@ function ReservationCard({
     description: string | undefined;
 }) {
     return (
-        <div className="flex w-full justify-between items-center border shadow-md rounded-md px-2 max-w-[80%]"
+        <div className="flex w-full justify-between items-center border shadow-md rounded-md px-2 max-w-[80%] text-xs md:text-sm lg:text-lg"
         style={{backgroundColor: color || "white"}}
         >
-            <div className="flex flex-col md:flex-row space-x-1">
-                <p>{startTime} -</p>
+            <div className="flex flex-col lg:flex-row space-x-1">
+                <p className="text-nowrap">{startTime} -</p>
                 <p>{endTime}</p>
             </div>
 
