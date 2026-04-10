@@ -302,7 +302,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         <>
             <Button
                 text="Back"
-                className="bg-gray-300 hover:bg-gray-200"
+                className="bg-gray-300 hover:bg-gray-200 mb-7 sm:mb-2"
                 onClick={() => safeBack(navigate)}
             />
 

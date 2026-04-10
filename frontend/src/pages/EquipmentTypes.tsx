@@ -119,7 +119,7 @@ export default function EquipmentTypes() {
             <Toast message={toastMessage} />
             <Button
                 text="Back"
-                className="bg-gray-300 hover:bg-gray-200"
+                className="bg-gray-300 hover:bg-gray-200 mb-7 sm:mb-2"
                 onClick={() => safeBack(navigate)}
             />
             <section className="mx-5 md:mx-30 space-y-10">

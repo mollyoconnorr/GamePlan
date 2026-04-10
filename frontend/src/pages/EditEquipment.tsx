@@ -166,8 +166,15 @@ export default function EditEquipment() {
             <Toast message={toastMessage} />
             <div className="flex items-center justify-between mb-6">
                 <div className="flex gap-2">
-                    <Button text="Back" className="bg-gray-200 hover:bg-gray-100" onClick={() => safeBack(navigate)} />
-                    <Button text="Delete" className="bg-red-500 hover:bg-red-400 text-white" onClick={handleDelete} />
+                    <Button
+                        text="Back"
+                        className="bg-gray-300 hover:bg-gray-200 mb-7 md:mb-2"
+                        onClick={() => safeBack(navigate)}
+                    />
+                    <Button
+                        text="Delete"
+                        className="bg-red-500 hover:bg-red-400 text-white mb-7 md:mb-2"
+                        onClick={handleDelete} />
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-sm font-semibold">Status</label>

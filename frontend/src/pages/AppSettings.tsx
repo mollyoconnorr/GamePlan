@@ -432,7 +432,11 @@ export default function AppSettings(props: AppSettingProps) {
         <>
             <Toast message={toastMessage} />
             <div className="flex flex-wrap gap-2">
-                <Button text="Back" className="bg-gray-200 hover:bg-gray-100" onClick={() => safeBack(navigate)} />
+                <Button
+                    text="Back"
+                    className="bg-gray-300 hover:bg-gray-200 mb-7 md:mb-2"
+                    onClick={() => safeBack(navigate)}
+                />
             </div>
             <section className="mx-5 md:mx-30 space-y-6">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
