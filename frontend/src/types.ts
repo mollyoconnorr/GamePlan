@@ -28,6 +28,12 @@ export interface AdminUser {
     role: string;
 }
 
+export interface Notification {
+    id: number;
+    message: string;
+    createdAt: string;
+}
+
 export interface hamProps {
     navHTML: JSX.Element[];
     display: boolean;

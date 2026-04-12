@@ -9,12 +9,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,14 +52,58 @@ class NotificationServiceTest {
      * Confirms no save call happens when the user has no unread notifications.
      */
     @Test
-    void fetchUnreadSkipsSaveWhenNone() {
+    void fetchUnreadReturnsUnmarkedNotifications() {
         User user = new User();
-        when(notificationRepository.findByUserAndReadFalse(user)).thenReturn(List.of());
+        Notification notification = new Notification();
+        when(notificationRepository.findByUserAndReadFalse(user)).thenReturn(List.of(notification));
 
-        List<Notification> result = notificationService.fetchUnreadAndMarkRead(user);
+        List<Notification> result = notificationService.fetchUnread(user);
 
-        assertThat(result).isEmpty();
+        assertThat(result).containsExactly(notification);
         verify(notificationRepository).findByUserAndReadFalse(user);
-        verify(notificationRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void countUnreadDelegatesToRepository() {
+        User user = new User();
+        when(notificationRepository.countByUserAndReadFalse(user)).thenReturn(3L);
+
+        long count = notificationService.countUnread(user);
+
+        assertThat(count).isEqualTo(3L);
+        verify(notificationRepository).countByUserAndReadFalse(user);
+    }
+
+    @Test
+    void markAsReadUpdatesNotification() {
+        User user = new User();
+        user.setId(1L);
+        Notification notification = new Notification();
+        notification.setId(2L);
+        notification.setUser(user);
+        notification.setRead(false);
+        when(notificationRepository.findById(2L)).thenReturn(java.util.Optional.of(notification));
+
+        notificationService.markAsRead(user, 2L);
+
+        assertThat(notification.isRead()).isTrue();
+        verify(notificationRepository).save(notification);
+    }
+
+    @Test
+    void markAsReadRejectsWrongUser() {
+        User owner = new User();
+        owner.setId(1L);
+        Notification notification = new Notification();
+        notification.setId(2L);
+        notification.setUser(owner);
+        notification.setRead(false);
+        when(notificationRepository.findById(2L)).thenReturn(java.util.Optional.of(notification));
+
+        User other = new User();
+        other.setId(99L);
+
+        assertThatThrownBy(() -> notificationService.markAsRead(other, 2L))
+                .isInstanceOf(AccessDeniedException.class);
     }
 }

@@ -1,6 +1,7 @@
 package edu.carroll.gameplan.repository;
 
 import edu.carroll.gameplan.model.User;
+import edu.carroll.gameplan.model.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -37,4 +38,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return true if a user exists with this email
      */
     boolean existsByEmailIgnoreCase(String email);
+
+    long countByRole(UserRole role);
 }

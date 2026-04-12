@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
@@ -40,6 +41,9 @@ class ReservationServiceUnitTest {
 
     @Mock
     private ScheduleBlockService scheduleBlockService;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private ReservationService reservationService;
@@ -138,6 +142,34 @@ class ReservationServiceUnitTest {
         assertThat(result).containsExactly(activeFutureReservation);
         verify(reservationRepository).findByEquipmentIdAndEndDatetimeAfterAndStatusIs(
                 eq(2L), any(LocalDateTime.class), eq(ReservationStatus.ACTIVE));
+    }
+
+    @Test
+    void cancelReservationNotifiesOwnerWhenTrainerActs() {
+        Reservation existing = new Reservation();
+        existing.setId(5L);
+        User owner = new User();
+        owner.setId(3L);
+        owner.setFirstName("Ath");
+        owner.setLastName("Olete");
+        existing.setUser(owner);
+        existing.setStatus(ReservationStatus.ACTIVE);
+        Equipment equipment = new Equipment();
+        equipment.setName("Test Equipment");
+        existing.setEquipment(equipment);
+        existing.setStartDatetime(LocalDateTime.now().plusHours(1));
+        when(reservationRepository.findById(5L)).thenReturn(java.util.Optional.of(existing));
+        when(reservationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User trainer = new User();
+        trainer.setId(4L);
+        trainer.setRole(UserRole.AT);
+        trainer.setFirstName("Sam");
+        trainer.setLastName("Coach");
+
+        reservationService.cancelReservation(5L, trainer);
+
+        verify(notificationService).createNotification(owner, anyString());
     }
 
     /**

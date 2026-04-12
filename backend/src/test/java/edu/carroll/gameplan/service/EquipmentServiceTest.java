@@ -200,6 +200,23 @@ class EquipmentServiceTest {
     void deleteEquipmentReturnsFalseWhenMissing() {
         when(equipmentRepository.existsById(100L)).thenReturn(false);
 
-        assertThat(equipmentService.deleteEquipment(100L)).isFalse();
+        assertThat(equipmentService.deleteEquipment(100L, new User())).isFalse();
+    }
+
+    @Test
+    void deleteEquipmentCancelsReservationsBeforeRemoval() {
+        when(equipmentRepository.existsById(20L)).thenReturn(true);
+
+        Reservation reservation = new Reservation();
+        reservation.setId(50L);
+        when(reservationService.getActiveReservationsForEquipment(20L)).thenReturn(List.of(reservation));
+
+        User trainer = new User();
+        trainer.setId(7L);
+
+        assertThat(equipmentService.deleteEquipment(20L, trainer)).isTrue();
+
+        verify(reservationService).cancelReservation(50L, trainer);
+        verify(equipmentRepository).deleteById(20L);
     }
 }
