@@ -78,6 +78,42 @@ public class DataSeeder {
             ur.save(nick);
         }
 
+        User admin = ur.findByOidcUserId("00u11y@t9p5rRNFw7698").orElse(null);
+
+        if (admin == null){
+            admin = new User();
+            admin.setEmail("admin@carroll.edu");
+            admin.setFirstName("Ad");
+            admin.setLastName("min");
+            admin.setOidcUserId("00u11y@t9p5rRNFw7698");
+            admin.setRole(UserRole.ADMIN);
+            ur.save(admin);
+        }
+
+        User trainer = ur.findByOidcUserId("00u11y1k1taiQFLy1698").orElse(null);
+
+        if (trainer == null){
+            trainer = new User();
+            trainer.setEmail("trainer@carroll.edu");
+            trainer.setFirstName("train");
+            trainer.setLastName("er");
+            trainer.setOidcUserId("00u11y1k1taiQFLy1698");
+            trainer.setRole(UserRole.AT);
+            ur.save(trainer);
+        }
+
+        User athlete = ur.findByOidcUserId("00u11y1gagjFS34ub698").orElse(null);
+
+        if (athlete == null){
+            athlete = new User();
+            athlete.setEmail("athlete@carroll.edu");
+            athlete.setFirstName("Ath");
+            athlete.setLastName("lete");
+            athlete.setOidcUserId("00u11y1gagjFS34ub698");
+            athlete.setRole(UserRole.ATHLETE);
+            ur.save(athlete);
+        }
+
         // ===== EQUIPMENT TYPES =====
         EquipmentType wiredBootsType = new EquipmentType();
         wiredBootsType.setName("Wired Boots");
