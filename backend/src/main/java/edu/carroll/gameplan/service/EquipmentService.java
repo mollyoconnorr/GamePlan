@@ -13,6 +13,7 @@ import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
+import edu.carroll.gameplan.repository.ReservationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,15 +38,18 @@ public class EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
     private final EquipmentTypeRepository equipmentTypeRepository;
+    private final ReservationRepository reservationRepository;
     private final ReservationService reservationService;
     private final NotificationService notificationService;
 
     public EquipmentService(EquipmentRepository equipmentRepository,
                             EquipmentTypeRepository equipmentTypeRepository,
+                            ReservationRepository reservationRepository,
                             ReservationService reservationService,
                             NotificationService notificationService) {
         this.equipmentRepository = equipmentRepository;
         this.equipmentTypeRepository = equipmentTypeRepository;
+        this.reservationRepository = reservationRepository;
         this.reservationService = reservationService;
         this.notificationService = notificationService;
     }
@@ -154,7 +158,8 @@ public class EquipmentService {
      */
     @Transactional
     public boolean deleteEquipment(Long id, User actingUser) {
-        if (!equipmentRepository.existsById(id)) {
+        Equipment equipment = equipmentRepository.findById(id).orElse(null);
+        if (equipment == null) {
             logger.warn("Equipment delete requested for missing equipment: equipmentId={}", id);
             return false;
         }
@@ -165,7 +170,12 @@ public class EquipmentService {
             reservationService.cancelReservation(reservation.getId(), actingUser);
         }
 
-        equipmentRepository.deleteById(id);
+        if (!activeReservations.isEmpty()) {
+            reservationRepository.deleteAll(activeReservations);
+            reservationRepository.flush();
+        }
+
+        equipmentRepository.delete(equipment);
         logger.info(
                 "Equipment deleted: equipmentId={}, actingUserId={}, cancelledReservations={}",
                 id,

@@ -12,6 +12,7 @@ import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
+import edu.carroll.gameplan.repository.ReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +43,9 @@ class EquipmentServiceTest {
 
     @Mock
     private EquipmentTypeRepository equipmentTypeRepository;
+
+    @Mock
+    private ReservationRepository reservationRepository;
 
     @Mock
     private ReservationService reservationService;
@@ -198,14 +202,16 @@ class EquipmentServiceTest {
      */
     @Test
     void deleteEquipmentReturnsFalseWhenMissing() {
-        when(equipmentRepository.existsById(100L)).thenReturn(false);
+        when(equipmentRepository.findById(100L)).thenReturn(java.util.Optional.empty());
 
         assertThat(equipmentService.deleteEquipment(100L, new User())).isFalse();
     }
 
     @Test
     void deleteEquipmentCancelsReservationsBeforeRemoval() {
-        when(equipmentRepository.existsById(20L)).thenReturn(true);
+        Equipment equipment = new Equipment();
+        equipment.setId(20L);
+        when(equipmentRepository.findById(20L)).thenReturn(java.util.Optional.of(equipment));
 
         Reservation reservation = new Reservation();
         reservation.setId(50L);
@@ -217,6 +223,8 @@ class EquipmentServiceTest {
         assertThat(equipmentService.deleteEquipment(20L, trainer)).isTrue();
 
         verify(reservationService).cancelReservation(50L, trainer);
-        verify(equipmentRepository).deleteById(20L);
+        verify(reservationRepository).deleteAll(List.of(reservation));
+        verify(reservationRepository).flush();
+        verify(equipmentRepository).delete(equipment);
     }
 }

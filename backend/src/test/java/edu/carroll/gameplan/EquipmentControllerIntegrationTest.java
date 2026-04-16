@@ -2,9 +2,11 @@ package edu.carroll.gameplan;
 
 import edu.carroll.gameplan.controller.EquipmentController;
 import edu.carroll.gameplan.dto.request.EquipmentStatusUpdateRequest;
+import edu.carroll.gameplan.dto.response.EquipmentStatusUpdateResponse;
 import edu.carroll.gameplan.model.Equipment;
 import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
+import edu.carroll.gameplan.model.Notification;
 import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.model.ReservationStatus;
 import edu.carroll.gameplan.model.User;
@@ -19,6 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
@@ -30,7 +35,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration tests verifying {@link EquipmentController} against the Spring context
@@ -62,7 +70,9 @@ public class EquipmentControllerIntegrationTest {
     private NotificationRepository notificationRepository;
 
     private OAuth2AuthenticationToken authToken;
+    private OAuth2AuthenticationToken athleteAuthToken;
     private Equipment equipment;
+    private User athlete;
 
     @BeforeEach
     /**
@@ -84,13 +94,13 @@ public class EquipmentControllerIntegrationTest {
         admin.setRole(UserRole.AT);
         userRepository.save(admin);
 
-        User athlete = new User();
+        athlete = new User();
         athlete.setEmail("athlete@example.com");
         athlete.setFirstName("Ath");
         athlete.setLastName("Olete");
         athlete.setOidcUserId("athlete-sub");
         athlete.setRole(UserRole.ATHLETE);
-        userRepository.save(athlete);
+        athlete = userRepository.save(athlete);
 
         EquipmentType type = new EquipmentType();
         type.setName("Test Type");
@@ -111,23 +121,80 @@ public class EquipmentControllerIntegrationTest {
         reservation.setStatus(ReservationStatus.ACTIVE);
         reservationRepository.save(reservation);
 
-        OidcIdToken token = new OidcIdToken("token", Instant.now(), Instant.now().plusSeconds(1000),
-                Map.of("sub", "at-sub"));
+        this.authToken = buildAuthToken("at-sub");
+        this.athleteAuthToken = buildAuthToken("athlete-sub");
+    }
+
+    private OAuth2AuthenticationToken buildAuthToken(String oidcSub) {
+        OidcIdToken token = new OidcIdToken(
+                "token-" + oidcSub,
+                Instant.now(),
+                Instant.now().plusSeconds(1000),
+                Map.of("sub", oidcSub)
+        );
         DefaultOidcUser oidcUser = new DefaultOidcUser(
                 List.of(new SimpleGrantedAuthority("ROLE_USER")),
                 token
         );
-        this.authToken = new OAuth2AuthenticationToken(oidcUser, oidcUser.getAuthorities(), "okta");
+        return new OAuth2AuthenticationToken(oidcUser, oidcUser.getAuthorities(), "okta");
     }
 
     @Test
-    /**
-     * Verifies that marking equipment as maintenance through the controller does not throw.
-     */
-    void updateStatusCancelsReservations() {
+    void updateStatusCancelsReservationsAndCreatesNotifications() {
         EquipmentStatusUpdateRequest request = new EquipmentStatusUpdateRequest();
         request.setStatus(EquipmentStatus.MAINTENANCE.name());
 
-        assertDoesNotThrow(() -> equipmentController.updateEquipmentStatus(equipment.getId(), request, authToken));
+        EquipmentStatusUpdateResponse response = equipmentController.updateEquipmentStatus(
+                equipment.getId(),
+                request,
+                authToken
+        );
+
+        Reservation reservation = reservationRepository.findAll().getFirst();
+        List<Notification> notifications = notificationRepository.findByUserAndReadFalse(athlete);
+
+        assertEquals("MAINTENANCE", response.equipment().getStatus());
+        assertEquals(1, response.canceledReservations());
+        assertEquals(ReservationStatus.CANCELLED, reservation.getStatus());
+        assertFalse(notifications.isEmpty());
+    }
+
+    @Test
+    void updateStatusToAvailableDoesNotCancelReservations() {
+        EquipmentStatusUpdateRequest request = new EquipmentStatusUpdateRequest();
+        request.setStatus(EquipmentStatus.AVAILABLE.name());
+
+        EquipmentStatusUpdateResponse response = equipmentController.updateEquipmentStatus(
+                equipment.getId(),
+                request,
+                authToken
+        );
+
+        Reservation reservation = reservationRepository.findAll().getFirst();
+
+        assertEquals("AVAILABLE", response.equipment().getStatus());
+        assertEquals(0, response.canceledReservations());
+        assertEquals(ReservationStatus.ACTIVE, reservation.getStatus());
+        assertTrue(notificationRepository.findByUserAndReadFalse(athlete).isEmpty());
+    }
+
+    @Test
+    void deleteEquipmentCancelsReservationsAndDeletesEquipment() {
+        ResponseEntity<Void> response = equipmentController.deleteEquipment(equipment.getId(), authToken);
+
+        assertEquals(HttpStatusCode.valueOf(204), response.getStatusCode());
+        assertTrue(equipmentRepository.findById(equipment.getId()).isEmpty());
+        assertTrue(reservationRepository.findAll().isEmpty());
+        assertFalse(notificationRepository.findByUserAndReadFalse(athlete).isEmpty());
+    }
+
+    @Test
+    void getAllEquipmentRequiresTrainerRole() {
+        AccessDeniedException exception = assertThrows(
+                AccessDeniedException.class,
+                () -> equipmentController.getAllEquipment(athleteAuthToken)
+        );
+
+        assertEquals("Trainer or admin role required", exception.getMessage());
     }
 }
