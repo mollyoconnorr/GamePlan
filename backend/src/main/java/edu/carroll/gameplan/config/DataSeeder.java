@@ -155,9 +155,9 @@ public class DataSeeder {
         etr.save(bathType);
 
         // ===== BATHS =====
-        Equipment coldBath = createBath("Ice Bath", "cold", bathType, er);
-        Equipment coldBath2 = createBath("Ice Bath", "cold", bathType, er);
-        Equipment coldBath3 = createBath("Ice Bath", "cold", bathType, er);
+        Equipment coldBath = createBath("Ice Bath #1", "cold", bathType, er);
+        Equipment coldBath2 = createBath("Ice Bath #2", "cold", bathType, er);
+        Equipment coldBath3 = createBath("Ice Bath #3", "cold", bathType, er);
         Equipment hotBath = createBath("Hot Bath", "hot", bathType, er);
 
         // ===== WIRED BOOTS =====
@@ -255,7 +255,7 @@ public class DataSeeder {
                                        LocalDateTime end,
                                        String reason) {
         try {
-            sbs.createBlock(createdBy, start, end, reason);
+            sbs.createBlock(createdBy, start, end, reason, ScheduleBlockType.BLOCK);
         } catch (IllegalArgumentException e) {
             Logger logger = LoggerFactory.getLogger(DataSeeder.class);
             logger.debug("Skipping schedule block during seed: {}", e.getMessage());
