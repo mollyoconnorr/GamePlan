@@ -24,6 +24,15 @@ type ManageReservationsProps = {
     emptyMessage?: string;
 };
 
+type DisplayReservation = {
+    id: number;
+    name: string;
+    start: Dayjs;
+    end: Dayjs;
+    color?: string;
+    description?: string;
+};
+
 export default function ManageReservations({
     reservations,
     calendarEvents,
@@ -48,9 +57,9 @@ export default function ManageReservations({
 
     // Calendar view passes event-shaped data; normalize to Reservation rows for list/edit rendering.
     const displayReservations = useMemo(() => {
-        const mappedReservations = calendarEvents
+        const mappedReservations: DisplayReservation[] = calendarEvents
             ? calendarEvents
-                .map((event) => {
+                .map((event): DisplayReservation | null => {
                     if (!event.startIso || !event.endIso) {
                         return null;
                     }
@@ -71,7 +80,7 @@ export default function ManageReservations({
                         description: event.temp ? "Pending reservation" : event.description,
                     };
                 })
-                .filter((event): event is Reservation => event !== null)
+                .filter((event): event is DisplayReservation => event !== null)
             : reservations;
 
         return [...mappedReservations].sort((a, b) => a.start.valueOf() - b.start.valueOf());
