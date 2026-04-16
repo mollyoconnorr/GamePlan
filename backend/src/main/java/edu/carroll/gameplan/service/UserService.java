@@ -3,6 +3,8 @@ package edu.carroll.gameplan.service;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.List;
  */
 @Service
 public class UserService {
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
 
@@ -29,12 +32,16 @@ public class UserService {
      */
     public User resolveCurrentUser(OAuth2AuthenticationToken authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
+            logger.warn("User resolution failed: authentication token missing");
             throw new RuntimeException("Authentication token is missing");
         }
 
         String oidcUserId = authentication.getPrincipal().getAttribute("sub");
         return userRepository.findByOidcUserId(oidcUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> {
+                    logger.warn("User resolution failed: no user found for oidcUserId={}", oidcUserId);
+                    return new RuntimeException("User not found");
+                });
     }
 
     /**
@@ -64,6 +71,11 @@ public class UserService {
      */
     public void requireTrainer(User user) {
         if (!isTrainer(user)) {
+            logger.warn(
+                    "Trainer access denied: userId={}, role={}",
+                    user != null ? user.getId() : null,
+                    user != null ? user.getRole() : null
+            );
             throw new AccessDeniedException("Trainer or admin role required");
         }
     }
@@ -75,6 +87,11 @@ public class UserService {
      */
     public void requireAdmin(User user) {
         if (!isAdmin(user)) {
+            logger.warn(
+                    "Admin access denied: userId={}, role={}",
+                    user != null ? user.getId() : null,
+                    user != null ? user.getRole() : null
+            );
             throw new AccessDeniedException("Admin role required");
         }
     }

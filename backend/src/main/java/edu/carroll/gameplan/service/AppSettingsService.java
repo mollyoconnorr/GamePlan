@@ -105,7 +105,7 @@ public class AppSettingsService {
         appSettings.setWeekendAutoBlockEnabled(weekendAutoBlockEnabled);
 
         AppSettings saved = appSettingsRepository.save(appSettings);
-        cancelOutOfBoundsReservations(startTime, endTime);
+        int cancelledReservations = cancelOutOfBoundsReservations(startTime, endTime);
 
         if (Boolean.TRUE.equals(saved.getWeekendAutoBlockEnabled())) {
             scheduleBlockService.syncWeekendAutoBlocksIfEnabled(null);
@@ -113,6 +113,17 @@ public class AppSettingsService {
             scheduleBlockService.removeWeekendAutoBlocks();
         }
 
+        logger.info(
+                "App settings updated: startDay={}, startTime={}, endTime={}, timeStep={}, maxReservationTime={}, numDaysToShow={}, weekendAutoBlockEnabled={}, cancelledReservations={}",
+                saved.getStartDay(),
+                saved.getStartTime(),
+                saved.getEndTime(),
+                saved.getTimeStep(),
+                saved.getMaxReservationTime(),
+                saved.getNumDaysToShow(),
+                saved.getWeekendAutoBlockEnabled(),
+                cancelledReservations
+        );
         return toDto(saved);
     }
 
@@ -279,7 +290,7 @@ public class AppSettingsService {
     /**
      * Cancels active reservations that no longer fit within the configured daily start/end window.
      */
-    private void cancelOutOfBoundsReservations(LocalTime startTime, LocalTime endTime) {
+    private int cancelOutOfBoundsReservations(LocalTime startTime, LocalTime endTime) {
         List<Reservation> activeReservations = reservationRepository.findByStatus(ReservationStatus.ACTIVE);
 
         List<Reservation> toCancel = activeReservations.stream()
@@ -288,10 +299,11 @@ public class AppSettingsService {
                 .toList();
 
         if (toCancel.isEmpty()) {
-            return;
+            return 0;
         }
 
         toCancel.forEach(reservation -> reservation.setStatus(ReservationStatus.CANCELLED));
         reservationRepository.saveAll(toCancel);
+        return toCancel.size();
     }
 }

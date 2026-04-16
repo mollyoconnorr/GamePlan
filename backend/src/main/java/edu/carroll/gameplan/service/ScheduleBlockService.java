@@ -11,6 +11,8 @@ import edu.carroll.gameplan.repository.AppSettingsRepository;
 import edu.carroll.gameplan.repository.ReservationRepository;
 import edu.carroll.gameplan.repository.ScheduleBlockRepository;
 import edu.carroll.gameplan.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class ScheduleBlockService {
+    private static final Logger logger = LoggerFactory.getLogger(ScheduleBlockService.class);
     private static final Long APP_SETTINGS_ID = 1L;
     private static final int WEEKEND_SYNC_WINDOW_DAYS = 56;
     private static final String WEEKEND_REASON = "Weekend";
@@ -94,6 +97,15 @@ public class ScheduleBlockService {
         block.setReason(normalizeReason(reason));
 
         final ScheduleBlock saved = scheduleBlockRepository.save(block);
+        logger.info(
+                "Schedule block created: blockId={}, createdByUserId={}, start={}, end={}, cancelledReservations={}, reason={}",
+                saved.getId(),
+                createdBy != null ? createdBy.getId() : null,
+                start,
+                end,
+                conflictingReservations.size(),
+                saved.getReason()
+        );
         return new CreateBlockResult(saved, conflictingReservations.size());
     }
 
@@ -103,11 +115,13 @@ public class ScheduleBlockService {
                 .orElseThrow(() -> new IllegalArgumentException("Block not found: " + id));
 
         if (!ScheduleBlockStatus.ACTIVE.equals(block.getStatus())) {
+            logger.debug("Schedule block cancel skipped for non-active block: blockId={}, status={}", id, block.getStatus());
             return;
         }
 
         block.setStatus(ScheduleBlockStatus.CANCELLED);
         scheduleBlockRepository.save(block);
+        logger.info("Schedule block cancelled: blockId={}", id);
     }
 
     @Transactional(readOnly = true)
@@ -141,6 +155,9 @@ public class ScheduleBlockService {
 
         final LocalDate startDate = LocalDate.now();
         final LocalDate endDateExclusive = startDate.plusDays(WEEKEND_SYNC_WINDOW_DAYS);
+        int blocksCancelled = 0;
+        int blocksCreated = 0;
+        int reservationsCancelled = 0;
 
         for (LocalDate currentDate = startDate; currentDate.isBefore(endDateExclusive); currentDate = currentDate.plusDays(1)) {
             final DayOfWeek dayOfWeek = currentDate.getDayOfWeek();
@@ -165,6 +182,7 @@ public class ScheduleBlockService {
             if (!blocksToCancel.isEmpty()) {
                 blocksToCancel.forEach(block -> block.setStatus(ScheduleBlockStatus.CANCELLED));
                 scheduleBlockRepository.saveAll(blocksToCancel);
+                blocksCancelled += blocksToCancel.size();
             }
 
             final boolean alreadyBlocked = overlappingBlocks.stream()
@@ -184,6 +202,7 @@ public class ScheduleBlockService {
             if (!conflictingReservations.isEmpty()) {
                 conflictingReservations.forEach(reservation -> reservation.setStatus(ReservationStatus.CANCELLED));
                 reservationRepository.saveAll(conflictingReservations);
+                reservationsCancelled += conflictingReservations.size();
             }
 
             final ScheduleBlock weekendBlock = new ScheduleBlock();
@@ -193,6 +212,16 @@ public class ScheduleBlockService {
             weekendBlock.setStatus(ScheduleBlockStatus.ACTIVE);
             weekendBlock.setReason(WEEKEND_REASON);
             scheduleBlockRepository.save(weekendBlock);
+            blocksCreated++;
+        }
+
+        if (blocksCreated > 0 || blocksCancelled > 0 || reservationsCancelled > 0) {
+            logger.info(
+                    "Weekend auto-block sync applied: createdBlocks={}, cancelledBlocks={}, cancelledReservations={}",
+                    blocksCreated,
+                    blocksCancelled,
+                    reservationsCancelled
+            );
         }
     }
 
@@ -213,6 +242,7 @@ public class ScheduleBlockService {
 
         autoWeekendBlocks.forEach(block -> block.setStatus(ScheduleBlockStatus.CANCELLED));
         scheduleBlockRepository.saveAll(autoWeekendBlocks);
+        logger.info("Weekend auto blocks removed: cancelledBlocks={}", autoWeekendBlocks.size());
     }
 
     private void validateRange(LocalDateTime start, LocalDateTime end) {

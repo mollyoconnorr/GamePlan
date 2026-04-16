@@ -3,6 +3,8 @@ package edu.carroll.gameplan.service;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class CustomOidcUserService extends OidcUserService {
+    private static final Logger logger = LoggerFactory.getLogger(CustomOidcUserService.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -49,12 +52,19 @@ public class CustomOidcUserService extends OidcUserService {
                     }
                     if (precreated != null) {
                         precreated.setOidcUserId(oidcUserId);
+                        logger.info(
+                                "Linked precreated user to OIDC identity: userId={}, email={}, oidcUserId={}",
+                                precreated.getId(),
+                                precreated.getEmail(),
+                                oidcUserId
+                        );
                         return precreated;
                     }
                     User newUser = new User();
                     newUser.setOidcUserId(oidcUserId);
                     newUser.setEmail(email);
                     newUser.setRole(UserRole.STUDENT);
+                    logger.info("Provisioning new OIDC user record: email={}, oidcUserId={}", email, oidcUserId);
                     return newUser;
                 });
 
@@ -65,6 +75,7 @@ public class CustomOidcUserService extends OidcUserService {
         }
 
         userRepository.save(user);
+        logger.debug("OIDC user sync completed: userId={}, oidcUserId={}", user.getId(), oidcUserId);
         return oidcUser;
     }
 }

@@ -79,10 +79,9 @@ class NotificationServiceTest {
         User user = new User();
         user.setId(1L);
         Notification notification = new Notification();
-        notification.setId(2L);
         notification.setUser(user);
         notification.setRead(false);
-        when(notificationRepository.findById(2L)).thenReturn(java.util.Optional.of(notification));
+        when(notificationRepository.findById(any())).thenReturn(java.util.Optional.of(notification));
 
         notificationService.markAsRead(user, 2L);
 
@@ -95,10 +94,9 @@ class NotificationServiceTest {
         User owner = new User();
         owner.setId(1L);
         Notification notification = new Notification();
-        notification.setId(2L);
         notification.setUser(owner);
         notification.setRead(false);
-        when(notificationRepository.findById(2L)).thenReturn(java.util.Optional.of(notification));
+        when(notificationRepository.findById(any())).thenReturn(java.util.Optional.of(notification));
 
         User other = new User();
         other.setId(99L);

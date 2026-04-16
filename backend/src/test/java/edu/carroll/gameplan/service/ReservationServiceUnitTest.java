@@ -6,6 +6,7 @@ import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.model.ReservationStatus;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.model.UserRole;
+import edu.carroll.gameplan.repository.AppSettingsRepository;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.ReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -45,6 +47,9 @@ class ReservationServiceUnitTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private AppSettingsRepository appSettingsRepository;
+
     @InjectMocks
     private ReservationService reservationService;
 
@@ -61,6 +66,7 @@ class ReservationServiceUnitTest {
         user.setRole(UserRole.ATHLETE);
         equipment = new Equipment();
         equipment.setId(2L);
+        lenient().when(appSettingsRepository.findById(any())).thenReturn(java.util.Optional.empty());
     }
 
     /**
@@ -169,7 +175,7 @@ class ReservationServiceUnitTest {
 
         reservationService.cancelReservation(5L, trainer);
 
-        verify(notificationService).createNotification(owner, anyString());
+        verify(notificationService).createNotification(eq(owner), anyString());
     }
 
     /**

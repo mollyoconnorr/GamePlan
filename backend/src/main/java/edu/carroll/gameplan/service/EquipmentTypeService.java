@@ -11,6 +11,8 @@ import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ import java.util.Set;
  */
 @Service
 public class EquipmentTypeService {
+    private static final Logger logger = LoggerFactory.getLogger(EquipmentTypeService.class);
 
     private final EquipmentTypeRepository equipmentTypeRepository;
     private final EquipmentRepository equipmentRepository;
@@ -88,7 +91,7 @@ public class EquipmentTypeService {
             });
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.warn("Failed to parse equipment type field schema", e);
         }
         return attributes;
     }
@@ -115,8 +118,9 @@ public class EquipmentTypeService {
         type.setName(name);
         type.setFieldSchema(trimToNull(request.getFieldSchema()));
         type.setColor(trimToNull(request.getColor()));
-
-        return toDto(equipmentTypeRepository.save(type));
+        EquipmentType saved = equipmentTypeRepository.save(type);
+        logger.info("Equipment type created: typeId={}, name={}", saved.getId(), saved.getName());
+        return toDto(saved);
     }
 
     /**
@@ -142,7 +146,9 @@ public class EquipmentTypeService {
             type.setFieldSchema(nextFieldSchema);
         }
 
-        return toDto(equipmentTypeRepository.save(type));
+        EquipmentType saved = equipmentTypeRepository.save(type);
+        logger.info("Equipment type updated: typeId={}, name={}", saved.getId(), saved.getName());
+        return toDto(saved);
     }
 
     /**
@@ -212,10 +218,16 @@ public class EquipmentTypeService {
 
         // Check if any equipment is attached
         if (!type.getEquipmentList().isEmpty()) {
+            logger.warn(
+                    "Equipment type delete blocked due to linked equipment: typeId={}, linkedEquipmentCount={}",
+                    id,
+                    type.getEquipmentList().size()
+            );
             throw new IllegalStateException("Cannot delete type: equipment exists");
         }
 
         equipmentTypeRepository.delete(type);
+        logger.info("Equipment type deleted: typeId={}, name={}", type.getId(), type.getName());
     }
 
     /**
@@ -228,8 +240,16 @@ public class EquipmentTypeService {
                 .orElseThrow(() -> new RuntimeException("EquipmentType not found"));
 
         // Delete every equipment that belongs to this type; cascade removes reservations.
-        equipmentRepository.deleteAll(type.getEquipmentList());
+        List<Equipment> linkedEquipment = type.getEquipmentList() == null ? List.of() : type.getEquipmentList();
+        int equipmentCount = linkedEquipment.size();
+        equipmentRepository.deleteAll(linkedEquipment);
         equipmentTypeRepository.delete(type);
+        logger.info(
+                "Equipment type force deleted: typeId={}, name={}, deletedEquipmentCount={}",
+                type.getId(),
+                type.getName(),
+                equipmentCount
+        );
     }
 
     private EquipmentType fetchEquipmentType(Long id) {

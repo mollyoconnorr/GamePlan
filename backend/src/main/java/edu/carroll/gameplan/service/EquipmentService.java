@@ -13,6 +13,8 @@ import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ import java.util.Map;
  */
 @Service
 public class EquipmentService {
+    private static final Logger logger = LoggerFactory.getLogger(EquipmentService.class);
 
     private static final DateTimeFormatter NOTIFICATION_FORMATTER =
             DateTimeFormatter.ofPattern("EEEE, MMM d 'at' h:mm a", Locale.ENGLISH);
@@ -74,7 +77,14 @@ public class EquipmentService {
         equipment.setEquipmentType(type);
         equipment.setStatus(EquipmentStatus.AVAILABLE);
         equipment.setAttributes(buildAttributes(request.getAttributes(), equipment));
-        return toDto(equipmentRepository.save(equipment));
+        Equipment saved = equipmentRepository.save(equipment);
+        logger.info(
+                "Equipment created: equipmentId={}, typeId={}, name={}",
+                saved.getId(),
+                type.getId(),
+                saved.getName()
+        );
+        return toDto(saved);
     }
 
     /**
@@ -100,7 +110,14 @@ public class EquipmentService {
         equipment.getAttributes().clear();
         equipment.getAttributes().addAll(updatedAttributes);
 
-        return toDto(equipmentRepository.save(equipment));
+        Equipment saved = equipmentRepository.save(equipment);
+        logger.info(
+                "Equipment updated: equipmentId={}, typeId={}, name={}",
+                saved.getId(),
+                saved.getEquipmentType() != null ? saved.getEquipmentType().getId() : null,
+                saved.getName()
+        );
+        return toDto(saved);
     }
 
     /**
@@ -111,6 +128,7 @@ public class EquipmentService {
                                                                EquipmentStatusUpdateRequest request,
                                                                User actingUser) {
         Equipment equipment = fetchEquipment(id);
+        EquipmentStatus previousStatus = equipment.getStatus();
         EquipmentStatus nextStatus = parseStatus(request.getStatus());
 
         int canceled = 0;
@@ -119,7 +137,16 @@ public class EquipmentService {
         }
 
         equipment.setStatus(nextStatus);
-        return new EquipmentStatusUpdateResponse(toDto(equipmentRepository.save(equipment)), canceled);
+        Equipment saved = equipmentRepository.save(equipment);
+        logger.info(
+                "Equipment status updated: equipmentId={}, previousStatus={}, newStatus={}, actingUserId={}, cancelledReservations={}",
+                saved.getId(),
+                previousStatus,
+                nextStatus,
+                actingUser != null ? actingUser.getId() : null,
+                canceled
+        );
+        return new EquipmentStatusUpdateResponse(toDto(saved), canceled);
     }
 
     /**
@@ -128,15 +155,23 @@ public class EquipmentService {
     @Transactional
     public boolean deleteEquipment(Long id, User actingUser) {
         if (!equipmentRepository.existsById(id)) {
+            logger.warn("Equipment delete requested for missing equipment: equipmentId={}", id);
             return false;
         }
 
         List<Reservation> activeReservations = reservationService.getActiveReservationsForEquipment(id);
+        int cancelledReservations = activeReservations.size();
         for (Reservation reservation : activeReservations) {
             reservationService.cancelReservation(reservation.getId(), actingUser);
         }
 
         equipmentRepository.deleteById(id);
+        logger.info(
+                "Equipment deleted: equipmentId={}, actingUserId={}, cancelledReservations={}",
+                id,
+                actingUser != null ? actingUser.getId() : null,
+                cancelledReservations
+        );
         return true;
     }
 

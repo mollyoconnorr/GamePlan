@@ -3,6 +3,8 @@ package edu.carroll.gameplan.service;
 import edu.carroll.gameplan.model.Notification;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.repository.NotificationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import java.util.List;
  */
 @Service
 public class NotificationService {
+    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
 
@@ -32,7 +35,12 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage(message);
-        notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        logger.debug(
+                "Notification created: notificationId={}, userId={}",
+                saved.getId(),
+                user != null ? user.getId() : null
+        );
     }
 
     /**
@@ -55,12 +63,19 @@ public class NotificationService {
                 .orElseThrow(() -> new IllegalArgumentException("Notification not found: " + notificationId));
 
         if (!notification.getUser().getId().equals(user.getId())) {
+            logger.warn(
+                    "Notification read denied: notificationId={}, actingUserId={}, ownerUserId={}",
+                    notificationId,
+                    user.getId(),
+                    notification.getUser().getId()
+            );
             throw new AccessDeniedException("Cannot mark another user's notification as read.");
         }
 
         if (!notification.isRead()) {
             notification.setRead(true);
             notificationRepository.save(notification);
+            logger.debug("Notification marked read: notificationId={}, userId={}", notificationId, user.getId());
         }
     }
     /**

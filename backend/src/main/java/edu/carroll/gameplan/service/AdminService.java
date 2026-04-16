@@ -4,6 +4,8 @@ import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.dto.request.CreateUserRequest;
 import edu.carroll.gameplan.dto.response.AdminUserResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +15,7 @@ import java.util.List;
  */
 @Service
 public class AdminService {
+    private static final Logger logger = LoggerFactory.getLogger(AdminService.class);
 
     private final UserService userService;
 
@@ -35,6 +38,7 @@ public class AdminService {
     public AdminUserResponse createPendingStudent(CreateUserRequest request) {
         String email = requireEmail(request.getEmail());
         if (userService.emailExists(email)) {
+            logger.warn("Admin attempted to create user with duplicate email: email={}", email);
             throw new IllegalArgumentException("Email already in use");
         }
 
@@ -44,8 +48,9 @@ public class AdminService {
         user.setLastName(request.getLastName());
         user.setRole(UserRole.STUDENT);
         user.setOidcUserId(request.getOidcUserId());
-
-        return toResponse(userService.saveUser(user));
+        User saved = userService.saveUser(user);
+        logger.info("Admin created pending user: userId={}, email={}, role={}", saved.getId(), saved.getEmail(), saved.getRole());
+        return toResponse(saved);
     }
 
     /**
@@ -64,8 +69,16 @@ public class AdminService {
             throw new IllegalArgumentException("Invalid role: " + requestedRole);
         }
 
+        UserRole previousRole = targetUser.getRole();
         targetUser.setRole(nextRole);
-        return toResponse(userService.saveUser(targetUser));
+        User saved = userService.saveUser(targetUser);
+        logger.info(
+                "Admin updated user role: userId={}, previousRole={}, newRole={}",
+                saved.getId(),
+                previousRole,
+                saved.getRole()
+        );
+        return toResponse(saved);
     }
 
     /**

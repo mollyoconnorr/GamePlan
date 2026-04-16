@@ -4,6 +4,8 @@ import edu.carroll.gameplan.model.*;
 import edu.carroll.gameplan.repository.AppSettingsRepository;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.ReservationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ import java.util.Locale;
  */
 @Service
 public class ReservationService {
+    private static final Logger logger = LoggerFactory.getLogger(ReservationService.class);
 
     private static final DateTimeFormatter NOTIFICATION_FORMATTER =
             DateTimeFormatter.ofPattern("EEEE, MMM d 'at' h:mm a", Locale.ENGLISH);
@@ -117,7 +120,16 @@ public class ReservationService {
         reservation.setEndDatetime(end);
         reservation.setStatus(ReservationStatus.ACTIVE);
 
-        return reservationRepository.save(reservation);
+        Reservation saved = reservationRepository.save(reservation);
+        logger.info(
+                "Reservation created: reservationId={}, userId={}, equipmentId={}, start={}, end={}",
+                saved.getId(),
+                user.getId(),
+                equipment.getId(),
+                start,
+                end
+        );
+        return saved;
     }
 
 
@@ -139,11 +151,24 @@ public class ReservationService {
         boolean isAdmin = UserRole.AT.equals(actingUser.getRole()) || UserRole.ADMIN.equals(actingUser.getRole());
 
         if (!isOwner && !isAdmin) {
+            logger.warn(
+                    "Reservation cancel denied: reservationId={}, actingUserId={}, ownerUserId={}",
+                    reservationId,
+                    actingUser.getId(),
+                    reservation.getUser().getId()
+            );
             throw new AccessDeniedException("Only the reservation owner or an admin can cancel this reservation.");
         }
 
         reservation.setStatus(ReservationStatus.CANCELLED);
         Reservation saved = reservationRepository.save(reservation);
+        logger.info(
+                "Reservation cancelled: reservationId={}, actingUserId={}, ownerUserId={}, actedAsAdmin={}",
+                reservationId,
+                actingUser.getId(),
+                reservation.getUser().getId(),
+                !isOwner
+        );
         if (!isOwner) {
             notifyOwnerOfCancellation(reservation, actingUser);
         }
@@ -256,6 +281,12 @@ public class ReservationService {
         boolean isAdmin = UserRole.AT.equals(actingUser.getRole()) || UserRole.ADMIN.equals(actingUser.getRole());
 
         if (!isOwner && !isAdmin) {
+            logger.warn(
+                    "Reservation update denied: reservationId={}, actingUserId={}, ownerUserId={}",
+                    reservationId,
+                    actingUser.getId(),
+                    reservation.getUser().getId()
+            );
             throw new AccessDeniedException("Only the reservation owner or an admin can edit this reservation.");
         }
 
@@ -264,6 +295,12 @@ public class ReservationService {
         }
 
         if (reservation.getEquipment().getStatus() != EquipmentStatus.AVAILABLE) {
+            logger.warn(
+                    "Reservation update blocked by equipment status: reservationId={}, equipmentId={}, equipmentStatus={}",
+                    reservationId,
+                    reservation.getEquipment().getId(),
+                    reservation.getEquipment().getStatus()
+            );
             cancelReservation(reservationId, actingUser);
             throw new IllegalArgumentException("Equipment is currently under maintenance.");
         }
@@ -292,7 +329,15 @@ public class ReservationService {
         reservation.setStartDatetime(newStart);
         reservation.setEndDatetime(newEnd);
 
-        return reservationRepository.save(reservation);
+        Reservation saved = reservationRepository.save(reservation);
+        logger.info(
+                "Reservation updated: reservationId={}, actingUserId={}, start={}, end={}",
+                reservationId,
+                actingUser.getId(),
+                newStart,
+                newEnd
+        );
+        return saved;
     }
 
 
