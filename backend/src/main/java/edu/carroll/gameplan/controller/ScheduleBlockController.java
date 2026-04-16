@@ -37,7 +37,8 @@ public class ScheduleBlockController {
                                                  @RequestParam(required = false) Instant from,
                                                  @RequestParam(required = false) Instant to) {
         // Any authenticated user can view blocked windows on their calendar.
-        userService.resolveCurrentUser(authentication);
+        final User currentUser = userService.resolveCurrentUser(authentication);
+        scheduleBlockService.syncWeekendAutoBlocksIfEnabled(currentUser);
 
         final LocalDateTime fromLocal = from != null ? from.atZone(APP_ZONE).toLocalDateTime() : null;
         final LocalDateTime toLocal = to != null ? to.atZone(APP_ZONE).toLocalDateTime() : null;

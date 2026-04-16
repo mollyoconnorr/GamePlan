@@ -15,6 +15,7 @@ import java.time.LocalTime;
  * @param maxReservationTime maximum reservation duration in minutes
  * @param numDaysToShow number of days displayed in the calendar
  * @param startDate date used by the client as the current calendar anchor
+ * @param weekendAutoBlockEnabled whether weekend auto-blocking is enabled
  */
 public record AppSettingsResponseDTO(
         CalendarFirstDay startDay,
@@ -23,6 +24,18 @@ public record AppSettingsResponseDTO(
         Integer timeStep,
         Integer maxReservationTime,
         Integer numDaysToShow,
-        LocalDate startDate
+        LocalDate startDate,
+        Boolean weekendAutoBlockEnabled
 ) {
+    public AppSettingsResponseDTO(
+            CalendarFirstDay startDay,
+            LocalTime startTime,
+            LocalTime endTime,
+            Integer timeStep,
+            Integer maxReservationTime,
+            Integer numDaysToShow,
+            LocalDate startDate
+    ) {
+        this(startDay, startTime, endTime, timeStep, maxReservationTime, numDaysToShow, startDate, false);
+    }
 }

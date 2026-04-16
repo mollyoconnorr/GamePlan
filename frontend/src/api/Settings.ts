@@ -11,10 +11,12 @@ type RawAppSettingsData = {
     timeStep: number;
     maxReservationTime: number;
     numDaysToShow: number;
+    weekendAutoBlockEnabled?: boolean;
 }
 
 export interface ParsedAppSettingsData extends CalendarData {
     firstDateToShow: "week" | "day";
+    weekendAutoBlockEnabled: boolean;
 }
 
 type SettingsRequest = {
@@ -24,6 +26,7 @@ type SettingsRequest = {
     maxResTimeInput: string;
     startTimeInput: string;
     endTimeInput: string;
+    weekendAutoBlockEnabled?: boolean;
 };
 
 type AppSettingsUpdatePayload = {
@@ -33,6 +36,7 @@ type AppSettingsUpdatePayload = {
     timeStep: number;
     maxReservationTime: number;
     numDaysToShow: number;
+    weekendAutoBlockEnabled?: boolean;
 };
 
 export async function updateAppSettings(request: SettingsRequest): Promise<ParsedAppSettingsData> {
@@ -85,6 +89,7 @@ function toAppSettingsUpdatePayload(request: SettingsRequest): AppSettingsUpdate
         timeStep,
         maxReservationTime,
         numDaysToShow,
+        weekendAutoBlockEnabled: request.weekendAutoBlockEnabled,
     };
 }
 
@@ -125,5 +130,6 @@ function parseAppDataToAppSettings(rawAppData: RawAppSettingsData): ParsedAppSet
         maxResTime: rawAppData.maxReservationTime,
         numDays: rawAppData.numDaysToShow,
         firstDateToShow: parsedStartDay,
+        weekendAutoBlockEnabled: Boolean(rawAppData.weekendAutoBlockEnabled),
     }
 }

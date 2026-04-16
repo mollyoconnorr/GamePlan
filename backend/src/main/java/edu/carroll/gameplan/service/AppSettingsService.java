@@ -32,6 +32,7 @@ public class AppSettingsService {
 
     private final AppSettingsRepository appSettingsRepository;
     private final ReservationRepository reservationRepository;
+    private final ScheduleBlockService scheduleBlockService;
 
     /**
      * Creates a service backed by the app settings repository.
@@ -39,9 +40,11 @@ public class AppSettingsService {
      * @param appSettingsRepository repository used to load and persist settings
      */
     public AppSettingsService(AppSettingsRepository appSettingsRepository,
-                              ReservationRepository reservationRepository) {
+                              ReservationRepository reservationRepository,
+                              ScheduleBlockService scheduleBlockService) {
         this.appSettingsRepository = appSettingsRepository;
         this.reservationRepository = reservationRepository;
+        this.scheduleBlockService = scheduleBlockService;
     }
 
     /**
@@ -70,6 +73,12 @@ public class AppSettingsService {
         final Integer timeStep = valueOrExisting(newSettings.timeStep(), appSettings.getTimeStep());
         final Integer maxReservationTime = valueOrExisting(newSettings.maxReservationTime(), appSettings.getMaxReservationTime());
         final Integer numDaysToShow = valueOrExisting(newSettings.numDaysToShow(), appSettings.getNumDaysToShow());
+        final Boolean weekendAutoBlockEnabled = valueOrExisting(
+                newSettings.weekendAutoBlockEnabled(),
+                appSettings.getWeekendAutoBlockEnabled()
+        );
+
+        final boolean wasWeekendAutoBlockEnabled = Boolean.TRUE.equals(appSettings.getWeekendAutoBlockEnabled());
 
         validateSetting("startDay", startDay, this::isValidStartDay);
         validateSetting("timeStep", timeStep, this::isValidTimeStep);
@@ -77,6 +86,7 @@ public class AppSettingsService {
         validateSetting("numDaysToShow", numDaysToShow, this::isValidNumDaysToShow);
         validateSetting("startTime", startTime, this::isValidTimeValue);
         validateSetting("endTime", endTime, this::isValidTimeValue);
+        validateSetting("weekendAutoBlockEnabled", weekendAutoBlockEnabled, this::isValidWeekendAutoBlockEnabled);
 
         if (!isValidSettingsState(startTime, endTime, timeStep, maxReservationTime, numDaysToShow)) {
             logger.warn(
@@ -92,9 +102,17 @@ public class AppSettingsService {
         appSettings.setTimeStep(timeStep);
         appSettings.setMaxReservationTime(maxReservationTime);
         appSettings.setNumDaysToShow(numDaysToShow);
+        appSettings.setWeekendAutoBlockEnabled(weekendAutoBlockEnabled);
 
         AppSettings saved = appSettingsRepository.save(appSettings);
         cancelOutOfBoundsReservations(startTime, endTime);
+
+        if (Boolean.TRUE.equals(saved.getWeekendAutoBlockEnabled())) {
+            scheduleBlockService.syncWeekendAutoBlocksIfEnabled(null);
+        } else if (wasWeekendAutoBlockEnabled) {
+            scheduleBlockService.removeWeekendAutoBlocks();
+        }
+
         return toDto(saved);
     }
 
@@ -153,7 +171,8 @@ public class AppSettingsService {
                 appSettings.getTimeStep(),
                 appSettings.getMaxReservationTime(),
                 appSettings.getNumDaysToShow(),
-                LocalDate.now()
+                LocalDate.now(),
+                Boolean.TRUE.equals(appSettings.getWeekendAutoBlockEnabled())
         );
     }
 
@@ -251,6 +270,10 @@ public class AppSettingsService {
      */
     private boolean isValidNumDaysToShow(Integer numDaysToShow) {
         return numDaysToShow != null && numDaysToShow >= MIN_DAYS_TO_SHOW && numDaysToShow <= MAX_DAYS_TO_SHOW;
+    }
+
+    private boolean isValidWeekendAutoBlockEnabled(Boolean weekendAutoBlockEnabled) {
+        return weekendAutoBlockEnabled != null;
     }
 
     /**

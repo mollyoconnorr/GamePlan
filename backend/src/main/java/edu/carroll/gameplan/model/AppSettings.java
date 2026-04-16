@@ -34,6 +34,9 @@ public class AppSettings {
     @Column(nullable = false)
     private Integer numDaysToShow;
 
+    @Column(nullable = false)
+    private Boolean weekendAutoBlockEnabled = false;
+
     public AppSettings() {
         // JPA constructor.
     }
@@ -45,12 +48,24 @@ public class AppSettings {
             Integer timeStep,
             Integer maxReservationTime,
             Integer numDaysToShow) {
+        this(startDay, startTime, endTime, timeStep, maxReservationTime, numDaysToShow, false);
+    }
+
+    public AppSettings(
+            CalendarFirstDay startDay,
+            LocalTime startTime,
+            LocalTime endTime,
+            Integer timeStep,
+            Integer maxReservationTime,
+            Integer numDaysToShow,
+            Boolean weekendAutoBlockEnabled) {
         this.startDay = startDay;
         this.startTime = startTime;
         this.endTime = endTime;
         this.timeStep = timeStep;
         this.maxReservationTime = maxReservationTime;
         this.numDaysToShow = numDaysToShow;
+        this.weekendAutoBlockEnabled = weekendAutoBlockEnabled;
     }
 
     public CalendarFirstDay getStartDay() {
@@ -103,5 +118,13 @@ public class AppSettings {
 
     public void setNumDaysToShow(Integer numDaysToShow) {
         this.numDaysToShow = numDaysToShow;
+    }
+
+    public Boolean getWeekendAutoBlockEnabled() {
+        return weekendAutoBlockEnabled;
+    }
+
+    public void setWeekendAutoBlockEnabled(Boolean weekendAutoBlockEnabled) {
+        this.weekendAutoBlockEnabled = weekendAutoBlockEnabled;
     }
 }

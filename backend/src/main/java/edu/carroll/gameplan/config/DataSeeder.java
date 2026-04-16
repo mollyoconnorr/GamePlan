@@ -50,6 +50,7 @@ public class DataSeeder {
             appSettings.setNumDaysToShow(7);
             appSettings.setStartTime(LocalTime.of(8,0));
             appSettings.setEndTime(LocalTime.of(17,0));
+            appSettings.setWeekendAutoBlockEnabled(false);
             asr.save(appSettings);
         }
 

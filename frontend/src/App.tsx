@@ -105,6 +105,7 @@ function AppShell() {
     const [timeStep, setTimeStep] = useState(0);
     const [maxResTime, setMaxResTime] = useState(0);
     const [numDays, setNumDays] = useState(0);
+    const [weekendAutoBlockEnabled, setWeekendAutoBlockEnabled] = useState(false);
 
     useEffect(() => {
         async function getSettings() {
@@ -119,8 +120,10 @@ function AppShell() {
                 setTimeStep(settings.timeStep);
                 setMaxResTime(settings.maxResTime);
                 setNumDays(settings.numDays);
-            } catch (err: any) {
-                console.log(err.message);
+                setWeekendAutoBlockEnabled(settings.weekendAutoBlockEnabled);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Failed to fetch app settings.";
+                console.log(message);
             } finally {
                 setLoading(false);
             }
@@ -196,6 +199,8 @@ function AppShell() {
                             setTimeStep={setTimeStep}
                             setMaxResTime={setMaxResTime}
                             setNumDays={setNumDays}
+                            weekendAutoBlockEnabled={weekendAutoBlockEnabled}
+                            setWeekendAutoBlockEnabled={setWeekendAutoBlockEnabled}
                             refreshCalendarData={loadReservations}
                             loading={loading}
                         />)} />
