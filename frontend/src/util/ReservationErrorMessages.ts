@@ -23,5 +23,9 @@ export function getFriendlyReservationErrorMessage(rawMessage: string) {
         return "This time is blocked off by a trainer or admin. Choose a different time.";
     }
 
+    if (normalized.includes("weekend reservations are disabled")) {
+        return "Weekend reservations are disabled. Choose a weekday.";
+    }
+
     return rawMessage;
 }

@@ -1,12 +1,15 @@
 package edu.carroll.gameplan.service;
 
 import edu.carroll.gameplan.model.*;
+import edu.carroll.gameplan.repository.AppSettingsRepository;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.ReservationRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -24,9 +27,11 @@ public class ReservationService {
 
     private static final DateTimeFormatter NOTIFICATION_FORMATTER =
             DateTimeFormatter.ofPattern("EEEE, MMM d 'at' h:mm a", Locale.ENGLISH);
+    private static final Long APP_SETTINGS_ID = 1L;
 
     private final ReservationRepository reservationRepository;
     private final EquipmentRepository equipmentRepository;
+    private final AppSettingsRepository appSettingsRepository;
     private final ScheduleBlockService scheduleBlockService;
     private final NotificationService notificationService;
 
@@ -38,10 +43,12 @@ public class ReservationService {
      */
     public ReservationService(ReservationRepository reservationRepository,
                               EquipmentRepository equipmentRepository,
+                              AppSettingsRepository appSettingsRepository,
                               ScheduleBlockService scheduleBlockService,
                               NotificationService notificationService) {
         this.reservationRepository = reservationRepository;
         this.equipmentRepository = equipmentRepository;
+        this.appSettingsRepository = appSettingsRepository;
         this.scheduleBlockService = scheduleBlockService;
         this.notificationService = notificationService;
     }
@@ -72,6 +79,8 @@ public class ReservationService {
         if (end.isBefore(start) || end.equals(start)) {
             throw new IllegalArgumentException("End time must be after start time.");
         }
+
+        enforceWeekendRestrictionForAthletes(user, start, end);
 
         if (scheduleBlockService.hasActiveBlockConflict(start, end)) {
             throw new IllegalArgumentException("This time slot is blocked by an admin.");
@@ -229,6 +238,8 @@ public class ReservationService {
             throw new IllegalArgumentException("End time must be after start time.");
         }
 
+        enforceWeekendRestrictionForAthletes(actingUser, newStart, newEnd);
+
         if (scheduleBlockService.hasActiveBlockConflict(newStart, newEnd)) {
             throw new IllegalArgumentException("This time slot is blocked by an admin.");
         }
@@ -295,5 +306,38 @@ public class ReservationService {
     public Equipment getEquipmentById(Long equipmentId) {
         return equipmentRepository.findById(equipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Equipment not found with id: " + equipmentId));
+    }
+
+    private void enforceWeekendRestrictionForAthletes(User user, LocalDateTime start, LocalDateTime end) {
+        if (user == null || UserRole.ADMIN.equals(user.getRole()) || UserRole.AT.equals(user.getRole())) {
+            return;
+        }
+
+        boolean weekendReservationsDisabled = appSettingsRepository.findById(APP_SETTINGS_ID)
+                .map(settings -> Boolean.TRUE.equals(settings.getWeekendAutoBlockEnabled()))
+                .orElse(false);
+
+        if (!weekendReservationsDisabled) {
+            return;
+        }
+
+        if (rangeTouchesWeekend(start, end)) {
+            throw new IllegalArgumentException("Weekend reservations are disabled.");
+        }
+    }
+
+    private boolean rangeTouchesWeekend(LocalDateTime start, LocalDateTime end) {
+        LocalDate current = start.toLocalDate();
+        LocalDate inclusiveEnd = end.minusNanos(1).toLocalDate();
+
+        while (!current.isAfter(inclusiveEnd)) {
+            DayOfWeek dayOfWeek = current.getDayOfWeek();
+            if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+                return true;
+            }
+            current = current.plusDays(1);
+        }
+
+        return false;
     }
 }

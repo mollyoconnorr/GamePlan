@@ -14,21 +14,29 @@ interface DateTimeRangePickerProps extends CalendarData {
     setSelectedDate: (date: string) => void;
     setSelectedStartTime: (time: string) => void;
     setSelectedEndTime: (time: string) => void;
+    disableWeekends?: boolean;
 }
 
 export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     // Date options, from given start date + numDays
-    const todayKey = dayjs().format("YYYY-MM-DD");
     const dateOptions = useMemo(() => {
         const today = dayjs();
 
         return Array.from({ length: props.numDays }, (_, i) => props.firstDate.add(i, "day"))
             .filter((dateOption) => !dateOption.isBefore(today, "day"))
+            .filter((dateOption) => {
+                if (!props.disableWeekends) {
+                    return true;
+                }
+
+                const dayOfWeek = dateOption.day();
+                return dayOfWeek !== 0 && dayOfWeek !== 6;
+            })
             .map((dateOption) => ({
                 value: dateOption.format("YYYY-MM-DD"),
                 label: dateOption.format("ddd M/D/YY"),
             }));
-    }, [props.firstDate, props.numDays, todayKey]);
+    }, [props.firstDate, props.numDays, props.disableWeekends]);
 
     // Create time options (between startTime and endTime)
     const timeOptions = useMemo(() => {

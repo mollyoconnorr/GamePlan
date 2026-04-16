@@ -179,6 +179,7 @@ function AppShell() {
                                     numDays={numDays}
                                     reservations={reservations}
                                     setReservations={setReservations}
+                                    weekendAutoBlockEnabled={weekendAutoBlockEnabled}
                                 />
                             )
                         }

@@ -6,6 +6,7 @@ import edu.carroll.gameplan.repository.EquipmentTypeRepository;
 import edu.carroll.gameplan.repository.ReservationRepository;
 import edu.carroll.gameplan.repository.ScheduleBlockRepository;
 import edu.carroll.gameplan.repository.UserRepository;
+import edu.carroll.gameplan.repository.AppSettingsRepository;
 import edu.carroll.gameplan.service.ReservationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -49,6 +52,9 @@ public class ReservationServiceTest {
     @Autowired
     private ScheduleBlockRepository scheduleBlockRepository;
 
+    @Autowired
+    private AppSettingsRepository appSettingsRepository;
+
     private User testUser;           // The test user used in reservations
     private Equipment testEquipment; // The test equipment used in reservations
 
@@ -80,6 +86,16 @@ public class ReservationServiceTest {
         testEquipment = equipmentRepository.save(testEquipment);
 
         scheduleBlockRepository.deleteAll();
+        appSettingsRepository.deleteAll();
+        appSettingsRepository.save(new AppSettings(
+                CalendarFirstDay.WEEK,
+                LocalTime.of(8, 0),
+                LocalTime.of(17, 0),
+                15,
+                60,
+                7,
+                false
+        ));
     }
 
     /**
@@ -193,6 +209,44 @@ public class ReservationServiceTest {
     }
 
     @Test
+    public void testCreateReservationRejectsWeekendWhenWeekendBlockingEnabled() {
+        AppSettings settings = appSettingsRepository.findById(1L).orElseThrow();
+        settings.setWeekendAutoBlockEnabled(true);
+        appSettingsRepository.save(settings);
+
+        LocalDateTime start = nextWeekendDateTime(10, 0);
+        LocalDateTime end = start.plusMinutes(30);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.createReservation(testUser, testEquipment, start, end)
+        );
+
+        assertEquals("Weekend reservations are disabled.", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateReservationRejectsWeekendWhenWeekendBlockingEnabled() {
+        AppSettings settings = appSettingsRepository.findById(1L).orElseThrow();
+        settings.setWeekendAutoBlockEnabled(true);
+        appSettingsRepository.save(settings);
+
+        LocalDateTime weekdayStart = nextWeekdayDateTime(10, 0);
+        LocalDateTime weekdayEnd = weekdayStart.plusMinutes(30);
+        Reservation reservation = reservationService.createReservation(testUser, testEquipment, weekdayStart, weekdayEnd);
+
+        LocalDateTime weekendStart = nextWeekendDateTime(11, 0);
+        LocalDateTime weekendEnd = weekendStart.plusMinutes(30);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.updateReservation(reservation.getId(), weekendStart, weekendEnd, testUser)
+        );
+
+        assertEquals("Weekend reservations are disabled.", exception.getMessage());
+    }
+
+    @Test
     public void testUpdateReservationRejectsBlockedTime() {
         User trainer = new User();
         trainer.setEmail("trainer2@carroll.edu");
@@ -274,5 +328,48 @@ public class ReservationServiceTest {
         assertEquals(futureActive.getId(), reservations.get(0).getId());
         assertNotEquals(pastActive.getId(), reservations.get(0).getId());
         assertNotEquals(futureCancelled.getId(), reservations.get(0).getId());
+    }
+
+    private LocalDateTime nextWeekendDateTime(int hour, int minute) {
+        LocalDateTime candidate = LocalDateTime.now().plusHours(2)
+                .withHour(hour)
+                .withMinute(minute)
+                .withSecond(0)
+                .withNano(0);
+
+        while (candidate.getDayOfWeek() != DayOfWeek.SATURDAY
+                && candidate.getDayOfWeek() != DayOfWeek.SUNDAY) {
+            candidate = candidate.plusDays(1);
+        }
+
+        if (candidate.isBefore(LocalDateTime.now().plusMinutes(1))) {
+            candidate = candidate.plusDays(7);
+        }
+
+        return candidate;
+    }
+
+    private LocalDateTime nextWeekdayDateTime(int hour, int minute) {
+        LocalDateTime candidate = LocalDateTime.now().plusHours(2)
+                .withHour(hour)
+                .withMinute(minute)
+                .withSecond(0)
+                .withNano(0);
+
+        while (candidate.getDayOfWeek() == DayOfWeek.SATURDAY
+                || candidate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            candidate = candidate.plusDays(1);
+        }
+
+        if (candidate.isBefore(LocalDateTime.now().plusMinutes(1))) {
+            candidate = candidate.plusDays(1);
+        }
+
+        while (candidate.getDayOfWeek() == DayOfWeek.SATURDAY
+                || candidate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            candidate = candidate.plusDays(1);
+        }
+
+        return candidate;
     }
 }

@@ -23,6 +23,7 @@ import {cardPanelClassName, formLabelClassName, selectInputClassName} from "../s
 interface ReserveEquipmentProps extends CalendarData {
     reservations: Reservation[];
     setReservations: Dispatch<SetStateAction<Reservation[]>>;
+    weekendAutoBlockEnabled: boolean;
 }
 
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
@@ -30,7 +31,7 @@ type EquipmentTypeResponse = { id: number; name: string };
 type AttributeDefinition = { name: string; options: string[] };
 
 export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
-                                             maxResTime,numDays,reservations, setReservations} : ReserveEquipmentProps) {
+                                             maxResTime,numDays,reservations, setReservations, weekendAutoBlockEnabled} : ReserveEquipmentProps) {
     const navigate = useNavigate();
 
     // Backend data
@@ -278,6 +279,23 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         // Clear stale API error copy when any selected reservation inputs change.
         setReservationErrorMessage("");
     }, [selectedEquipment, selectedDate, selectedStartTime, selectedEndTime]);
+
+    useEffect(() => {
+        if (!weekendAutoBlockEnabled || !selectedDate) {
+            return;
+        }
+
+        const selectedDay = dayjs(selectedDate, "YYYY-MM-DD", true);
+        const dayOfWeek = selectedDay.day();
+
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            return;
+        }
+
+        setSelectedDate("");
+        setSelectedStartTime("");
+        setSelectedEndTime("");
+    }, [selectedDate, weekendAutoBlockEnabled]);
 
     // Fetch equipment types on load
     useEffect(() => {
@@ -555,6 +573,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                             setSelectedDate={setSelectedDate}
                             setSelectedStartTime={setSelectedStartTime}
                             setSelectedEndTime={setSelectedEndTime}
+                            disableWeekends={weekendAutoBlockEnabled}
                         />
                     </div>
                 </div>
