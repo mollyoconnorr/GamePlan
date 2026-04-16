@@ -5,6 +5,9 @@ import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.UserRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -32,9 +35,25 @@ public class UserService {
             throw new RuntimeException("Authentication token is missing");
         }
 
-        String oidcUserId = authentication.getPrincipal().getAttribute("sub");
-        return userRepository.findByOidcUserId(oidcUserId)
+        OAuth2User principal = authentication.getPrincipal();
+        String oidcUserId = principal.getAttribute("sub");
+        User user = userRepository.findByOidcUserId(oidcUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        long sessionAuthVersion = getSessionAuthVersion(principal);
+        if (sessionAuthVersion != user.getAuthVersion()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your role changed. Please sign in again.");
+        }
+
+        return user;
+    }
+
+    private long getSessionAuthVersion(OAuth2User principal) {
+        Object authVersion = principal.getAttribute(VersionedOidcUser.AUTH_VERSION_ATTRIBUTE);
+        if (authVersion instanceof Number number) {
+            return number.longValue();
+        }
+        return 0L;
     }
 
     /**
@@ -127,5 +146,14 @@ public class UserService {
      */
     public long countByRole(UserRole role) {
         return userRepository.countByRole(role);
+    }
+
+    /**
+     * Counts how many users are pending approval.
+     *
+     * @return number of pending users
+     */
+    public long countPendingApproval() {
+        return userRepository.countByPendingApprovalTrue();
     }
 }

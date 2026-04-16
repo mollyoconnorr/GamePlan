@@ -36,6 +36,18 @@ public class User {
     private UserRole role = UserRole.ATHLETE;
 
     /**
+     * Indicates whether this student is waiting for approval.
+     */
+    @Column(nullable = false)
+    private boolean pendingApproval = false;
+
+    /**
+     * Bumps whenever the user's role or approval state changes so old sessions can be invalidated.
+     */
+    @Column(nullable = false)
+    private long authVersion = 0L;
+
+    /**
      * Email of the user
      */
     private String email;
@@ -181,5 +193,41 @@ public class User {
      */
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    /**
+     * Returns whether this user is still waiting for approval.
+     *
+     * @return true if pending approval
+     */
+    public boolean isPendingApproval() {
+        return pendingApproval;
+    }
+
+    /**
+     * Sets whether this user is waiting for approval.
+     *
+     * @param pendingApproval approval state
+     */
+    public void setPendingApproval(boolean pendingApproval) {
+        this.pendingApproval = pendingApproval;
+    }
+
+    /**
+     * Returns the authentication version used to invalidate stale sessions.
+     *
+     * @return auth version
+     */
+    public long getAuthVersion() {
+        return authVersion;
+    }
+
+    /**
+     * Sets the authentication version used to invalidate stale sessions.
+     *
+     * @param authVersion auth version
+     */
+    public void setAuthVersion(long authVersion) {
+        this.authVersion = authVersion;
     }
 }

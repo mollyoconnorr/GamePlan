@@ -55,6 +55,7 @@ public class CustomOidcUserService extends OidcUserService {
                     newUser.setOidcUserId(oidcUserId);
                     newUser.setEmail(email);
                     newUser.setRole(UserRole.STUDENT);
+                    newUser.setPendingApproval(true);
                     return newUser;
                 });
 
@@ -64,7 +65,7 @@ public class CustomOidcUserService extends OidcUserService {
             user.setOidcUserId(oidcUserId);
         }
 
-        userRepository.save(user);
-        return oidcUser;
+        user = userRepository.save(user);
+        return new VersionedOidcUser(oidcUser, user.getAuthVersion());
     }
 }

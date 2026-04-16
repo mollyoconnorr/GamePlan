@@ -9,6 +9,7 @@ package edu.carroll.gameplan.dto.response;
  * @param firstName  User first name
  * @param lastName   User last name
  * @param role       Current user role label
+ * @param pendingApproval Whether the user is still waiting for approval
  */
 public record AdminUserResponse(
         Long id,
@@ -16,6 +17,7 @@ public record AdminUserResponse(
         String email,
         String firstName,
         String lastName,
-        String role
+        String role,
+        boolean pendingApproval
 ) {
 }
