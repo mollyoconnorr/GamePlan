@@ -18,6 +18,13 @@ import {
 import {parseRawBlockToEvent, sortEventsByStartIso} from "../util/ParseScheduleBlock.ts";
 import {baseInputClassName, cardPanelClassName, formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
 
+const WEEKEND_AUTO_BLOCK_REASON = "Weekend";
+const LEGACY_WEEKEND_AUTO_BLOCK_REASONS = new Set([
+    "Weekend",
+    "Weekend (auto)",
+    "Weekend unavailable (auto)",
+]);
+
 // Parent-owned app settings plus callbacks to persist validated updates.
 interface AppSettingProps extends CalendarData {
     firstDateToShow: "week" | "day";
@@ -225,8 +232,55 @@ export default function AppSettings(props: AppSettingProps) {
     const [blockedSlots, setBlockedSlots] = useState<CalendarEvent[]>([]);
     const [blocksLoading, setBlocksLoading] = useState(false);
     const [isSavingBlock, setIsSavingBlock] = useState(false);
+    const [isTogglingWeekendBlocks, setIsTogglingWeekendBlocks] = useState(false);
     const [blockErrorMessage, setBlockErrorMessage] = useState("");
     const [toastMessage, setToastMessage] = useState("");
+
+    const weekendRanges = useMemo(() => {
+        const sundayStart = dayjs().startOf("week").startOf("day");
+        const saturdayStart = sundayStart.add(6, "day");
+
+        return [
+            {
+                label: "Sunday",
+                start: sundayStart,
+                end: sundayStart.add(1, "day"),
+            },
+            {
+                label: "Saturday",
+                start: saturdayStart,
+                end: saturdayStart.add(1, "day"),
+            },
+        ] as const;
+    }, []);
+
+    const weekendLabel = useMemo(
+        () => `${weekendRanges[0].start.format("MMM D")} and ${weekendRanges[1].start.format("MMM D")}`,
+        [weekendRanges]
+    );
+
+    const weekendBlockRanges = useMemo(
+        () =>
+            weekendRanges.map((weekendRange) => {
+                const blockStart = weekendRange.start
+                    .hour(previewStartTime.hour())
+                    .minute(previewStartTime.minute())
+                    .second(0)
+                    .millisecond(0);
+                const blockEnd = weekendRange.start
+                    .hour(previewEndTime.hour())
+                    .minute(previewEndTime.minute())
+                    .second(0)
+                    .millisecond(0);
+
+                return {
+                    label: weekendRange.label,
+                    start: blockStart,
+                    end: blockEnd,
+                };
+            }),
+        [previewEndTime, previewStartTime, weekendRanges]
+    );
 
     const pendingBlockStart = selectedBlockDate && selectedBlockStartTime
         ? dayjs(`${selectedBlockDate} ${selectedBlockStartTime}`, "YYYY-MM-DD HH:mm")
@@ -285,7 +339,33 @@ export default function AppSettings(props: AppSettingProps) {
         pendingBlockStartsInPast ||
         pendingBlockConflict ||
         isSavingBlock ||
-        blocksLoading;
+        blocksLoading ||
+        isTogglingWeekendBlocks;
+
+    const doesSlotOverlapRange = (slot: CalendarEvent, rangeStart: Dayjs, rangeEnd: Dayjs) => {
+        if (!slot.startIso || !slot.endIso) {
+            return false;
+        }
+
+        const slotStart = dayjs(slot.startIso);
+        const slotEnd = dayjs(slot.endIso);
+        return slotStart.isBefore(rangeEnd) && rangeStart.isBefore(slotEnd);
+    };
+
+    const isWeekendAutoSlot = (slot: CalendarEvent) => {
+        if (!slot.description) {
+            return false;
+        }
+
+        return LEGACY_WEEKEND_AUTO_BLOCK_REASONS.has(slot.description.trim());
+    };
+
+    const isWeekendAutoBlockEnabled = weekendRanges.every((weekendRange) =>
+        blockedSlots.some((slot) =>
+            isWeekendAutoSlot(slot) &&
+            doesSlotOverlapRange(slot, weekendRange.start, weekendRange.end)
+        )
+    );
 
     // Keep toast auto-dismiss behavior consistent with the rest of the app.
     useEffect(() => {
@@ -387,6 +467,82 @@ export default function AppSettings(props: AppSettingProps) {
         setBlockedSlots((previous) => previous.filter((slot) => slot.id !== id));
         setToastMessage("Block removed.");
         refreshMainCalendar();
+    };
+
+    const handleToggleWeekendBlocks = async () => {
+        if (blocksLoading || isSavingBlock || isTogglingWeekendBlocks) {
+            return;
+        }
+
+        const refreshBlocks = async () => {
+            const data = await getScheduleBlocks();
+            setBlockedSlots(sortEventsByStartIso(data.map(parseRawBlockToEvent)));
+        };
+
+        setIsTogglingWeekendBlocks(true);
+        setBlockErrorMessage("");
+
+        try {
+            if (isWeekendAutoBlockEnabled) {
+                const weekendAutoBlockIds = blockedSlots
+                    .filter((slot) =>
+                        isWeekendAutoSlot(slot) &&
+                        weekendRanges.some((range) => doesSlotOverlapRange(slot, range.start, range.end))
+                    )
+                    .map((slot) => slot.id)
+                    .filter((id) => id > 0);
+
+                if (weekendAutoBlockIds.length === 0) {
+                    setToastMessage("Weekend blocks are already off.");
+                    return;
+                }
+
+                await Promise.all(weekendAutoBlockIds.map((id) => deleteScheduleBlock(id)));
+                await refreshBlocks();
+                setToastMessage("Weekend blocks removed.");
+                refreshMainCalendar();
+                return;
+            }
+
+            // Ensure weekend days are clean before creating full-day auto blocks.
+            const weekendBlockIdsToDelete = blockedSlots
+                .filter((slot) => weekendRanges.some((range) => doesSlotOverlapRange(slot, range.start, range.end)))
+                .map((slot) => slot.id)
+                .filter((id) => id > 0);
+
+            if (weekendBlockIdsToDelete.length > 0) {
+                await Promise.all(weekendBlockIdsToDelete.map((id) => deleteScheduleBlock(id)));
+            }
+
+            let totalCanceledReservations = 0;
+            for (const weekendRange of weekendBlockRanges) {
+                const createdBlock = await createScheduleBlock({
+                    start: weekendRange.start.toISOString(),
+                    end: weekendRange.end.toISOString(),
+                    reason: WEEKEND_AUTO_BLOCK_REASON,
+                });
+                totalCanceledReservations += createdBlock.canceledReservations ?? 0;
+            }
+
+            await refreshBlocks();
+
+            const suffix = totalCanceledReservations === 1 ? "" : "s";
+            const canceledMessage = totalCanceledReservations > 0
+                ? ` ${totalCanceledReservations} reservation${suffix} canceled.`
+                : "";
+            setToastMessage(`Weekend blocks enabled for ${weekendLabel}.${canceledMessage}`);
+            refreshMainCalendar();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to update weekend blocks.";
+            setBlockErrorMessage(message);
+            try {
+                await refreshBlocks();
+            } catch (refreshErr) {
+                console.error("Failed to refresh blocks after weekend toggle error:", refreshErr);
+            }
+        } finally {
+            setIsTogglingWeekendBlocks(false);
+        }
     };
 
     // Highlight invalid fields while reusing the base input styling.
@@ -606,6 +762,34 @@ export default function AppSettings(props: AppSettingProps) {
                     <p className="text-sm text-gray-500">
                         Add persisted block events to mark unavailable windows.
                     </p>
+
+                    <div className="rounded border border-gray-200 bg-gray-50 p-4">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-gray-900">Weekend block toggle</p>
+                                <p className="text-xs text-gray-600">
+                                    Applies to {weekendLabel}. Turning on removes any existing weekend block events,
+                                    then adds weekend blocks with reason "{WEEKEND_AUTO_BLOCK_REASON}".
+                                </p>
+                            </div>
+                            <Button
+                                text={
+                                    isTogglingWeekendBlocks
+                                        ? "Updating..."
+                                        : isWeekendAutoBlockEnabled
+                                            ? "Weekend blocks: ON"
+                                            : "Weekend blocks: OFF"
+                                }
+                                className={`w-fit font-bold text-white ${
+                                    isWeekendAutoBlockEnabled
+                                        ? "bg-green-600 border-green-700 hover:bg-green-500 hover:border-green-600"
+                                        : "bg-slate-800 border-slate-900 hover:bg-slate-700 hover:border-slate-800"
+                                }`}
+                                onClick={handleToggleWeekendBlocks}
+                                disabled={isTogglingWeekendBlocks || blocksLoading || isSavingBlock}
+                            />
+                        </div>
+                    </div>
 
                     <ReservationDateTimePicker
                         firstDate={previewFirstDate}
