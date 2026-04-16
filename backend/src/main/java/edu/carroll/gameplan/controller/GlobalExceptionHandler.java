@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
@@ -17,7 +18,7 @@ import java.time.Instant;
 /**
  * Centralized API exception mapping and error logging.
  */
-@RestControllerAdvice
+@RestControllerAdvice(annotations = RestController.class)
 public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 

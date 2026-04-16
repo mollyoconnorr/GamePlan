@@ -41,6 +41,9 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth -> oauth
                         .defaultSuccessUrl(props.getSuccessUrl(), true)
+                        .failureHandler((request, response, exception) ->
+                                response.sendRedirect(buildLoginFailureRedirectUrl(props.getLogoutUrl()))
+                        )
                 )
                 .logout(logout -> logout
                         .logoutUrl("/api/logout")
@@ -74,5 +77,14 @@ public class SecurityConfig {
 
         successHandler.setPostLogoutRedirectUri(props.getLogoutUrl());
         return successHandler;
+    }
+
+    private String buildLoginFailureRedirectUrl(String logoutUrl) {
+        if (logoutUrl == null || logoutUrl.isBlank()) {
+            return "/?loginError=true";
+        }
+
+        final String separator = logoutUrl.contains("?") ? "&" : "?";
+        return logoutUrl + separator + "loginError=true";
     }
 }
