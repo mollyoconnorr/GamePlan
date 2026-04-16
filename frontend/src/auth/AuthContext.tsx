@@ -1,4 +1,4 @@
-import {createContext, useContext, useEffect, useMemo, useState} from "react";
+import {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import type {AuthState, User} from "../types.ts";
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -13,8 +13,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     /**
      * Refreshes user object by calling backend to reauth user.
      */
-    const refresh = async () => {
-        setLoading(true);
+    const refresh = useCallback(async (silent = false) => {
+        if (!silent) {
+            setLoading(true);
+        }
         try {
             // Call backend to refetch user data
             const res = await fetch("/api/user");
@@ -33,14 +35,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             return;
         } finally {
-            setLoading(false);
+            if (!silent) {
+                setLoading(false);
+            }
         }
-    };
+    }, []);
 
     // Refresh when this component is loaded.
     useEffect(() => {
-        refresh();
-    }, []);
+        void refresh();
+    }, [refresh]);
+
+    useEffect(() => {
+        if (!user) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            void refresh(true);
+        }, 60_000);
+
+        return () => window.clearInterval(interval);
+    }, [refresh, user]);
 
     // Only recompute this object if user or loading state changes.
     const value = useMemo(
@@ -51,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             login: () => {window.location.href = "/oauth2/authorization/okta";},
             logout: () => {window.location.href = "/api/logout";}
         }),
-        [user, loading]
+        [user, loading, refresh]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

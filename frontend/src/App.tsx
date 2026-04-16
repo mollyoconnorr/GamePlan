@@ -28,6 +28,10 @@ import EditEquipment from "./pages/EditEquipment.tsx";
 import AppSettings from "./pages/AppSettings.tsx";
 import dayjs from "dayjs";
 import {getAppSettings} from "./api/Settings.ts";
+import {
+    RESERVATION_DATA_CHANGED_EVENT,
+    type ReservationDataChangedDetail,
+} from "./util/AppDataEvents.ts";
 
 function AppShell() {
     // user is guaranteed by RequireAuth
@@ -56,12 +60,30 @@ function AppShell() {
         [globalBlockEvents, reservations]
     );
 
+    const [firstDateToShow, setFirstDateToShow] = useState<"week" | "day">("week");
+    const [firstDate, setFirstDate] = useState(dayjs());
+
+    const [startTime, setStartTime] = useState(dayjs());
+    const [endTime, setEndTime] = useState(dayjs());
+    const [timeStep, setTimeStep] = useState(0);
+    const [maxResTime, setMaxResTime] = useState(0);
+    const [numDays, setNumDays] = useState(0);
+
     // TODO error handling
-    const loadReservations = useCallback(async () => {
-        setLoading(true);
+    const loadReservations = useCallback(async (silent = false) => {
+        if (numDays <= 0) {
+            return;
+        }
+
+        if (!silent) {
+            setLoading(true);
+        }
         try {
-            // Fetch blocks
-            const blocksPromise = getScheduleBlocks()
+            // Fetch blocks for the visible calendar window so recurring weekends are included.
+            const blocksPromise = getScheduleBlocks(
+                firstDate.startOf("day").toISOString(),
+                firstDate.add(numDays, "day").startOf("day").toISOString()
+            )
                 .then((blocks) => sortEventsByStartIso(blocks.map(parseRawBlockToEvent)))
                 .catch((err) => {
                     console.error("Failed to fetch schedule blocks:", err);
@@ -89,22 +111,57 @@ function AppShell() {
         } catch (err) {
             console.error(err);
         } finally {
-            setLoading(false);
+            if (!silent) {
+                setLoading(false);
+            }
         }
-    }, [hasPrivilegedAccess]);
+    }, [hasPrivilegedAccess, firstDate, numDays]);
 
     useEffect(() => {
         void loadReservations();
     }, [loadReservations]);
 
-    const [firstDateToShow, setFirstDateToShow] = useState<"week" | "day">("week");
-    const [firstDate, setFirstDate] = useState(dayjs());
+    useEffect(() => {
+        const handleReservationChange = (event: Event) => {
+            const detail = (event as CustomEvent<ReservationDataChangedDetail>).detail;
+            if (!detail) {
+                return;
+            }
 
-    const [startTime, setStartTime] = useState(dayjs());
-    const [endTime, setEndTime] = useState(dayjs());
-    const [timeStep, setTimeStep] = useState(0);
-    const [maxResTime, setMaxResTime] = useState(0);
-    const [numDays, setNumDays] = useState(0);
+            if (hasPrivilegedAccess && detail.action === "created") {
+                void loadReservations();
+            }
+
+            if (!hasPrivilegedAccess && detail.action === "canceled") {
+                void loadReservations();
+            }
+        };
+
+        window.addEventListener(RESERVATION_DATA_CHANGED_EVENT, handleReservationChange);
+        return () => window.removeEventListener(RESERVATION_DATA_CHANGED_EVENT, handleReservationChange);
+    }, [hasPrivilegedAccess, loadReservations]);
+
+    useEffect(() => {
+        if (numDays <= 0) {
+            return;
+        }
+
+        const refreshSilently = () => {
+            if (document.visibilityState === "visible") {
+                void loadReservations(true);
+            }
+        };
+
+        const intervalId = window.setInterval(refreshSilently, 30_000);
+        window.addEventListener("focus", refreshSilently);
+        document.addEventListener("visibilitychange", refreshSilently);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener("focus", refreshSilently);
+            document.removeEventListener("visibilitychange", refreshSilently);
+        };
+    }, [loadReservations, numDays]);
 
     useEffect(() => {
         async function getSettings() {
@@ -226,7 +283,7 @@ export default function App() {
             <Route
                 path="/app/*"
                 element={
-                    <RequireAuth redirectTo="/">
+                    <RequireAuth redirectTo="/login">
                         <AppShell />
                     </RequireAuth>
                 }
