@@ -73,6 +73,10 @@ public class ReservationService {
             throw new IllegalArgumentException("End time must be after start time.");
         }
 
+        if (scheduleBlockService.hasWeekendConflict(start, end) && !scheduleBlockService.hasOpenWindowCoverage(start, end)) {
+            throw new IllegalArgumentException("Weekend reservations are not allowed.");
+        }
+
         if (scheduleBlockService.hasActiveBlockConflict(start, end)) {
             throw new IllegalArgumentException("This time slot is blocked by an admin.");
         }
@@ -227,6 +231,10 @@ public class ReservationService {
 
         if (newEnd.isBefore(newStart) || newEnd.equals(newStart)) {
             throw new IllegalArgumentException("End time must be after start time.");
+        }
+
+        if (scheduleBlockService.hasWeekendConflict(newStart, newEnd) && !scheduleBlockService.hasOpenWindowCoverage(newStart, newEnd)) {
+            throw new IllegalArgumentException("Weekend reservations are not allowed.");
         }
 
         if (scheduleBlockService.hasActiveBlockConflict(newStart, newEnd)) {

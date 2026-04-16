@@ -15,6 +15,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -193,6 +195,54 @@ public class ReservationServiceTest {
     }
 
     @Test
+    public void testCreateReservationRejectsWeekendTime() {
+        LocalDateTime start = LocalDateTime.now()
+                .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
+                .withHour(10)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        LocalDateTime end = start.plusHours(1);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.createReservation(testUser, testEquipment, start, end)
+        );
+
+        assertEquals("Weekend reservations are not allowed.", exception.getMessage());
+    }
+
+    @Test
+    public void testCreateReservationAllowsWeekendOpenWindow() {
+        User trainer = new User();
+        trainer.setEmail("trainer3@carroll.edu");
+        trainer.setFirstName("Trainer");
+        trainer.setLastName("Three");
+        trainer.setRole(UserRole.ADMIN);
+        trainer = userRepository.save(trainer);
+
+        LocalDateTime start = LocalDateTime.now()
+                .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
+                .withHour(10)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        LocalDateTime end = start.plusHours(1);
+
+        ScheduleBlock block = new ScheduleBlock();
+        block.setCreatedBy(trainer);
+        block.setStartDatetime(start.minusMinutes(15));
+        block.setEndDatetime(end.plusMinutes(15));
+        block.setStatus(ScheduleBlockStatus.ACTIVE);
+        block.setBlockType(ScheduleBlockType.OPEN);
+        scheduleBlockRepository.save(block);
+
+        Reservation reservation = reservationService.createReservation(testUser, testEquipment, start, end);
+        assertNotNull(reservation.getId());
+        assertEquals(ReservationStatus.ACTIVE, reservation.getStatus());
+    }
+
+    @Test
     public void testUpdateReservationRejectsBlockedTime() {
         User trainer = new User();
         trainer.setEmail("trainer2@carroll.edu");
@@ -221,6 +271,28 @@ public class ReservationServiceTest {
         );
 
         assertEquals("This time slot is blocked by an admin.", exception.getMessage());
+    }
+
+    @Test
+    public void testUpdateReservationRejectsWeekendTime() {
+        LocalDateTime start = LocalDateTime.now().plusHours(4).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime end = start.plusMinutes(30);
+        Reservation reservation = reservationService.createReservation(testUser, testEquipment, start, end);
+
+        LocalDateTime weekendStart = LocalDateTime.now()
+                .with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
+                .withHour(11)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        LocalDateTime weekendEnd = weekendStart.plusHours(1);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.updateReservation(reservation.getId(), weekendStart, weekendEnd, testUser)
+        );
+
+        assertEquals("Weekend reservations are not allowed.", exception.getMessage());
     }
 
     @Test
