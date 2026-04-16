@@ -111,6 +111,19 @@ export async function getEquipmentTypeAttributes(typeId: number) {
     return await res.json() as Promise<EquipmentTypeAttributeResponse[]>;
 }
 
+export async function getEquipmentTypeAttributeValues(typeId: number) {
+    const res = await fetch(`/api/equipment-types/${typeId}/attributes`, {
+        method: "GET",
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to fetch equipment type attribute values");
+    }
+
+    return await res.json() as Promise<EquipmentTypeAttributeResponse[]>;
+}
+
 export async function createEquipment(request: CreateEquipmentRequest) {
     const res = await fetch("/api/equipment", {
         method: "POST",

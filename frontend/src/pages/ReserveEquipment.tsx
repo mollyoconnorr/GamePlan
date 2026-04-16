@@ -17,7 +17,7 @@ import ReservationDateTimePicker from "../components/ReservationDateTimePicker.t
 import {getFriendlyReservationErrorMessage} from "../util/ReservationErrorMessages.ts";
 import {getScheduleBlocks} from "../api/Blocks.ts";
 import {parseRawBlockToEvent} from "../util/ParseScheduleBlock.ts";
-import {getEquipmentTypeAttributes, type EquipmentTypeAttributeResponse} from "../api/Equipment.ts";
+import {getEquipmentTypeAttributeValues, type EquipmentTypeAttributeResponse} from "../api/Equipment.ts";
 import {cardPanelClassName, formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
 
 interface ReserveEquipmentProps extends CalendarData {
@@ -376,7 +376,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
         try {
             const [attributeData, equipmentResponse] = await Promise.all([
-                getEquipmentTypeAttributes(typeId),
+                getEquipmentTypeAttributeValues(typeId),
                 fetch(`/api/equipment-types/${typeId}/equipment`, {credentials: "include"}),
             ]);
 
