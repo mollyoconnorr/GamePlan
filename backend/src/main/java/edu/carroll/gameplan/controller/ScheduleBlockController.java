@@ -3,6 +3,7 @@ package edu.carroll.gameplan.controller;
 import edu.carroll.gameplan.dto.request.ScheduleBlockRequest;
 import edu.carroll.gameplan.dto.response.ScheduleBlockResponse;
 import edu.carroll.gameplan.model.ScheduleBlock;
+import edu.carroll.gameplan.model.ScheduleBlockType;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.service.ScheduleBlockService;
 import edu.carroll.gameplan.service.UserService;
@@ -62,7 +63,8 @@ public class ScheduleBlockController {
                 user,
                 request.getStart().atZone(APP_ZONE).toLocalDateTime(),
                 request.getEnd().atZone(APP_ZONE).toLocalDateTime(),
-                request.getReason()
+                request.getReason(),
+                parseBlockType(request.getBlockType())
         );
 
         return new ScheduleBlockResponse(
@@ -70,6 +72,36 @@ public class ScheduleBlockController {
                 result.block().getStartDatetime().toString(),
                 result.block().getEndDatetime().toString(),
                 result.block().getReason(),
+                result.block().getBlockType().name(),
+                result.canceledReservations()
+        );
+    }
+
+    @PutMapping("/{id}")
+    public ScheduleBlockResponse updateBlock(@PathVariable Long id,
+                                             OAuth2AuthenticationToken authentication,
+                                             @RequestBody ScheduleBlockRequest request) {
+        final User user = userService.resolveCurrentUser(authentication);
+        userService.requireTrainer(user);
+
+        if (request.getStart() == null || request.getEnd() == null) {
+            throw new IllegalArgumentException("Block start and end time are required.");
+        }
+
+        ScheduleBlockService.CreateBlockResult result = scheduleBlockService.updateBlock(
+                id,
+                request.getStart().atZone(APP_ZONE).toLocalDateTime(),
+                request.getEnd().atZone(APP_ZONE).toLocalDateTime(),
+                request.getReason(),
+                parseBlockType(request.getBlockType())
+        );
+
+        return new ScheduleBlockResponse(
+                result.block().getId(),
+                result.block().getStartDatetime().toString(),
+                result.block().getEndDatetime().toString(),
+                result.block().getReason(),
+                result.block().getBlockType().name(),
                 result.canceledReservations()
         );
     }
@@ -90,7 +122,28 @@ public class ScheduleBlockController {
                 block.getStartDatetime().toString(),
                 block.getEndDatetime().toString(),
                 block.getReason(),
+                block.getId() != null && block.getId() < 0 ? "WEEKEND" : resolveBlockType(block).name(),
                 null
         );
+    }
+
+    private ScheduleBlockType resolveBlockType(ScheduleBlock block) {
+        if (block.getBlockType() != null) {
+            return block.getBlockType();
+        }
+
+        return ScheduleBlockType.BLOCK;
+    }
+
+    private ScheduleBlockType parseBlockType(String value) {
+        if (value == null || value.isBlank()) {
+            return ScheduleBlockType.BLOCK;
+        }
+
+        try {
+            return ScheduleBlockType.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid block type: " + value);
+        }
     }
 }

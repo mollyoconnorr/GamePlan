@@ -10,9 +10,10 @@ public record ScheduleBlockResponse(
         String start,
         String end,
         String reason,
+        String blockType,
         Integer canceledReservations
 ) {
     public ScheduleBlockResponse(Long id, LocalDateTime start, LocalDateTime end, String reason) {
-        this(id, start.toString(), end.toString(), reason, null);
+        this(id, start.toString(), end.toString(), reason, null, null);
     }
 }

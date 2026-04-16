@@ -10,6 +10,7 @@ public class ScheduleBlockRequest {
     private Instant start;
     private Instant end;
     private String reason;
+    private String blockType;
 
     public Instant getStart() {
         return start;
@@ -33,5 +34,13 @@ public class ScheduleBlockRequest {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public String getBlockType() {
+        return blockType;
+    }
+
+    public void setBlockType(String blockType) {
+        this.blockType = blockType;
     }
 }
