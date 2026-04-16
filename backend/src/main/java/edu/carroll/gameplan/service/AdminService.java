@@ -77,6 +77,10 @@ public class AdminService {
         UserRole previousRole = targetUser.getRole();
         boolean stateChanged = !nextRole.equals(targetUser.getRole()) || targetUser.isPendingApproval();
         targetUser.setRole(nextRole);
+        targetUser.setPendingApproval(false);
+        if (stateChanged) {
+            targetUser.setAuthVersion(targetUser.getAuthVersion() + 1);
+        }
         User saved = userService.saveUser(targetUser);
         logger.info(
                 "Admin updated user role: userId={}, previousRole={}, newRole={}",

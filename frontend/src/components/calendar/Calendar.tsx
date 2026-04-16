@@ -71,7 +71,6 @@ export default function Calendar(props: CalendarProps) {
 
     const getCellBackground = (dayIdx: number, rowIdx: number) => {
         const dayDate = props.firstDate.add(dayIdx, "day");
-        const isWeekend = dayDate.day() === 0 || dayDate.day() === 6;
         const slotStart = dayDate
             .hour(props.startTime.hour())
             .minute(props.startTime.minute())
@@ -103,7 +102,8 @@ export default function Calendar(props: CalendarProps) {
             return slotStart.isBefore(eventEnd) && eventStart.isBefore(slotEnd);
         });
 
-        const baseAvailabilityHit = !isWeekend;
+        // Default to available unless a block event explicitly marks the slot unavailable.
+        const baseAvailabilityHit = true;
 
         if (blockedWindowHit) {
             return "#475569";

@@ -256,7 +256,7 @@ public class DataSeeder {
                                        LocalDateTime end,
                                        String reason) {
         try {
-            sbs.createBlock(createdBy, start, end, reason, ScheduleBlockType.BLOCK);
+            sbs.createBlock(createdBy, start, end, reason);
         } catch (IllegalArgumentException e) {
             Logger logger = LoggerFactory.getLogger(DataSeeder.class);
             logger.debug("Skipping schedule block during seed: {}", e.getMessage());

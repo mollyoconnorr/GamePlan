@@ -24,24 +24,17 @@ interface DateTimeRangePickerProps extends CalendarData {
 export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     // Date options, from given start date + numDays
     const todayKey = dayjs().format("YYYY-MM-DD");
+    const weekendLockEnabled = props.disableWeekends ?? !props.allowWeekendDates;
     const effectiveStartTime = props.timeWindowStart ?? props.startTime;
     const effectiveEndTime = props.timeWindowEnd ?? props.endTime;
     const baseTimeOptions = useMemo(() => {
         return buildTimeOptions(effectiveStartTime, effectiveEndTime, props.timeStep);
     }, [effectiveEndTime, effectiveStartTime, props.timeStep]);
     const dateOptions = useMemo(() => {
-        const today = dayjs();
+        const today = dayjs(todayKey, "YYYY-MM-DD", true);
 
         return Array.from({ length: props.numDays }, (_, i) => props.firstDate.add(i, "day"))
             .filter((dateOption) => !dateOption.isBefore(today, "day"))
-            .filter((dateOption) => {
-                if (!props.disableWeekends) {
-                    return true;
-                }
-
-                const dayOfWeek = dateOption.day();
-                return dayOfWeek !== 0 && dayOfWeek !== 6;
-            })
             .map((dateOption) => ({
                 isWeekend: dateOption.day() === 0 || dateOption.day() === 6,
                 hasOpenWindow: props.scheduleBlocks?.some((block) => {
@@ -57,7 +50,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                 value: dateOption.format("YYYY-MM-DD"),
                 label: dateOption.format("ddd M/D/YY"),
             }));
-    }, [props.disableWeekends, props.firstDate, props.numDays, props.scheduleBlocks, todayKey]);
+    }, [props.firstDate, props.numDays, props.scheduleBlocks, todayKey]);
 
     const openWindowTimeOptionsByDate = useMemo(() => {
         const map = new Map<string, { value: string; label: string }[]>();
@@ -78,14 +71,14 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
 
     const normalizedDateOptions = useMemo(() => {
         return dateOptions.map((option) => {
-            const enabled = props.allowWeekendDates || !option.isWeekend || option.hasOpenWindow;
+            const enabled = !weekendLockEnabled || !option.isWeekend || option.hasOpenWindow;
             return {
                 ...option,
                 disabled: !enabled,
                 label: option.isWeekend && !enabled ? `${option.label} (blocked)` : option.label,
             };
         });
-    }, [dateOptions, props.allowWeekendDates]);
+    }, [dateOptions, weekendLockEnabled]);
 
     const selectedDay = useMemo(() => {
         if (!props.selectedDate) {
@@ -110,7 +103,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
 
         const isWeekend = selectedDay.day() === 0 || selectedDay.day() === 6;
         if (isWeekend) {
-            if (props.allowWeekendDates) {
+            if (!weekendLockEnabled) {
                 return filteredBaseTimes;
             }
 
@@ -131,7 +124,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
         });
 
         return Array.from(merged.values()).sort((a, b) => a.value.localeCompare(b.value));
-    }, [baseTimeOptions, openWindowTimeOptionsByDate, selectedDay, props.allowWeekendDates]);
+    }, [baseTimeOptions, openWindowTimeOptionsByDate, selectedDay, weekendLockEnabled]);
     const noStartTimesAvailable = Boolean(props.selectedDate) && startTimeOptions.length === 0;
 
     const toMinutes = (time: string) => {

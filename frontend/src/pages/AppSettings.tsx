@@ -288,10 +288,19 @@ export default function AppSettings(props: AppSettingProps) {
         : null;
 
     const pendingBlockType = blockTypeInput;
+    const isWeekendAutoBlock = (slot: CalendarEvent) => {
+        if (slot.isWeekend || (slot.blockType ?? "").toUpperCase() === "WEEKEND") {
+            return true;
+        }
+
+        const normalizedDescription = slot.description?.trim().toLowerCase();
+        return normalizedDescription === WEEKEND_AUTO_BLOCK_REASON.toLowerCase()
+            || normalizedDescription === "weekend closed";
+    };
 
     const manageableBlocks = useMemo(() => {
         return blockedSlots
-            .filter((slot) => slot.id > 0 && !slot.isWeekend)
+            .filter((slot) => slot.id > 0 && !isWeekendAutoBlock(slot))
             .sort((a, b) => (a.startIso ?? "").localeCompare(b.startIso ?? ""));
     }, [blockedSlots]);
 
@@ -302,7 +311,7 @@ export default function AppSettings(props: AppSettingProps) {
         }
 
         return blockedSlots.some((slot) => {
-            if (!slot.startIso || !slot.endIso || slot.isWeekend || (editingBlockId !== null && slot.id === editingBlockId)) {
+            if (!slot.startIso || !slot.endIso || isWeekendAutoBlock(slot) || (editingBlockId !== null && slot.id === editingBlockId)) {
                 return false;
             }
 

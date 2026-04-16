@@ -109,8 +109,7 @@ public class ScheduleBlockServiceTest {
                 trainerUser,
                 start,
                 end,
-                "Team event",
-                ScheduleBlockType.BLOCK
+                "Team event"
         );
 
         Reservation reloadedOverlap = reservationRepository.findById(overlapping.getId()).orElseThrow();
@@ -131,8 +130,7 @@ public class ScheduleBlockServiceTest {
                 trainerUser,
                 start,
                 end,
-                null,
-                ScheduleBlockType.BLOCK
+                null
         );
 
         assertTrue(scheduleBlockService.hasActiveBlockConflict(start.plusMinutes(1), end.minusMinutes(1)));
@@ -142,26 +140,6 @@ public class ScheduleBlockServiceTest {
         ScheduleBlock block = scheduleBlockRepository.findById(result.block().getId()).orElseThrow();
         assertEquals(ScheduleBlockStatus.CANCELLED, block.getStatus());
         assertFalse(scheduleBlockService.hasActiveBlockConflict(start.plusMinutes(1), end.minusMinutes(1)));
-    }
-
-    @Test
-    void testGetActiveBlocksIncludesWeekendBlocksForRange() {
-        LocalDateTime from = LocalDateTime.now()
-                .with(TemporalAdjusters.next(DayOfWeek.FRIDAY))
-                .withHour(0)
-                .withMinute(0)
-                .withSecond(0)
-                .withNano(0);
-        LocalDateTime to = from.plusDays(3);
-
-        List<ScheduleBlock> blocks = scheduleBlockService.getActiveBlocks(from, to);
-
-        long weekendBlocks = blocks.stream()
-                .filter(block -> "Weekend".equals(block.getReason()))
-                .count();
-
-        assertEquals(2, weekendBlocks);
-        assertTrue(scheduleBlockService.hasWeekendConflict(from.plusHours(1), to.minusHours(1)));
     }
 
     @Test

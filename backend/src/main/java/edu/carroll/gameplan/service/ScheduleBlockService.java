@@ -20,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalDate;
-import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Set;
 import java.util.ArrayList;
@@ -82,7 +80,13 @@ public class ScheduleBlockService {
 
     @Transactional
     public CreateBlockResult createBlock(User createdBy, LocalDateTime start, LocalDateTime end, String reason) {
+        return createBlock(createdBy, start, end, reason, ScheduleBlockType.BLOCK);
+    }
+
+    @Transactional
+    public CreateBlockResult createBlock(User createdBy, LocalDateTime start, LocalDateTime end, String reason, ScheduleBlockType blockType) {
         validateRange(start, end);
+        final ScheduleBlockType normalizedType = blockType == null ? ScheduleBlockType.BLOCK : blockType;
 
         final List<ScheduleBlock> overlappingBlocks = scheduleBlockRepository
                 .findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(start, end, ScheduleBlockStatus.ACTIVE);
@@ -91,8 +95,9 @@ public class ScheduleBlockService {
             throw new IllegalArgumentException("A block already exists for this time slot.");
         }
 
-        final List<Reservation> conflictingReservations = reservationRepository
-                .findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(start, end, ReservationStatus.ACTIVE);
+        final List<Reservation> conflictingReservations = normalizedType == ScheduleBlockType.BLOCK
+                ? reservationRepository.findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(start, end, ReservationStatus.ACTIVE)
+                : List.of();
 
         conflictingReservations.forEach(reservation -> reservation.setStatus(ReservationStatus.CANCELLED));
         if (!conflictingReservations.isEmpty()) {
@@ -104,15 +109,17 @@ public class ScheduleBlockService {
         block.setStartDatetime(start);
         block.setEndDatetime(end);
         block.setStatus(ScheduleBlockStatus.ACTIVE);
+        block.setBlockType(normalizedType);
         block.setReason(normalizeReason(reason));
 
         final ScheduleBlock saved = scheduleBlockRepository.save(block);
         logger.info(
-                "Schedule block created: blockId={}, createdByUserId={}, start={}, end={}, cancelledReservations={}, reason={}",
+                "Schedule block created: blockId={}, createdByUserId={}, start={}, end={}, blockType={}, cancelledReservations={}, reason={}",
                 saved.getId(),
                 createdBy != null ? createdBy.getId() : null,
                 start,
                 end,
+                saved.getBlockType(),
                 conflictingReservations.size(),
                 saved.getReason()
         );
