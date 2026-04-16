@@ -1,6 +1,12 @@
 import dayjs from "dayjs";
 import { describe, expect, it } from "vitest";
-import { parseRawResToEvent, parseRawResToRes, parseResToEvent } from "../../../src/util/ParseReservation.ts";
+import {
+    parseAdminRawResToEvent,
+    parseAdminRawResToRes,
+    parseRawResToEvent,
+    parseRawResToRes,
+    parseResToEvent,
+} from "../../../src/util/ParseReservation.ts";
 
 describe("ParseReservation utils", () => {
     it("parses a raw reservation into a reservation object", () => {
@@ -66,5 +72,41 @@ describe("ParseReservation utils", () => {
             color: undefined,
             description: undefined,
         });
+    });
+
+    it("parses admin raw reservations into events with athlete labels", () => {
+        const raw = {
+            id: 44,
+            equipmentName: "Power Rack",
+            start: "2026-03-21T14:00:00",
+            end: "2026-03-21T15:00:00",
+            athleteFirstName: "Taylor",
+            athleteLastName: "Smith",
+            color: "#111827",
+        };
+
+        const event = parseAdminRawResToEvent(raw);
+
+        expect(event.description).toBe("Taylor Smith");
+        expect(event.startIso).toBe(raw.start);
+        expect(event.endIso).toBe(raw.end);
+        expect(event.color).toBe("#111827");
+    });
+
+    it("falls back to generic athlete description for missing names", () => {
+        const raw = {
+            id: 45,
+            equipmentName: "Power Rack",
+            start: "2026-03-21T14:00:00",
+            end: "2026-03-21T15:00:00",
+            athleteFirstName: "",
+            athleteLastName: "",
+            color: undefined,
+        };
+
+        const parsed = parseAdminRawResToRes(raw);
+
+        expect(parsed.description).toBe("Athlete reservation");
+        expect(parsed.color).toBeUndefined();
     });
 });
