@@ -237,27 +237,42 @@ export default function AppSettings(props: AppSettingProps) {
     const [toastMessage, setToastMessage] = useState("");
 
     const weekendRanges = useMemo(() => {
-        const sundayStart = dayjs().startOf("week").startOf("day");
-        const saturdayStart = sundayStart.add(6, "day");
+        const ranges: Array<{ label: string; start: Dayjs; end: Dayjs }> = [];
+        const rangeStart = previewFirstDate.startOf("day");
 
-        return [
-            {
-                label: "Sunday",
-                start: sundayStart,
-                end: sundayStart.add(1, "day"),
-            },
-            {
-                label: "Saturday",
-                start: saturdayStart,
-                end: saturdayStart.add(1, "day"),
-            },
-        ] as const;
-    }, []);
+        for (let dayOffset = 0; dayOffset < previewNumDays; dayOffset++) {
+            const currentDay = rangeStart.add(dayOffset, "day");
+            const dayOfWeek = currentDay.day();
 
-    const weekendLabel = useMemo(
-        () => `${weekendRanges[0].start.format("MMM D")} and ${weekendRanges[1].start.format("MMM D")}`,
-        [weekendRanges]
-    );
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                continue;
+            }
+
+            const dayName = dayOfWeek === 0 ? "Sunday" : "Saturday";
+            const dayStart = currentDay.startOf("day");
+
+            ranges.push({
+                label: `${dayName} ${dayStart.format("MMM D")}`,
+                start: dayStart,
+                end: dayStart.add(1, "day"),
+            });
+        }
+
+        return ranges;
+    }, [previewFirstDate, previewNumDays]);
+
+    const weekendLabel = useMemo(() => {
+        if (weekendRanges.length === 0) {
+            return "no weekend days in the current calendar range";
+        }
+
+        const labels = weekendRanges.map((range) => range.start.format("MMM D"));
+        if (labels.length === 1) {
+            return labels[0];
+        }
+
+        return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+    }, [weekendRanges]);
 
     const weekendBlockRanges = useMemo(
         () =>
@@ -360,7 +375,9 @@ export default function AppSettings(props: AppSettingProps) {
         return LEGACY_WEEKEND_AUTO_BLOCK_REASONS.has(slot.description.trim());
     };
 
-    const isWeekendAutoBlockEnabled = weekendRanges.every((weekendRange) =>
+    const hasWeekendDaysInRange = weekendRanges.length > 0;
+
+    const isWeekendAutoBlockEnabled = hasWeekendDaysInRange && weekendRanges.every((weekendRange) =>
         blockedSlots.some((slot) =>
             isWeekendAutoSlot(slot) &&
             doesSlotOverlapRange(slot, weekendRange.start, weekendRange.end)
@@ -471,6 +488,12 @@ export default function AppSettings(props: AppSettingProps) {
 
     const handleToggleWeekendBlocks = async () => {
         if (blocksLoading || isSavingBlock || isTogglingWeekendBlocks) {
+            return;
+        }
+
+        if (!hasWeekendDaysInRange) {
+            setBlockErrorMessage("");
+            setToastMessage("No weekend days are visible in the current calendar range.");
             return;
         }
 
@@ -768,17 +791,19 @@ export default function AppSettings(props: AppSettingProps) {
                             <div>
                                 <p className="text-sm font-semibold text-gray-900">Weekend block toggle</p>
                                 <p className="text-xs text-gray-600">
-                                    Applies to {weekendLabel}. Turning on removes any existing weekend block events,
-                                    then adds weekend blocks with reason "{WEEKEND_AUTO_BLOCK_REASON}".
+                                    Applies to {weekendLabel}. Turning on removes any existing weekend block events in
+                                    the shown range, then adds weekend blocks with reason "{WEEKEND_AUTO_BLOCK_REASON}".
                                 </p>
                             </div>
                             <Button
                                 text={
                                     isTogglingWeekendBlocks
                                         ? "Updating..."
-                                        : isWeekendAutoBlockEnabled
-                                            ? "Weekend blocks: ON"
-                                            : "Weekend blocks: OFF"
+                                        : !hasWeekendDaysInRange
+                                            ? "Weekend blocks: N/A"
+                                            : isWeekendAutoBlockEnabled
+                                                ? "Weekend blocks: ON"
+                                                : "Weekend blocks: OFF"
                                 }
                                 className={`w-fit font-bold text-white ${
                                     isWeekendAutoBlockEnabled
@@ -786,7 +811,7 @@ export default function AppSettings(props: AppSettingProps) {
                                         : "bg-slate-800 border-slate-900 hover:bg-slate-700 hover:border-slate-800"
                                 }`}
                                 onClick={handleToggleWeekendBlocks}
-                                disabled={isTogglingWeekendBlocks || blocksLoading || isSavingBlock}
+                                disabled={isTogglingWeekendBlocks || blocksLoading || isSavingBlock || !hasWeekendDaysInRange}
                             />
                         </div>
                     </div>
