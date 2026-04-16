@@ -6,6 +6,7 @@ import {safeBack} from "../util/Navigation.ts";
 import {getEquipmentTypes, updateEquipmentType} from "../api/Equipment.ts";
 import {getEquipmentReservations} from "../api/Reservations.ts";
 import type {EquipmentDTO, EquipmentType} from "../api/Equipment.ts";
+import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
 
 type EquipmentTypeAttributeDraft = {
     id: string;
@@ -171,6 +172,9 @@ export default function EquipmentTypes() {
                     ? ` ${pendingDeleteReservationCount} reservation${deleteReservationSuffix} canceled.`
                     : "";
                 setToastMessage(`Type deleted along with its equipment.${canceledMessage}`);
+                if (pendingDeleteReservationCount > 0) {
+                    dispatchReservationDataChanged("canceled");
+                }
                 cancelDelete();
             } else {
                 setToastMessage("Failed to delete equipment type.");

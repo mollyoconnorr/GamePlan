@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useState, type FormEvent} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import Button from "../components/Button.tsx";
+import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Toast from "../components/Toast.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import {
@@ -44,6 +45,7 @@ export default function EditEquipment() {
     const [saving, setSaving] = useState(false);
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const selectedType = useMemo(
         () => types.find((type) => type.id === selectedTypeId) ?? null,
@@ -221,7 +223,6 @@ export default function EditEquipment() {
 
     const handleDelete = async () => {
         if (!equipmentId) return;
-        if (!window.confirm("Are you sure you want to delete this equipment?")) return;
 
         try {
             await deleteEquipment(Number(equipmentId));
@@ -258,7 +259,7 @@ export default function EditEquipment() {
                     <Button
                         text="Delete"
                         className="bg-red-500 hover:bg-red-400 text-white mb-7 md:mb-2"
-                        onClick={handleDelete} />
+                        onClick={() => setShowDeleteConfirm(true)} />
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-sm font-semibold">Status</label>
@@ -364,6 +365,20 @@ export default function EditEquipment() {
                     </div>
                 </form>
             )}
+
+            <ConfirmDialog
+                open={showDeleteConfirm}
+                title="Delete this equipment?"
+                description="This will permanently remove the equipment record."
+                confirmLabel="Delete"
+                cancelLabel="Keep equipment"
+                tone="danger"
+                onCancel={() => setShowDeleteConfirm(false)}
+                onConfirm={async () => {
+                    setShowDeleteConfirm(false);
+                    await handleDelete();
+                }}
+            />
         </>
     );
 }
