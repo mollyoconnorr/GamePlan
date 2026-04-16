@@ -9,9 +9,11 @@ import edu.carroll.gameplan.model.Equipment;
 import edu.carroll.gameplan.model.EquipmentAttribute;
 import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
+import edu.carroll.gameplan.model.ReservationStatus;
 import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
+import edu.carroll.gameplan.repository.ReservationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +28,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +44,9 @@ class EquipmentTypeServiceTest {
 
     @Mock
     private EquipmentRepository equipmentRepository;
+
+    @Mock
+    private ReservationRepository reservationRepository;
 
     @InjectMocks
     private EquipmentTypeService equipmentTypeService;
@@ -164,10 +171,12 @@ class EquipmentTypeServiceTest {
         reservation.setId(10L);
         reservation.setStartDatetime(LocalDateTime.of(2026, 4, 15, 10, 0));
         reservation.setEndDatetime(LocalDateTime.of(2026, 4, 15, 11, 0));
-        equipment.setReservations(List.of(reservation));
+        reservation.setStatus(ReservationStatus.ACTIVE);
 
         when(equipmentRepository.findByTypeAndAttributeAndStatus(1L, "size", "L", EquipmentStatus.AVAILABLE))
                 .thenReturn(List.of(equipment));
+        when(reservationRepository.findByEquipmentIdAndEndDatetimeAfterAndStatusIs(eq(5L), any(LocalDateTime.class), eq(ReservationStatus.ACTIVE)))
+                .thenReturn(List.of(reservation));
 
         List<EquipmentWithReservationsDTO> result =
                 equipmentTypeService.getAvailableEquipmentWithReservations(1L, "size", "L");
@@ -177,6 +186,47 @@ class EquipmentTypeServiceTest {
         assertThat(result.get(0).attributes()).hasSize(1);
         assertThat(result.get(0).reservations()).hasSize(1);
         verify(equipmentRepository).findByTypeAndAttributeAndStatus(1L, "size", "L", EquipmentStatus.AVAILABLE);
+    }
+
+    /**
+     * Ensures cancelled and past reservations are excluded from the summary payload.
+     */
+    @Test
+    void getAvailableEquipmentWithReservationsFiltersInactiveReservations() {
+        Equipment equipment = new Equipment();
+        equipment.setId(6L);
+        equipment.setName("Rack Two");
+        equipment.setStatus(EquipmentStatus.AVAILABLE);
+
+        Reservation activeReservation = new Reservation();
+        activeReservation.setId(11L);
+        activeReservation.setStartDatetime(LocalDateTime.now().plusHours(1));
+        activeReservation.setEndDatetime(LocalDateTime.now().plusHours(2));
+        activeReservation.setStatus(ReservationStatus.ACTIVE);
+
+        Reservation cancelledReservation = new Reservation();
+        cancelledReservation.setId(12L);
+        cancelledReservation.setStartDatetime(LocalDateTime.now().plusHours(3));
+        cancelledReservation.setEndDatetime(LocalDateTime.now().plusHours(4));
+        cancelledReservation.setStatus(ReservationStatus.CANCELLED);
+
+        Reservation pastReservation = new Reservation();
+        pastReservation.setId(13L);
+        pastReservation.setStartDatetime(LocalDateTime.now().minusHours(3));
+        pastReservation.setEndDatetime(LocalDateTime.now().minusHours(2));
+        pastReservation.setStatus(ReservationStatus.ACTIVE);
+
+        when(equipmentRepository.findByTypeAndAttributeAndStatus(2L, "size", "L", EquipmentStatus.AVAILABLE))
+                .thenReturn(List.of(equipment));
+        when(reservationRepository.findByEquipmentIdAndEndDatetimeAfterAndStatusIs(eq(6L), any(LocalDateTime.class), eq(ReservationStatus.ACTIVE)))
+                .thenReturn(List.of(activeReservation));
+
+        List<EquipmentWithReservationsDTO> result =
+                equipmentTypeService.getAvailableEquipmentWithReservations(2L, "size", "L");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).reservations()).hasSize(1);
+        assertThat(result.get(0).reservations().get(0).id()).isEqualTo(11L);
     }
 
     /**
