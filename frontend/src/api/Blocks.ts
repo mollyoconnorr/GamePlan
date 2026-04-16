@@ -5,11 +5,24 @@ interface CreateScheduleBlockRequest {
     start: string;
     end: string;
     reason?: string;
+    blockType?: "BLOCK" | "OPEN";
 }
 
-export async function getScheduleBlocks() {
+interface UpdateScheduleBlockRequest extends CreateScheduleBlockRequest {
+}
+
+export async function getScheduleBlocks(from?: string, to?: string) {
     // Trainer/admin-only endpoint that returns persisted global blocks.
-    const res = await fetch("/api/blocks", {
+    const query = new URLSearchParams();
+    if (from) {
+        query.set("from", from);
+    }
+    if (to) {
+        query.set("to", to);
+    }
+
+    const url = query.toString() ? `/api/blocks?${query.toString()}` : "/api/blocks";
+    const res = await fetch(url, {
         method: "GET",
         credentials: "include",
     });
@@ -35,6 +48,24 @@ export async function createScheduleBlock(request: CreateScheduleBlockRequest) {
 
     if (!res.ok) {
         const message = await extractErrorMessage(res, "Failed to create schedule block");
+        throw new Error(message);
+    }
+
+    return await res.json() as Promise<RawScheduleBlock>;
+}
+
+export async function updateScheduleBlock(id: number, request: UpdateScheduleBlockRequest) {
+    const res = await fetch(`/api/blocks/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!res.ok) {
+        const message = await extractErrorMessage(res, "Failed to update schedule block");
         throw new Error(message);
     }
 

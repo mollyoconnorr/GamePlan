@@ -19,6 +19,10 @@ export function getFriendlyReservationErrorMessage(rawMessage: string) {
     }
 
     // Surface backend schedule-block validation in user-friendly terms.
+    if (normalized.includes("weekend reservations are not allowed")) {
+        return "Weekends are blocked off. Please choose a weekday.";
+    }
+
     if (normalized.includes("blocked by an admin")) {
         return "This time is blocked off by a trainer or admin. Choose a different time.";
     }

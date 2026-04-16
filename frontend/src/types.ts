@@ -9,6 +9,7 @@ export type User = {
     firstName: string;
     lastName: string;
     role: string;
+    pendingApproval?: boolean;
 };
 
 export type AuthState = {
@@ -26,6 +27,7 @@ export interface AdminUser {
     firstName: string;
     lastName: string;
     role: string;
+    pendingApproval: boolean;
 }
 
 export interface Notification {
@@ -77,6 +79,9 @@ export interface CalendarEvent {
     textColor?: string;
     conflict?: boolean;
     isBlock?: boolean;
+    isAvailability?: boolean;
+    isWeekend?: boolean;
+    blockType?: string;
 }
 
 export interface RawAdminReservation {
@@ -94,6 +99,7 @@ export interface RawScheduleBlock {
     start: string;
     end: string;
     reason?: string | null;
+    blockType?: string | null;
     canceledReservations?: number | null;
 }
 
