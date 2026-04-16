@@ -7,6 +7,7 @@ import {formLabelClassName, selectInputClassName} from "../styles/formStyles.ts"
 interface DateTimeRangePickerProps extends CalendarData {
     scheduleBlocks?: CalendarEvent[];
     allowWeekendDates?: boolean;
+    allowPastDateTimes?: boolean;
     timeWindowStart?: Dayjs;
     timeWindowEnd?: Dayjs;
     // controlled values
@@ -34,7 +35,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
         const today = dayjs(todayKey, "YYYY-MM-DD", true);
 
         return Array.from({ length: props.numDays }, (_, i) => props.firstDate.add(i, "day"))
-            .filter((dateOption) => !dateOption.isBefore(today, "day"))
+            .filter((dateOption) => props.allowPastDateTimes || !dateOption.isBefore(today, "day"))
             .map((dateOption) => ({
                 isWeekend: dateOption.day() === 0 || dateOption.day() === 6,
                 hasOpenWindow: props.scheduleBlocks?.some((block) => {
@@ -50,7 +51,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                 value: dateOption.format("YYYY-MM-DD"),
                 label: dateOption.format("ddd M/D/YY"),
             }));
-    }, [props.firstDate, props.numDays, props.scheduleBlocks, todayKey]);
+    }, [props.allowPastDateTimes, props.firstDate, props.numDays, props.scheduleBlocks, todayKey]);
 
     // Index OPEN blocks by date so weekend-only windows can still be selectable.
     const openWindowTimeOptionsByDate = useMemo(() => {
@@ -92,15 +93,17 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
 
     // Merges base day options with OPEN windows and enforces weekend locking rules.
     const startTimeOptions = useMemo(() => {
-        const filteredBaseTimes = filterPastTimesForDate(baseTimeOptions, selectedDay);
+        const filterForDay = (options: { value: string; label: string }[]) =>
+            props.allowPastDateTimes ? options : filterPastTimesForDate(options, selectedDay);
+
+        const filteredBaseTimes = filterForDay(baseTimeOptions);
 
         if (!selectedDay) {
             return filteredBaseTimes;
         }
 
-        const openWindowOptions = filterPastTimesForDate(
-            openWindowTimeOptionsByDate.get(selectedDay.format("YYYY-MM-DD")) ?? [],
-            selectedDay
+        const openWindowOptions = filterForDay(
+            openWindowTimeOptionsByDate.get(selectedDay.format("YYYY-MM-DD")) ?? []
         );
 
         const isWeekend = selectedDay.day() === 0 || selectedDay.day() === 6;
@@ -126,7 +129,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
         });
 
         return Array.from(merged.values()).sort((a, b) => a.value.localeCompare(b.value));
-    }, [baseTimeOptions, openWindowTimeOptionsByDate, selectedDay, weekendLockEnabled]);
+    }, [baseTimeOptions, openWindowTimeOptionsByDate, props.allowPastDateTimes, selectedDay, weekendLockEnabled]);
     const noStartTimesAvailable = Boolean(props.selectedDate) && startTimeOptions.length === 0;
 
     const toMinutes = (time: string) => {

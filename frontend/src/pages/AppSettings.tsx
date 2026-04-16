@@ -3,7 +3,7 @@ import {safeBack} from "../util/Navigation.ts";
 import {useNavigate} from "react-router-dom";
 import type {CalendarData, CalendarEvent, ParsedTime, RawScheduleBlock} from "../types.ts";
 import dayjs, {type Dayjs} from "dayjs";
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import Calendar from "../components/calendar/Calendar.tsx";
 import {parseTime, parseWholeNumber} from "../util/Time.ts";
 import {type ParsedAppSettingsData, updateAppSettings} from "../api/Settings.ts";
@@ -126,6 +126,7 @@ const validateSettings = (inputs: SettingsInputs): ValidationResult => {
 
 export default function AppSettings(props: AppSettingProps) {
     const navigate = useNavigate();
+    const blockEditorRef = useRef<HTMLDivElement | null>(null);
 
     const refreshMainCalendar = () => {
         void props.refreshCalendarData().catch((err) => {
@@ -396,7 +397,8 @@ export default function AppSettings(props: AppSettingProps) {
     }, [blockedSlots, editingBlockId, selectedBlockEndTime, selectedBlockStartTime, targetBlockDates]);
 
     const pendingBlockConflict = pendingBlockRanges.some((range) => range.conflict);
-    const pendingBlockStartsInPast = pendingBlockRanges.some((range) => range.startsInPast);
+    const pendingBlockHasPastStart = pendingBlockRanges.some((range) => range.startsInPast);
+    const pendingBlockStartsInPast = editingBlockId === null && pendingBlockHasPastStart;
 
     const conflictingBlockDates = useMemo(() => {
         return pendingBlockRanges
@@ -600,6 +602,11 @@ export default function AppSettings(props: AppSettingProps) {
         setBlockReasonInput(block.description ?? "");
         setBlockErrorMessage("");
         setToastMessage("");
+
+        // Bring the edit form back into view when the user edits from the lower block list.
+        window.requestAnimationFrame(() => {
+            blockEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
     };
 
     const handleCancelEdit = () => {
@@ -899,7 +906,7 @@ export default function AppSettings(props: AppSettingProps) {
                     />
                 </div>}
 
-                <div className={`${cardPanelClassName} space-y-4`}>
+                <div ref={blockEditorRef} className={`${cardPanelClassName} space-y-4 scroll-mt-24`}>
                     <h2 className="text-2xl font-bold text-gray-900">Add or Block Time Slots</h2>
                     <p className="text-sm text-gray-500">
                         Add blocked windows or open windows for staffed gym time.
@@ -939,6 +946,7 @@ export default function AppSettings(props: AppSettingProps) {
                         startTime={previewStartTime}
                         timeStep={previewTimeStep}
                         endTime={previewEndTime}
+                        allowPastDateTimes={editingBlockId !== null}
                         timeWindowStart={blockTypeInput === "OPEN" ? openWindowStartTime : undefined}
                         timeWindowEnd={blockTypeInput === "OPEN" ? openWindowEndTime : undefined}
                         maxResTime={blockMaxDuration}
