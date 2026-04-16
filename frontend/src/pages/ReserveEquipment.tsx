@@ -2,6 +2,7 @@ import {useNavigate} from "react-router-dom";
 import Button from "../components/Button.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import Calendar from "../components/calendar/Calendar.tsx";
+import ManageReservations from "../components/ManageReservations.tsx";
 import {useState, useEffect, useMemo, type Dispatch, type SetStateAction} from "react";
 import dayjs from "dayjs";
 import type {
@@ -51,6 +52,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     const [selectedStartTime, setSelectedStartTime] = useState("");
     const [selectedEndTime, setSelectedEndTime] = useState("");
     const [reservationErrorMessage, setReservationErrorMessage] = useState("");
+    const [showCalendar, setShowCalendar] = useState(true);
 
     const previewStart = selectedDate && selectedStartTime
         ? dayjs(`${selectedDate} ${selectedStartTime}`, "YYYY-MM-DD HH:mm")
@@ -69,6 +71,8 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                 endTime: previewEnd.format("h:mm A"),
                 name: allEquipmentOptions.find((option) => option.id === selectedEquipment)?.name ?? "",
                 date: previewStart.format("ddd M/D"),
+                startIso: previewStart.toISOString(),
+                endIso: previewEnd.toISOString(),
                 temp: true
             }
             : null;
@@ -135,21 +139,54 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         [equipmentReservationsWithConflict, userReservationIds]
     );
 
-    const previewReservationWithColor = previewReservation
-        ? {
-            ...previewReservation,
-            color: "#2563eb",
-            borderColor: "#1d4ed8",
-            textColor: "#ffffff",
-        }
-        : null;
+    const displayedReservations = useMemo(
+        () => {
+            const previewEvent =
+                previewStart &&
+                previewEnd &&
+                selectedEquipment != null
+                    ? {
+                        id: selectedEquipment,
+                        startTime: previewStart.format("h:mm A"),
+                        endTime: previewEnd.format("h:mm A"),
+                        name: allEquipmentOptions.find((option) => option.id === selectedEquipment)?.name ?? "",
+                        date: previewStart.format("ddd M/D"),
+                        startIso: previewStart.toISOString(),
+                        endIso: previewEnd.toISOString(),
+                        temp: true,
+                        color: "#2563eb",
+                        borderColor: "#1d4ed8",
+                        textColor: "#ffffff",
+                    }
+                    : null;
 
-    const displayedReservations = [
-        ...equipmentOtherReservations,
-        ...scheduleBlocksWithConflict,
-        ...userCalendarEvents,
-        ...(previewReservationWithColor ? [previewReservationWithColor] : []),
-    ];
+            return [
+                ...equipmentOtherReservations,
+                ...scheduleBlocksWithConflict,
+                ...userCalendarEvents,
+                ...(previewEvent ? [previewEvent] : []),
+            ];
+        },
+        [
+            allEquipmentOptions,
+            equipmentOtherReservations,
+            previewEnd,
+            previewStart,
+            scheduleBlocksWithConflict,
+            selectedEquipment,
+            userCalendarEvents,
+        ]
+    );
+
+    const visibleDateLabels = useMemo(
+        () => new Set(Array.from({ length: numDays }, (_, index) => firstDate.add(index, "day").format("ddd M/D"))),
+        [firstDate, numDays]
+    );
+
+    const visibleDisplayedReservations = useMemo(
+        () => displayedReservations.filter((event) => visibleDateLabels.has(event.date)),
+        [displayedReservations, visibleDateLabels]
+    );
 
     const scheduleBlockConflict = scheduleBlocksWithConflict.some((event) => event.conflict);
     const hasConflict =
@@ -559,16 +596,51 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                             <LegendItem color="#dc2626" label="Other athletes' bookings" />
                             <LegendItem color="#111827" label="Admin/trainer blocked time" />
                         </div>
-                        <Calendar
-                            firstDate={firstDate}
-                            numDays={numDays}
-                            startTime={startTime}
-                            endTime={endTime}
-                            timeStepMin={timeStep}
-                            variant={"equip"}
-                            reservations={displayedReservations}
-                            loading={loading}
-                        />
+                        <div className="mt-3 flex max-w-md rounded-md border border-black overflow-hidden">
+                            <Button
+                                text="Calendar"
+                                className="flex-1 border-0 border-r rounded-l-none rounded-r-none"
+                                onClick={() => setShowCalendar(true)}
+                                style={{
+                                    backgroundColor: showCalendar ? "var(--purple)" : "",
+                                    color: showCalendar ? "white" : "black",
+                                }}
+                            />
+                            <Button
+                                text="List"
+                                className="flex-1 border-0 rounded-l-none rounded-r-none"
+                                onClick={() => setShowCalendar(false)}
+                                style={{
+                                    backgroundColor: showCalendar ? "" : "var(--purple)",
+                                    color: showCalendar ? "black" : "white",
+                                }}
+                            />
+                        </div>
+
+                        {showCalendar ? (
+                            <Calendar
+                                firstDate={firstDate}
+                                numDays={numDays}
+                                startTime={startTime}
+                                endTime={endTime}
+                                timeStepMin={timeStep}
+                                variant={"equip"}
+                                reservations={visibleDisplayedReservations}
+                                loading={loading}
+                            />
+                        ) : (
+                            <ManageReservations
+                                reservations={[]}
+                                calendarEvents={visibleDisplayedReservations}
+                                loading={loading}
+                                startTime={startTime}
+                                endTime={endTime}
+                                timeStepMin={timeStep}
+                                isPrivileged={false}
+                                readOnly
+                                emptyMessage="No reservations found for the selected equipment this week."
+                            />
+                        )}
                     </>
                 )}
             </section>
