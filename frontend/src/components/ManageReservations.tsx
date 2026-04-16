@@ -360,6 +360,10 @@ export default function ManageReservations({
             <section className="mx-0 lg:mx-30">
                 {loading && <Spinner />}
 
+                {!loading && (dayEventArr.length === 0) &&
+                    <p className="text-center">No reservations found this week</p>
+                }
+
                 {!loading &&
                     dayEventArr.map(({ dayKey, dayLabel, events }) => (
                         <div
