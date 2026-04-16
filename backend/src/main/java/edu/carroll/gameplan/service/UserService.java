@@ -94,7 +94,7 @@ public class UserService {
                     user != null ? user.getId() : null,
                     user != null ? user.getRole() : null
             );
-            throw new AccessDeniedException("Trainer or admin role required");
+            throw new AccessDeniedException("Athletic trainer or admin role required");
         }
     }
 

@@ -864,7 +864,7 @@ export default function AppSettings(props: AppSettingProps) {
                             value={blockReasonInput}
                             onChange={(event) => setBlockReasonInput(event.target.value)}
                             placeholder={blockTypeInput === "OPEN"
-                                ? "Example: Staffed by trainer, open gym"
+                                ? "Example: Staffed by athletic trainer, open gym"
                                 : "Example: Team lift, facility event, maintenance window"}
                             className={selectInputClassName}
                         />

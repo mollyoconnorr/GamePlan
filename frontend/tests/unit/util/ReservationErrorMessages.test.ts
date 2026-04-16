@@ -23,7 +23,7 @@ describe("ReservationErrorMessages", () => {
         expect(getFriendlyReservationErrorMessage("weekend reservations are not allowed"))
             .toBe("Weekends are blocked off. Please choose a weekday.");
         expect(getFriendlyReservationErrorMessage("blocked by an admin"))
-            .toBe("This time is blocked off by a trainer or admin. Choose a different time.");
+            .toBe("This time is blocked off by an athletic trainer or admin. Choose a different time.");
         expect(getFriendlyReservationErrorMessage("weekend reservations are disabled"))
             .toBe("Weekend reservations are disabled. Choose a weekday.");
     });

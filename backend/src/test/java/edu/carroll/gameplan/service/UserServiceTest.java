@@ -52,7 +52,7 @@ class UserServiceTest {
         User athlete = new User();
         athlete.setRole(UserRole.ATHLETE);
 
-        assertThatThrownBy(() -> userService.requireTrainer(athlete)).hasMessageContaining("Trainer");
+        assertThatThrownBy(() -> userService.requireTrainer(athlete)).hasMessageContaining("Athletic trainer");
     }
 
     /**

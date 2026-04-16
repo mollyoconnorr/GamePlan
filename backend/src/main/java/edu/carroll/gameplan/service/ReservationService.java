@@ -200,7 +200,7 @@ public class ReservationService {
 
     private String formatActingUserName(User actingUser) {
         if (actingUser == null) {
-            return "a trainer";
+            return "an athletic trainer";
         }
 
         String first = actingUser.getFirstName();
@@ -218,7 +218,7 @@ public class ReservationService {
         }
 
         if (builder.isEmpty()) {
-            return "a trainer";
+            return "an athletic trainer";
         }
 
         return builder.toString();

@@ -24,7 +24,7 @@ export function getFriendlyReservationErrorMessage(rawMessage: string) {
     }
 
     if (normalized.includes("blocked by an admin")) {
-        return "This time is blocked off by a trainer or admin. Choose a different time.";
+        return "This time is blocked off by an athletic trainer or admin. Choose a different time.";
     }
 
     if (normalized.includes("weekend reservations are disabled")) {

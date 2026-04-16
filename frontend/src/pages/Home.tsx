@@ -334,7 +334,7 @@ export default function Home(
                     <div className="rounded border bg-white p-6 shadow-sm">
                         <p className="text-lg font-medium text-gray-900">Thanks for signing up!</p>
                         <p className="mt-2 text-sm text-gray-600">
-                            Your account is currently marked as a student request. A trainer or admin will
+                            Your account is currently marked as a student request. An athletic trainer or admin will
                             review your request and promote you to an athlete as soon as they verify you.
                         </p>
                         <p className="mt-2 text-sm text-gray-500">
@@ -355,7 +355,7 @@ export default function Home(
                     <div className="rounded border bg-white p-6 shadow-sm">
                         <p className="text-lg font-medium text-gray-900">Student access</p>
                         <p className="mt-2 text-sm text-gray-600">
-                            Your account is set to student access. A trainer or admin can update your role if needed.
+                            Your account is set to student access. An athletic trainer or admin can update your role if needed.
                         </p>
                     </div>
                 </section>

@@ -195,6 +195,6 @@ public class EquipmentControllerIntegrationTest {
                 () -> equipmentController.getAllEquipment(athleteAuthToken)
         );
 
-        assertEquals("Trainer or admin role required", exception.getMessage());
+        assertEquals("Athletic trainer or admin role required", exception.getMessage());
     }
 }

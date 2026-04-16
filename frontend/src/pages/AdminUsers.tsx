@@ -95,7 +95,7 @@ export default function AdminUsers() {
         setUpdatingUserId(userId);
         try {
             await updateUserRole(userId, role);
-            setFeedback(`Updated user to ${role === "AT" ? "trainer" : role === "ADMIN" ? "admin" : role === "STUDENT" ? "student" : "athlete"}.`);
+            setFeedback(`Updated user to ${role === "AT" ? "athletic trainer" : role === "ADMIN" ? "admin" : role === "STUDENT" ? "student" : "athlete"}.`);
             await loadUsers();
             dispatchAppDataChanged("users");
         } catch (err) {
@@ -257,7 +257,7 @@ export default function AdminUsers() {
                                                     className="rounded border border-gray-300 px-2 py-1 text-sm"
                                                 >
                                                     <option value="ATHLETE">Athlete</option>
-                                                    <option value="AT">Trainer (AT)</option>
+                                                    <option value="AT">Athletic Trainer (AT)</option>
                                                 </select>
                                                 <Button
                                                     text={isBusy ? "Approving…" : "Approve"}

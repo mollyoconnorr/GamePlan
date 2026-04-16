@@ -255,7 +255,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         : firstConflictingScheduleBlock?.isWeekend
             ? "Weekends are blocked off unless an open window is available. Choose a different time."
         : firstConflictingScheduleBlock
-            ? "This time slot is blocked by a trainer or admin. Pick a different slot."
+            ? "This time slot is blocked by an athletic trainer or admin. Pick a different slot."
         : "Someone else already has that equipment at this time; delete this pending reservation and try again or pick a different slot.";
 
     const needsAttributeSelections = attributeDefinitions.length > 0;
