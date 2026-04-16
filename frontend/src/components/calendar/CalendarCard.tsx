@@ -298,6 +298,7 @@ export default function CalendarCard({
                 const baseBackground = event.color ?? "#1d4ed8";
                 const computedBackground = event.conflict ? "#dc2626" : baseBackground;
                 const borderColor = event.borderColor ?? (event.conflict ? "#991b1b" : "black");
+                const borderStyle = event.borderStyle ?? "solid";
                 const textColor = event.textColor ?? "#ffffff";
 
                 return (
@@ -311,6 +312,7 @@ export default function CalendarCard({
                             marginTop: cardMargin,
                             backgroundColor: computedBackground,
                             borderColor,
+                            borderStyle,
                             color: textColor,
                         }}
                     >

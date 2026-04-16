@@ -74,6 +74,7 @@ export interface CalendarEvent {
     endIso?: string;
     color?: string;
     borderColor?: string;
+    borderStyle?: "solid" | "dashed" | "dotted";
     textColor?: string;
     conflict?: boolean;
     isBlock?: boolean;

@@ -107,9 +107,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         () =>
             reservations.map((reservation) => ({
                 ...parseResToEvent(reservation),
-                color: "#fbbf24",
-                borderColor: "#d97706",
-                textColor: "#1f2937",
+                borderColor: "#111827",
+                borderStyle: "solid" as const,
+                description: "You",
             })),
         [reservations]
     );
@@ -134,8 +134,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                 .filter((event) => !userReservationIds.has(event.id))
                 .map((event) => ({
                     ...event,
-                    color: "#dc2626",
-                    borderColor: "#b91c1c",
+                    borderColor: "#111827",
+                    borderStyle: "dashed" as const,
+                    description: "Other athlete",
                 })),
         [equipmentReservationsWithConflict, userReservationIds]
     );
@@ -611,9 +612,24 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                 {selectedEquipment && (
                     <>
                         <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                            <LegendItem color="#fbbf24" label="Your existing reservations" />
-                            <LegendItem color="#dc2626" label="Other athletes' bookings" />
-                            <LegendItem color="#111827" label="Admin/trainer blocked time" />
+                            <LegendItem
+                                label="Your existing reservations"
+                                fillColor="#ffffff"
+                                borderColor="#111827"
+                                borderStyle="solid"
+                            />
+                            <LegendItem
+                                label="Other athletes' bookings"
+                                fillColor="#ffffff"
+                                borderColor="#111827"
+                                borderStyle="dashed"
+                            />
+                            <LegendItem
+                                label="Admin/trainer blocked time"
+                                fillColor="#111827"
+                                borderColor="#111827"
+                                borderStyle="solid"
+                            />
                         </div>
                         <div className="mt-3 flex max-w-md rounded-md border border-black overflow-hidden">
                             <Button
@@ -667,12 +683,22 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     );
 }
 
-function LegendItem({ color, label }: { color: string; label: string }) {
+function LegendItem({
+                        fillColor,
+                        borderColor,
+                        borderStyle,
+                        label
+                    }: {
+    fillColor: string;
+    borderColor: string;
+    borderStyle: "solid" | "dashed" | "dotted";
+    label: string;
+}) {
     return (
         <div className="flex items-center gap-2">
             <span
                 className="inline-block h-4 w-4 rounded-sm border"
-                style={{ backgroundColor: color, borderColor: "#000" }}
+                style={{ backgroundColor: fillColor, borderColor, borderStyle }}
             />
             <span>{label}</span>
         </div>
