@@ -1,7 +1,7 @@
 import Button from "../components/Button.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import {useNavigate} from "react-router-dom";
-import type {CalendarData, CalendarEvent, ParsedTime} from "../types.ts";
+import type {CalendarData, CalendarEvent, ParsedTime, RawScheduleBlock} from "../types.ts";
 import dayjs, {type Dayjs} from "dayjs";
 import {useEffect, useMemo, useState} from "react";
 import Calendar from "../components/calendar/Calendar.tsx";
@@ -231,6 +231,7 @@ export default function AppSettings(props: AppSettingProps) {
     const [selectedBlockDate, setSelectedBlockDate] = useState("");
     const [selectedBlockStartTime, setSelectedBlockStartTime] = useState("");
     const [selectedBlockEndTime, setSelectedBlockEndTime] = useState("");
+    const [additionalBlockDates, setAdditionalBlockDates] = useState<string[]>([]);
     const [blockTypeInput, setBlockTypeInput] = useState<"BLOCK" | "OPEN">("BLOCK");
     const [blockReasonInput, setBlockReasonInput] = useState("");
     const [blockedSlots, setBlockedSlots] = useState<CalendarEvent[]>([]);
@@ -280,14 +281,6 @@ export default function AppSettings(props: AppSettingProps) {
         return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
     }, [weekendRanges]);
 
-    const pendingBlockStart = selectedBlockDate && selectedBlockStartTime
-        ? dayjs(`${selectedBlockDate} ${selectedBlockStartTime}`, "YYYY-MM-DD HH:mm")
-        : null;
-    const pendingBlockEnd = selectedBlockDate && selectedBlockEndTime
-        ? dayjs(`${selectedBlockDate} ${selectedBlockEndTime}`, "YYYY-MM-DD HH:mm")
-        : null;
-
-    const pendingBlockType = blockTypeInput;
     const isWeekendAutoBlock = (slot: CalendarEvent) => {
         if (slot.isWeekend || (slot.blockType ?? "").toUpperCase() === "WEEKEND") {
             return true;
@@ -304,60 +297,152 @@ export default function AppSettings(props: AppSettingProps) {
             .sort((a, b) => (a.startIso ?? "").localeCompare(b.startIso ?? ""));
     }, [blockedSlots]);
 
-    // Prevent creating overlapping blocks in the current dataset before calling the API.
-    const pendingBlockConflict = useMemo(() => {
-        if (!pendingBlockStart || !pendingBlockEnd) {
-            return false;
+    const repeatDateOptions = useMemo(() => {
+        if (!selectedBlockDate || editingBlockId !== null) {
+            return [] as Array<{ value: string; label: string }>;
         }
 
-        return blockedSlots.some((slot) => {
-            if (!slot.startIso || !slot.endIso || isWeekendAutoBlock(slot) || (editingBlockId !== null && slot.id === editingBlockId)) {
-                return false;
-            }
+        const today = dayjs().startOf("day");
+        const weekendLockEnabled = blockTypeInput !== "OPEN";
 
-            const slotStart = dayjs(slot.startIso);
-            const slotEnd = dayjs(slot.endIso);
-            return pendingBlockStart.isBefore(slotEnd) && slotStart.isBefore(pendingBlockEnd);
-        });
-    }, [editingBlockId, pendingBlockEnd, pendingBlockStart, blockedSlots]);
+        return Array.from({ length: previewNumDays }, (_, index) => previewFirstDate.add(index, "day"))
+            .filter((dateOption) => !dateOption.isBefore(today, "day"))
+            .map((dateOption) => {
+                const isWeekend = dateOption.day() === 0 || dateOption.day() === 6;
+                const hasOpenWindow = blockedSlots.some((slot) => {
+                    if (!slot.isAvailability || !slot.startIso || !slot.endIso) {
+                        return false;
+                    }
 
-    // Temporary event used only for live calendar preview before the block is saved.
-    const pendingBlock = pendingBlockStart && pendingBlockEnd
-        ? {
-            id: 0,
-            name: "Pending block",
-            date: pendingBlockStart.format("ddd M/D"),
-            startTime: pendingBlockStart.format("h:mm A"),
-            endTime: pendingBlockEnd.format("h:mm A"),
-            description: blockReasonInput.trim() || "Not added yet",
-            temp: true,
-            startIso: pendingBlockStart.toISOString(),
-            endIso: pendingBlockEnd.toISOString(),
-            color: pendingBlockType === "OPEN"
-                ? (pendingBlockConflict ? "#dc2626" : "#166534")
-                : (pendingBlockConflict ? "#dc2626" : "#2563eb"),
-            borderColor: pendingBlockType === "OPEN"
-                ? (pendingBlockConflict ? "#991b1b" : "#14532d")
-                : (pendingBlockConflict ? "#991b1b" : "#1d4ed8"),
-            textColor: "#ffffff",
-            conflict: pendingBlockConflict,
-            isBlock: true,
-            isAvailability: pendingBlockType === "OPEN",
-            blockType: pendingBlockType,
-        } satisfies CalendarEvent
-        : null;
+                    const slotStart = dayjs(slot.startIso);
+                    const slotEnd = dayjs(slot.endIso);
+                    return slotStart.format("YYYY-MM-DD") === dateOption.format("YYYY-MM-DD")
+                        && slotEnd.isAfter(slotStart);
+                });
 
-    // Show persisted blocks plus the unsaved preview block in one calendar feed.
+                const enabled = !weekendLockEnabled || !isWeekend || hasOpenWindow;
+                return {
+                    value: dateOption.format("YYYY-MM-DD"),
+                    label: dateOption.format("ddd M/D/YY"),
+                    enabled,
+                };
+            })
+            .filter((option) => option.enabled && option.value !== selectedBlockDate)
+            .map(({ value, label }) => ({ value, label }));
+    }, [blockedSlots, blockTypeInput, editingBlockId, previewFirstDate, previewNumDays, selectedBlockDate]);
+
+    useEffect(() => {
+        setAdditionalBlockDates((previous) => previous.filter((date) =>
+            repeatDateOptions.some((option) => option.value === date)
+        ));
+    }, [repeatDateOptions]);
+
+    const targetBlockDates = useMemo(() => {
+        if (!selectedBlockDate) {
+            return [] as string[];
+        }
+
+        if (editingBlockId !== null) {
+            return [selectedBlockDate];
+        }
+
+        return Array.from(new Set([selectedBlockDate, ...additionalBlockDates])).sort();
+    }, [additionalBlockDates, editingBlockId, selectedBlockDate]);
+
+    const pendingBlockRanges = useMemo(() => {
+        if (!selectedBlockStartTime || !selectedBlockEndTime || targetBlockDates.length === 0) {
+            return [] as Array<{
+                date: string;
+                start: Dayjs;
+                end: Dayjs;
+                conflict: boolean;
+                startsInPast: boolean;
+            }>;
+        }
+
+        return targetBlockDates
+            .map((date) => {
+                const start = dayjs(`${date} ${selectedBlockStartTime}`, "YYYY-MM-DD HH:mm");
+                const end = dayjs(`${date} ${selectedBlockEndTime}`, "YYYY-MM-DD HH:mm");
+                if (!start.isValid() || !end.isValid()) {
+                    return null;
+                }
+
+                const conflict = blockedSlots.some((slot) => {
+                    if (!slot.startIso || !slot.endIso || isWeekendAutoBlock(slot) || (editingBlockId !== null && slot.id === editingBlockId)) {
+                        return false;
+                    }
+
+                    const slotStart = dayjs(slot.startIso);
+                    const slotEnd = dayjs(slot.endIso);
+                    return start.isBefore(slotEnd) && slotStart.isBefore(end);
+                });
+
+                return {
+                    date,
+                    start,
+                    end,
+                    conflict,
+                    startsInPast: start.isBefore(dayjs()),
+                };
+            })
+            .filter((range): range is {
+                date: string;
+                start: Dayjs;
+                end: Dayjs;
+                conflict: boolean;
+                startsInPast: boolean;
+            } => range !== null);
+    }, [blockedSlots, editingBlockId, selectedBlockEndTime, selectedBlockStartTime, targetBlockDates]);
+
+    const pendingBlockConflict = pendingBlockRanges.some((range) => range.conflict);
+    const pendingBlockStartsInPast = pendingBlockRanges.some((range) => range.startsInPast);
+
+    const conflictingBlockDates = useMemo(() => {
+        return pendingBlockRanges
+            .filter((range) => range.conflict)
+            .map((range) => range.start.format("ddd M/D"));
+    }, [pendingBlockRanges]);
+
+    const pastBlockDates = useMemo(() => {
+        return pendingBlockRanges
+            .filter((range) => range.startsInPast)
+            .map((range) => range.start.format("ddd M/D"));
+    }, [pendingBlockRanges]);
+
+    // Temporary events used only for live calendar preview before blocks are saved.
+    const pendingBlockEvents = pendingBlockRanges.map((range, index) => ({
+        id: -(index + 1),
+        name: "Pending block",
+        date: range.start.format("ddd M/D"),
+        startTime: range.start.format("h:mm A"),
+        endTime: range.end.format("h:mm A"),
+        description: blockReasonInput.trim() || "Not added yet",
+        temp: true,
+        startIso: range.start.toISOString(),
+        endIso: range.end.toISOString(),
+        color: blockTypeInput === "OPEN"
+            ? (range.conflict ? "#dc2626" : "#166534")
+            : (range.conflict ? "#dc2626" : "#2563eb"),
+        borderColor: blockTypeInput === "OPEN"
+            ? (range.conflict ? "#991b1b" : "#14532d")
+            : (range.conflict ? "#991b1b" : "#1d4ed8"),
+        textColor: "#ffffff",
+        conflict: range.conflict,
+        isBlock: true,
+        isAvailability: blockTypeInput === "OPEN",
+        blockType: blockTypeInput,
+    } satisfies CalendarEvent));
+
+    // Show persisted blocks plus unsaved preview blocks in one calendar feed.
     const blockedSlotsWithPreview = [
         ...blockedSlots,
-        ...(pendingBlock ? [pendingBlock] : []),
+        ...pendingBlockEvents,
     ];
 
     // Disable creation until selection is complete and we are not in a conflicting/loading state.
-    const pendingBlockStartsInPast = pendingBlockStart ? pendingBlockStart.isBefore(dayjs()) : false;
     const addBlockDisabled =
-        !pendingBlockStart ||
-        !pendingBlockEnd ||
+        pendingBlockRanges.length === 0 ||
         pendingBlockStartsInPast ||
         pendingBlockConflict ||
         isSavingBlock ||
@@ -414,13 +499,14 @@ export default function AppSettings(props: AppSettingProps) {
         setSelectedBlockDate("");
         setSelectedBlockStartTime("");
         setSelectedBlockEndTime("");
+        setAdditionalBlockDates([]);
         setBlockTypeInput("BLOCK");
         setBlockReasonInput("");
         setEditingBlockId(null);
     };
 
     const handleSaveBlock = async () => {
-        if (addBlockDisabled || !pendingBlockStart || !pendingBlockEnd) {
+        if (addBlockDisabled || pendingBlockRanges.length === 0) {
             return;
         }
 
@@ -430,31 +516,53 @@ export default function AppSettings(props: AppSettingProps) {
         setBlockErrorMessage("");
 
         try {
-            const payload = {
-                start: pendingBlockStart.toISOString(),
-                end: pendingBlockEnd.toISOString(),
-                reason: blockReasonInput.trim() || undefined,
-                blockType: blockTypeInput,
-            };
+            const createdBlocks: RawScheduleBlock[] = [];
 
-            const createdBlock = editingBlockId
-                ? await updateScheduleBlock(editingBlockId, payload)
-                : await createScheduleBlock(payload);
+            if (editingBlockId !== null) {
+                const [range] = pendingBlockRanges;
+                const payload = {
+                    start: range.start.toISOString(),
+                    end: range.end.toISOString(),
+                    reason: blockReasonInput.trim() || undefined,
+                    blockType: blockTypeInput,
+                };
 
-            const canceledReservations = createdBlock.canceledReservations ?? 0;
+                createdBlocks.push(await updateScheduleBlock(editingBlockId, payload));
+            } else {
+                for (const range of pendingBlockRanges) {
+                    const payload = {
+                        start: range.start.toISOString(),
+                        end: range.end.toISOString(),
+                        reason: blockReasonInput.trim() || undefined,
+                        blockType: blockTypeInput,
+                    };
+                    createdBlocks.push(await createScheduleBlock(payload));
+                }
+            }
+
+            const canceledReservations = createdBlocks.reduce(
+                (total, block) => total + (block.canceledReservations ?? 0),
+                0
+            );
             const suffix = canceledReservations === 1 ? "" : "s";
-            const actionVerb = editingBlockId ? "updated" : "added";
             const canceledMessage = canceledReservations > 0
                 ? ` ${canceledReservations} reservation${suffix} canceled.`
                 : "";
 
             setBlockedSlots((previous) => {
-                const nextBlocks = editingBlockId
-                    ? previous.map((slot) => slot.id === editingBlockId ? parseRawBlockToEvent(createdBlock) : slot)
-                    : [...previous, parseRawBlockToEvent(createdBlock)];
+                const nextBlocks = editingBlockId !== null
+                    ? previous.map((slot) => slot.id === editingBlockId ? parseRawBlockToEvent(createdBlocks[0]!) : slot)
+                    : [...previous, ...createdBlocks.map(parseRawBlockToEvent)];
                 return sortEventsByStartIso(nextBlocks);
             });
-            setToastMessage(`Block ${actionVerb}.${canceledMessage}`);
+
+            if (editingBlockId !== null) {
+                setToastMessage(`Block updated.${canceledMessage}`);
+            } else {
+                const blockLabel = createdBlocks.length === 1 ? "Block" : `${createdBlocks.length} blocks`;
+                setToastMessage(`${blockLabel} added.${canceledMessage}`);
+            }
+
             if (canceledReservations > 0) {
                 dispatchReservationDataChanged("canceled");
             }
@@ -464,6 +572,15 @@ export default function AppSettings(props: AppSettingProps) {
         } catch (err) {
             const message = err instanceof Error ? err.message : editingBlockId ? "Failed to update block." : "Failed to add block.";
             setBlockErrorMessage(message);
+            try {
+                const data = await getScheduleBlocks(
+                    previewFirstDate.startOf("day").toISOString(),
+                    previewFirstDate.add(previewNumDays, "day").startOf("day").toISOString()
+                );
+                setBlockedSlots(sortEventsByStartIso(data.map(parseRawBlockToEvent)));
+            } catch (refreshErr) {
+                console.error("Failed to refresh blocks after save error:", refreshErr);
+            }
         } finally {
             setIsSavingBlock(false);
         }
@@ -478,6 +595,7 @@ export default function AppSettings(props: AppSettingProps) {
         setSelectedBlockDate(dayjs(block.startIso).format("YYYY-MM-DD"));
         setSelectedBlockStartTime(dayjs(block.startIso).format("HH:mm"));
         setSelectedBlockEndTime(dayjs(block.endIso).format("HH:mm"));
+        setAdditionalBlockDates([]);
         setBlockTypeInput(block.isAvailability ? "OPEN" : "BLOCK");
         setBlockReasonInput(block.description ?? "");
         setBlockErrorMessage("");
@@ -560,6 +678,11 @@ export default function AppSettings(props: AppSettingProps) {
         } finally {
             setIsTogglingWeekendBlocks(false);
         }
+    };
+
+    const handleSelectedBlockDateChange = (date: string) => {
+        setSelectedBlockDate(date);
+        setAdditionalBlockDates([]);
     };
 
     // Highlight invalid fields while reusing the base input styling.
@@ -824,10 +947,64 @@ export default function AppSettings(props: AppSettingProps) {
                         selectedDate={selectedBlockDate}
                         selectedStartTime={selectedBlockStartTime}
                         selectedEndTime={selectedBlockEndTime}
-                        setSelectedDate={setSelectedBlockDate}
+                        setSelectedDate={handleSelectedBlockDateChange}
                         setSelectedStartTime={setSelectedBlockStartTime}
                         setSelectedEndTime={setSelectedBlockEndTime}
                     />
+
+                    {!editingBlockId && selectedBlockDate && (
+                        <div className="rounded border border-gray-200 bg-gray-50 p-4">
+                            <p className="text-sm font-semibold text-gray-900">Apply to additional days</p>
+                            <p className="text-xs text-gray-600">
+                                Reuse the same start/end time on more dates in the current calendar range.
+                            </p>
+
+                            {repeatDateOptions.length === 0 ? (
+                                <p className="mt-2 text-xs text-gray-500">
+                                    No additional eligible dates in the current range.
+                                </p>
+                            ) : (
+                                <>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <Button
+                                            text="Select all"
+                                            className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 w-fit"
+                                            onClick={() => setAdditionalBlockDates(repeatDateOptions.map((option) => option.value))}
+                                            disabled={isSavingBlock}
+                                        />
+                                        <Button
+                                            text="Clear"
+                                            className="bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 w-fit"
+                                            onClick={() => setAdditionalBlockDates([])}
+                                            disabled={isSavingBlock || additionalBlockDates.length === 0}
+                                        />
+                                    </div>
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                        {repeatDateOptions.map((option) => (
+                                            <label
+                                                key={option.value}
+                                                className="flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={additionalBlockDates.includes(option.value)}
+                                                    onChange={(event) => {
+                                                        const checked = event.target.checked;
+                                                        setAdditionalBlockDates((previous) =>
+                                                            checked
+                                                                ? [...previous, option.value]
+                                                                : previous.filter((date) => date !== option.value)
+                                                        );
+                                                    }}
+                                                />
+                                                <span>{option.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
@@ -843,6 +1020,7 @@ export default function AppSettings(props: AppSettingProps) {
                                     setSelectedBlockDate("");
                                     setSelectedBlockStartTime("");
                                     setSelectedBlockEndTime("");
+                                    setAdditionalBlockDates([]);
                                 }}
                                 className={selectInputClassName}
                             >
@@ -876,12 +1054,16 @@ export default function AppSettings(props: AppSettingProps) {
 
                     {pendingBlockConflict && (
                         <p className="text-sm font-semibold text-red-600">
-                            This block overlaps an existing block on the preview calendar.
+                            {conflictingBlockDates.length > 1
+                                ? `Selected dates overlap existing blocks: ${conflictingBlockDates.join(", ")}.`
+                                : "This block overlaps an existing block on the preview calendar."}
                         </p>
                     )}
                     {pendingBlockStartsInPast && (
                         <p className="text-sm font-semibold text-red-600">
-                            Block start time must be now or later.
+                            {pastBlockDates.length > 1
+                                ? `Block start time must be now or later for: ${pastBlockDates.join(", ")}.`
+                                : "Block start time must be now or later."}
                         </p>
                     )}
                     {blockErrorMessage && (
@@ -896,8 +1078,8 @@ export default function AppSettings(props: AppSettingProps) {
                                     : editingBlockId
                                         ? "Save Changes"
                                         : blockTypeInput === "OPEN"
-                                            ? "Add Open Window"
-                                            : "Add Block"
+                                            ? (pendingBlockRanges.length > 1 ? "Add Open Windows" : "Add Open Window")
+                                            : (pendingBlockRanges.length > 1 ? "Add Blocks" : "Add Block")
                             }
                             className="text-white font-bold bg-slate-800 border-slate-900 hover:bg-slate-700 hover:border-slate-800 w-fit"
                             onClick={handleSaveBlock}
