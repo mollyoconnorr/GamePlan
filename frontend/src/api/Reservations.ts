@@ -1,5 +1,8 @@
 import type {RawAdminReservation, RawReservation} from "../types.ts";
 
+/**
+ * Tries to surface backend-provided error details from JSON or plain-text responses.
+ */
 async function extractErrorMessage(response: Response, fallback: string) {
     const body = await response.text();
     if (!body) {
@@ -18,7 +21,9 @@ async function extractErrorMessage(response: Response, fallback: string) {
     return body.trim();
 }
 
-// Fetch all reservations for the current user
+/**
+ * Fetches reservations belonging to the currently authenticated user.
+ */
 export async function getReservations() {
     const res = await fetch("/api/reservations", {
         method: "GET",
@@ -61,6 +66,9 @@ interface UpdateReservationRequest {
     end: string;
 }
 
+/**
+ * Updates an existing reservation's time range.
+ */
 export async function updateReservation(id: number, request: UpdateReservationRequest) {
     const res = await fetch(`/api/reservations/${id}`, {
         method: "PUT",
@@ -96,6 +104,9 @@ interface MakeReservationRequest {
     end: string;
 }
 
+/**
+ * Creates a reservation for a specific equipment id and ISO date-time range.
+ */
 export async function makeReservation(request: MakeReservationRequest) {
     const res = await fetch("/api/reservations", {
         method: "POST",

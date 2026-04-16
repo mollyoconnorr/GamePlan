@@ -4,10 +4,15 @@ import CalendarContent from "./CalendarContent.tsx";
 import Spinner from "../Spinner.tsx";
 import dayjs from "dayjs";
 
+/**
+ * Calendar grid renderer.
+ * Draws static day/time slots first, then overlays reservation cards via CalendarContent.
+ */
 export default function Calendar(props: CalendarProps) {
     const TIME_W = 90;
     const CELL_H = 40;
     const DAY_MIN_W = 140;
+    // Background shading is driven by block/availability events only.
     const backgroundEvents = useMemo(() => {
         return (props.reservations ?? []).filter((event) => (
             Boolean(event.startIso && event.endIso) && (event.isBlock || event.isAvailability)
@@ -69,6 +74,7 @@ export default function Calendar(props: CalendarProps) {
         timeMap.set(currTime, i);
     }
 
+    // Blocked slots take priority. Otherwise show availability tint.
     const getCellBackground = (dayIdx: number, rowIdx: number) => {
         const dayDate = props.firstDate.add(dayIdx, "day");
         const slotStart = dayDate
@@ -120,6 +126,7 @@ export default function Calendar(props: CalendarProps) {
         return "#475569";
     };
 
+    // Used to align absolutely-positioned overlay events with the rendered grid width.
     const divRef = useRef<HTMLDivElement | null>(null);
     const [size, setSize] = useState({ width: 0, height: 0 });
 

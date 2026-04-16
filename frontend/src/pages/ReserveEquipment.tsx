@@ -36,6 +36,13 @@ type Option = { label: string; value: string }; // value = actual attr value or 
 type EquipmentTypeResponse = { id: number; name: string };
 type AttributeDefinition = { name: string; options: string[] };
 
+/**
+ * Equipment reservation flow:
+ * 1) choose type
+ * 2) optionally filter by type attributes
+ * 3) choose exact equipment
+ * 4) pick date/time and submit
+ */
 export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                              maxResTime,numDays,reservations, setReservations, weekendAutoBlockEnabled} : ReserveEquipmentProps) {
     const navigate = useNavigate();
@@ -84,6 +91,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         ? dayjs(`${selectedDate} ${selectedEndTime}`, "YYYY-MM-DD HH:mm")
         : null;
 
+    // Temporary event used to preview the in-progress selection in the calendar/list.
     const previewReservation =
         previewStart &&
         previewEnd &&
@@ -100,6 +108,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
             }
             : null;
 
+    // Highlight direct conflicts against existing reservations for the selected equipment.
     const equipmentReservationsWithConflict = useMemo(() => {
         return equipmentReservations.map((event) => {
             if (!previewStart || !previewEnd || !event.startIso || !event.endIso) {
@@ -114,6 +123,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         });
     }, [equipmentReservations, previewStart, previewEnd]);
 
+    // Prevent users from creating overlapping reservations for themselves.
     const userReservationConflict = useMemo(() => {
         if (!previewStart || !previewEnd) return false;
         return reservations.some((reservation) => {
@@ -136,6 +146,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         [reservations]
     );
 
+    // Blocks conflict unless the preview fits fully inside an OPEN availability window.
     const scheduleBlocksWithConflict = useMemo(() => {
         const openWindowCoversPreview = Boolean(
             previewStart &&
@@ -182,6 +193,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         [equipmentReservationsWithConflict, userReservationIds]
     );
 
+    // Unified feed for calendar/list rendering: other users, blocks, current user, then preview.
     const displayedReservations = useMemo(
         () => {
             const previewEvent =
@@ -288,6 +300,10 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         Boolean(selectedEndTime) &&
         Boolean(previewReservation);
 
+    /**
+     * Reload reservations for the currently selected equipment.
+     * `silent` skips spinner changes for background polling.
+     */
     const loadSelectedEquipmentReservations = async (silent = false) => {
         if (!selectedEquipment) {
             setEquipmentReservations([]);
@@ -310,6 +326,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         }
     };
 
+    // Rehydrate type metadata and equipment list (used by polling + data-change event listener).
     const refreshSelectedType = async (silent = true) => {
         if (selectedType === null) {
             return;
@@ -354,6 +371,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         void fetchBlocks();
     }, [firstDate, numDays]);
 
+    // Keep selected type data fresh while this page is visible.
     useEffect(() => {
         if (selectedType === null) {
             return;
@@ -383,6 +401,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         };
     }, [selectedEquipment, selectedType, selectedAttributeValues, allEquipmentOptions]);
 
+    // Cross-page refresh when reservations are created/canceled elsewhere in the app.
     useEffect(() => {
         const handleReservationChange = (event: Event) => {
             const detail = (event as CustomEvent<ReservationDataChangedDetail>).detail;
@@ -436,6 +455,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
             });
     }, []);
 
+    // Normalizes server rows into a grouped attribute schema (name + unique option values).
     const parseTypeAttributes = (rows: EquipmentTypeAttributeResponse[]): AttributeDefinition[] => {
         const grouped = new Map<string, Set<string>>();
 
@@ -487,6 +507,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         return equipment.attributes.map((attribute) => `${attribute.name}: ${attribute.value}`).join(" · ");
     };
 
+    // Dynamically narrow each attribute dropdown based on other active filters.
     const availableAttributeOptions = useMemo(() => {
         const optionsByAttribute = new Map<string, string[]>();
 

@@ -52,6 +52,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
             }));
     }, [props.firstDate, props.numDays, props.scheduleBlocks, todayKey]);
 
+    // Index OPEN blocks by date so weekend-only windows can still be selectable.
     const openWindowTimeOptionsByDate = useMemo(() => {
         const map = new Map<string, { value: string; label: string }[]>();
 
@@ -89,6 +90,7 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
         return parsed.isValid() ? parsed : null;
     }, [props.selectedDate]);
 
+    // Merges base day options with OPEN windows and enforces weekend locking rules.
     const startTimeOptions = useMemo(() => {
         const filteredBaseTimes = filterPastTimesForDate(baseTimeOptions, selectedDay);
 

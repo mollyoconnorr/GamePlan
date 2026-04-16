@@ -8,8 +8,7 @@ interface CreateScheduleBlockRequest {
     blockType?: "BLOCK" | "OPEN";
 }
 
-interface UpdateScheduleBlockRequest extends CreateScheduleBlockRequest {
-}
+type UpdateScheduleBlockRequest = CreateScheduleBlockRequest;
 
 export async function getScheduleBlocks(from?: string, to?: string) {
     // Trainer/admin-only endpoint that returns persisted global blocks.

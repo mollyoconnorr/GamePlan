@@ -33,10 +33,15 @@ import {
     type ReservationDataChangedDetail,
 } from "./util/AppDataEvents.ts";
 
+/**
+ * Authenticated application shell.
+ * Owns app-level calendar/settings state and keeps reservation data fresh.
+ */
 function AppShell() {
     // user is guaranteed by RequireAuth
     const { user, logout } = useAuth();
 
+    // Privileged users can access admin/trainer routes and view all active reservations.
     const hasPrivilegedAccess = user!.role === "AT" || user!.role === "ADMIN";
 
     const renderForPrivileged = (element: JSX.Element) => {
@@ -70,7 +75,10 @@ function AppShell() {
     const [numDays, setNumDays] = useState(0);
     const [weekendAutoBlockEnabled, setWeekendAutoBlockEnabled] = useState(false);
 
-    // TODO error handling
+    /**
+     * Loads reservations + schedule blocks for the visible calendar window.
+     * `silent` skips spinner updates for background refreshes.
+     */
     const loadReservations = useCallback(async (silent = false) => {
         if (numDays <= 0) {
             return;
@@ -129,10 +137,12 @@ function AppShell() {
                 return;
             }
 
+            // Admin/trainer home view should reflect newly created reservations immediately.
             if (hasPrivilegedAccess && detail.action === "created") {
                 void loadReservations();
             }
 
+            // Athletes only need an explicit refresh after cancellation.
             if (!hasPrivilegedAccess && detail.action === "canceled") {
                 void loadReservations();
             }
@@ -142,6 +152,7 @@ function AppShell() {
         return () => window.removeEventListener(RESERVATION_DATA_CHANGED_EVENT, handleReservationChange);
     }, [hasPrivilegedAccess, loadReservations]);
 
+    // Keep data in sync while users tab away and come back.
     useEffect(() => {
         if (numDays <= 0) {
             return;
@@ -164,6 +175,7 @@ function AppShell() {
         };
     }, [loadReservations, numDays]);
 
+    // App settings drive the shared calendar behavior for every major page.
     useEffect(() => {
         async function getSettings() {
             setLoading(true);

@@ -5,9 +5,14 @@ import dayjs from "dayjs";
 import CalendarCard from "./CalendarCard.tsx";
 import Toast from "../Toast.tsx";
 
+/**
+ * Overlay layer for calendar cards.
+ * Groups overlapping events per-day so cards can share horizontal space.
+ */
 export default function CalendarContent(props: CalendarContentProps) {
     const cardMargin: number = 2;
     const [toastMessage, setToastMessage] = useState("");
+    // Background block/availability events are painted by Calendar grid; cards are only reservations.
     const overlayEvents = props.events.filter((event) => !event.isBlock && !event.isAvailability);
 
     useEffect(() => {
@@ -16,10 +21,10 @@ export default function CalendarContent(props: CalendarContentProps) {
         return () => clearTimeout(timeout);
     }, [toastMessage]);
 
-    // Map column / day indexes to events to render in those columns
+    // Map column/day indexes to events that should be rendered in those columns.
     const dayEventMap: Map<number, CalendarEvent[]> = new Map();
 
-    // Add events to their respective columns
+    // Add events to their respective day columns.
     overlayEvents.forEach((e) => {
         // Column index (Each column is one day)
         const colIndex = props.dayMap.get(e.date);
@@ -40,13 +45,13 @@ export default function CalendarContent(props: CalendarContentProps) {
     const dayEventMapHTML: Map<number, JSX.Element[]> = new Map();
 
     dayEventMap.forEach((dayEvents, key) => {
-        // Sort events earliest to latest (Arbitrary date needed for converting to dayjs obj)
+        // Sort events by end time to make overlap grouping deterministic.
         dayEvents.sort((a, b) =>
             dayjs(`1970-01-01 ${a.endTime}`, "YYYY-MM-DD h:mm A").valueOf() -
             dayjs(`1970-01-01 ${b.endTime}`, "YYYY-MM-DD h:mm A").valueOf()
         );
 
-        // Group events into groups that contain overlapping events
+        // Group consecutive overlapping events into a single positioned container.
         let i = 0;
         while (i < dayEvents.length) {
             const overlapping: CalendarEvent[] = []
@@ -63,8 +68,7 @@ export default function CalendarContent(props: CalendarContentProps) {
                 dayEventMapHTML.set(key, []);
             }
 
-            // Precompute the events starting and ending index
-            // So we can compute the proper bounds for its container
+            // Precompute start/end rows so the overlap container spans the full group window.
             const indexedEvents = overlapping
                 .map((e) => {
                     const startIndex = props.timeMap.get(e.startTime);
@@ -91,7 +95,7 @@ export default function CalendarContent(props: CalendarContentProps) {
                 continue;
             }
 
-            // Start and end index of group / container
+            // Start/end row bounds for the overlap group container.
             const groupStartIndex = Math.min(...indexedEvents.map((e) => e.startIndex));
             const groupEndIndex = Math.max(...indexedEvents.map((e) => e.endIndex));
 

@@ -9,6 +9,9 @@ export type ReservationDataChangedDetail = {
     action: "created" | "canceled";
 };
 
+/**
+ * Broadcasts non-reservation admin data changes (currently user list mutations).
+ */
 export function dispatchAppDataChanged(kind: AppDataChangedDetail["kind"]) {
     if (typeof window === "undefined") {
         return;
@@ -19,6 +22,9 @@ export function dispatchAppDataChanged(kind: AppDataChangedDetail["kind"]) {
     }));
 }
 
+/**
+ * Broadcasts reservation lifecycle changes so other pages can refresh in-place.
+ */
 export function dispatchReservationDataChanged(action: ReservationDataChangedDetail["action"]) {
     if (typeof window === "undefined") {
         return;

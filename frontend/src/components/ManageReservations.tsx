@@ -46,6 +46,7 @@ export default function ManageReservations({
     const [selectedStartTime, setSelectedStartTime] = useState("");
     const [selectedEndTime, setSelectedEndTime] = useState("");
 
+    // Calendar view passes event-shaped data; normalize to Reservation rows for list/edit rendering.
     const displayReservations = useMemo(() => {
         const mappedReservations = calendarEvents
             ? calendarEvents
@@ -152,6 +153,7 @@ export default function ManageReservations({
         setEditErrorMessage("");
     };
 
+    // Derived range from edit modal selectors; used by validation and conflict checks.
     const editedRange = useMemo(() => {
         if (!pendingEdit || !selectedStartTime || !selectedEndTime) {
             return null;

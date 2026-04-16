@@ -79,9 +79,11 @@ export interface CalendarEvent {
     borderStyle?: "solid" | "dashed" | "dotted";
     textColor?: string;
     conflict?: boolean;
+    // Background renderer hints for schedule blocks / open windows.
     isBlock?: boolean;
     isAvailability?: boolean;
     isWeekend?: boolean;
+    // Raw backend block type preserved for admin editing workflows.
     blockType?: string;
 }
 
@@ -136,7 +138,9 @@ export type PendingDelete = {
 };
 
 export interface CalendarData {
+    // Window start date in local timezone (week/day aligned by settings).
     firstDate: Dayjs;
+    // Daily time bounds used by both calendar and reservation forms.
     startTime: Dayjs;
     endTime: Dayjs;
     timeStep: number;

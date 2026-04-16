@@ -39,6 +39,9 @@ type AppSettingsUpdatePayload = {
     weekendAutoBlockEnabled?: boolean;
 };
 
+/**
+ * Validates form input and sends canonical app settings payload to backend.
+ */
 export async function updateAppSettings(request: SettingsRequest): Promise<ParsedAppSettingsData> {
     const payload = toAppSettingsUpdatePayload(request);
 
@@ -108,6 +111,7 @@ export async function getAppSettings(): Promise<ParsedAppSettingsData>{
 }
 
 function parseAppDataToAppSettings(rawAppData: RawAppSettingsData): ParsedAppSettingsData {
+    // Backend stores times as strings; UI works with dayjs objects for comparisons/math.
     const parsedStartTime = parseTime(rawAppData.startTime);
     const parsedEndTime = parseTime(rawAppData.endTime);
 

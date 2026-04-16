@@ -3,6 +3,10 @@ import type {AuthState, User} from "../types.ts";
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/**
+ * Central auth state provider.
+ * Keeps user session synced with backend and exposes login/logout redirects.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Store user object
     const [user, setUser] = useState<User | null>(null);
@@ -46,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         void refresh();
     }, [refresh]);
 
+    // Keep session fresh while an authenticated user is active in the app.
     useEffect(() => {
         if (!user) {
             return;
@@ -58,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => window.clearInterval(interval);
     }, [refresh, user]);
 
-    // Only recompute this object if user or loading state changes.
+    // Only recompute this object if user/loading/refresh references change.
     const value = useMemo(
         () => ({
             user,

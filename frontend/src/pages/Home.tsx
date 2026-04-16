@@ -26,6 +26,13 @@ type HomeLocationState = {
     view?: "calendar" | "list";
 }
 
+/**
+ * Primary landing page after login.
+ * Behavior varies by role:
+ * - student: informational access state
+ * - athlete: reservations + notifications
+ * - trainer/admin: reservation management + admin actions
+ */
 export default function Home(
     { firstDate,startTime,endTime,timeStep,maxResTime,numDays,
         reservations, calendarEvents, loadReservations, loading}: HomeProps
@@ -69,10 +76,12 @@ export default function Home(
     const [markError, setMarkError] = useState<string | null>(null);
 
     // Update local storage when showCalendar changes
+    // Persist list/calendar preference across refreshes.
     useEffect(() => {
         localStorage.setItem("showCalendar", JSON.stringify(showCalendar));
     }, [showCalendar]);
 
+    // Reserve page can redirect back with a preferred view.
     useEffect(() => {
         if (!preferredView) return;
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -87,6 +96,7 @@ export default function Home(
         return () => clearTimeout(timeout);
     }, [location.pathname, navigate, toastMessage]);
 
+    // Non-admin users fetch full notification payload only when panel is open.
     useEffect(() => {
         if (isAdmin || !showNotifications) {
             return;
@@ -120,6 +130,7 @@ export default function Home(
         };
     }, [isAdmin, showNotifications]);
 
+    // Badge count refreshes while panel is collapsed to keep the indicator cheap.
     useEffect(() => {
         if (isAdmin || showNotifications) {
             return;
@@ -150,6 +161,7 @@ export default function Home(
         };
     }, [isAdmin, showNotifications]);
 
+    // Poll notifications in the background and refresh again on tab focus/visibility changes.
     useEffect(() => {
         if (isAdmin) {
             return;
@@ -242,6 +254,7 @@ export default function Home(
         }
     }
 
+    // Admin-only badge that tracks pending account approvals.
     useEffect(() => {
         if (!isAdmin) {
             setPendingUserCount(0);
@@ -275,6 +288,7 @@ export default function Home(
         };
     }, [isAdmin]);
 
+    // Keep pending count fresh while admin is active in app.
     useEffect(() => {
         if (!isAdmin) {
             return;
