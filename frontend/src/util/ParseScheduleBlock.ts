@@ -14,19 +14,31 @@ export function sortEventsByStartIso(events: CalendarEvent[]) {
 export function parseRawBlockToEvent(block: RawScheduleBlock): CalendarEvent {
     const start = dayjs(block.start);
     const end = dayjs(block.end);
+    const blockType = (block.blockType ?? "BLOCK").toUpperCase();
+    const isAvailability = blockType === "OPEN";
+    const isWeekend = blockType === "WEEKEND";
 
     return {
         id: block.id,
-        name: "Blocked time",
+        name: isAvailability ? "Open window" : isWeekend ? "Weekend blocked" : "Blocked time",
         date: start.format("ddd M/D"),
         startTime: start.format("h:mm A"),
         endTime: end.format("h:mm A"),
-        description: block.reason?.trim() ? block.reason.trim() : "Admin block",
+        description: block.reason?.trim()
+            ? block.reason.trim()
+            : isAvailability
+                ? "Open gym time"
+                : isWeekend
+                    ? "Weekend closed"
+                    : "Admin block",
         startIso: start.toISOString(),
         endIso: end.toISOString(),
-        color: "#111827",
-        borderColor: "#030712",
+        color: isAvailability ? "#166534" : isWeekend ? "#7c2d12" : "#111827",
+        borderColor: isAvailability ? "#14532d" : isWeekend ? "#431407" : "#030712",
         textColor: "#ffffff",
         isBlock: true,
+        isAvailability,
+        isWeekend,
+        blockType,
     };
 }

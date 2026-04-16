@@ -1,12 +1,18 @@
 import type {CalendarProps} from "./CalendarTypes.ts";
-import React, {type JSX, useEffect, useRef, useState} from "react";
+import React, {type JSX, useEffect, useMemo, useRef, useState} from "react";
 import CalendarContent from "./CalendarContent.tsx";
 import Spinner from "../Spinner.tsx";
+import dayjs from "dayjs";
 
 export default function Calendar(props: CalendarProps) {
     const TIME_W = 90;
     const CELL_H = 40;
     const DAY_MIN_W = 140;
+    const backgroundEvents = useMemo(() => {
+        return (props.reservations ?? []).filter((event) => (
+            Boolean(event.startIso && event.endIso) && (event.isBlock || event.isAvailability)
+        ));
+    }, [props.reservations]);
 
     const numRows =
         props.endTime.diff(props.startTime, "minute") / props.timeStepMin;
@@ -63,6 +69,57 @@ export default function Calendar(props: CalendarProps) {
         timeMap.set(currTime, i);
     }
 
+    const getCellBackground = (dayIdx: number, rowIdx: number) => {
+        const dayDate = props.firstDate.add(dayIdx, "day");
+        const isWeekend = dayDate.day() === 0 || dayDate.day() === 6;
+        const slotStart = dayDate
+            .hour(props.startTime.hour())
+            .minute(props.startTime.minute())
+            .second(props.startTime.second())
+            .millisecond(0)
+            .add(rowIdx * props.timeStepMin, "minute");
+        const slotEnd = slotStart.add(props.timeStepMin, "minute");
+        const blockedWindowHit = backgroundEvents.some((event) => {
+            if (event.isAvailability) {
+                return false;
+            }
+
+            if (!event.startIso || !event.endIso) {
+                return false;
+            }
+
+            const eventStart = dayjs(event.startIso);
+            const eventEnd = dayjs(event.endIso);
+            return slotStart.isBefore(eventEnd) && eventStart.isBefore(slotEnd);
+        });
+
+        const openWindowHit = backgroundEvents.some((event) => {
+            if (!event.startIso || !event.endIso) {
+                return false;
+            }
+
+            const eventStart = dayjs(event.startIso);
+            const eventEnd = dayjs(event.endIso);
+            return slotStart.isBefore(eventEnd) && eventStart.isBefore(slotEnd);
+        });
+
+        const baseAvailabilityHit = !isWeekend;
+
+        if (blockedWindowHit) {
+            return "#475569";
+        }
+
+        if (openWindowHit) {
+            return "rgba(16, 185, 129, 0.22)";
+        }
+
+        if (baseAvailabilityHit) {
+            return "rgba(16, 185, 129, 0.22)";
+        }
+
+        return "#475569";
+    };
+
     const divRef = useRef<HTMLDivElement | null>(null);
     const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -102,8 +159,13 @@ export default function Calendar(props: CalendarProps) {
                     {Array.from({ length: props.numDays }).map((_, dayIdx) => (
                         <div key={dayIdx} className="border">
                             {Array.from({ length: numRows + 1 }).map((__, rowIdx) => (
-                                <div key={rowIdx} className="border-b p-2"
-                                     style={{ height: CELL_H }}
+                                <div
+                                    key={rowIdx}
+                                    className="border-b p-2"
+                                    style={{
+                                        height: CELL_H,
+                                        backgroundColor: getCellBackground(dayIdx, rowIdx),
+                                    }}
                                 >
                                 </div>
                             ))}
