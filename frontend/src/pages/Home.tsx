@@ -28,7 +28,7 @@ export default function Home(
 
 ){
     const user = useAuthedUser();
-    const isAdmin = user.role === "ADMIN"; //TODO FIX: AT != ADMIN
+    const isAdmin = user.role === "ADMIN";
     const isTrainer = user.role === "AT";
     const isPrivileged = isTrainer || isAdmin;
     const isStudent = user.role === "STUDENT";
@@ -38,12 +38,17 @@ export default function Home(
 
     const locationState = location.state as HomeLocationState | null;
     const toastMessage = locationState?.toastMessage ?? "";
+
+    const isSmallScreen = window.innerWidth < 768;
+
     const preferredView = locationState?.view;
 
     // Store current event view in local storage so it persists across refreshes
     const [showCalendar, setShowCalendar] = useState(() => {
         const stored = localStorage.getItem("showCalendar");
-        return stored !== null ? JSON.parse(stored) : true;
+
+        // Small screens default to list view
+        return stored !== null ? JSON.parse(stored) : !isSmallScreen;
     });
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
