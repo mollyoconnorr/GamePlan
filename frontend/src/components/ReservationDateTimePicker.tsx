@@ -1,10 +1,14 @@
 import { useMemo } from "react";
-import type {CalendarData} from "../types.ts";
-import dayjs from "dayjs";
+import type {CalendarData, CalendarEvent} from "../types.ts";
+import dayjs, {type Dayjs} from "dayjs";
 import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
 import {formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
 
 interface DateTimeRangePickerProps extends CalendarData {
+    scheduleBlocks?: CalendarEvent[];
+    allowWeekendDates?: boolean;
+    timeWindowStart?: Dayjs;
+    timeWindowEnd?: Dayjs;
     // controlled values
     selectedDate: string;
     selectedStartTime: string;
@@ -19,6 +23,12 @@ interface DateTimeRangePickerProps extends CalendarData {
 
 export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     // Date options, from given start date + numDays
+    const todayKey = dayjs().format("YYYY-MM-DD");
+    const effectiveStartTime = props.timeWindowStart ?? props.startTime;
+    const effectiveEndTime = props.timeWindowEnd ?? props.endTime;
+    const baseTimeOptions = useMemo(() => {
+        return buildTimeOptions(effectiveStartTime, effectiveEndTime, props.timeStep);
+    }, [effectiveEndTime, effectiveStartTime, props.timeStep]);
     const dateOptions = useMemo(() => {
         const today = dayjs();
 
@@ -33,15 +43,49 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                 return dayOfWeek !== 0 && dayOfWeek !== 6;
             })
             .map((dateOption) => ({
+                isWeekend: dateOption.day() === 0 || dateOption.day() === 6,
+                hasOpenWindow: props.scheduleBlocks?.some((block) => {
+                    if ((block.blockType ?? "BLOCK").toUpperCase() !== "OPEN" || !block.startIso || !block.endIso) {
+                        return false;
+                    }
+
+                    const blockStart = dayjs(block.startIso);
+                    const blockEnd = dayjs(block.endIso);
+                    return blockStart.format("YYYY-MM-DD") === dateOption.format("YYYY-MM-DD") &&
+                        blockEnd.isAfter(blockStart);
+                }) ?? false,
                 value: dateOption.format("YYYY-MM-DD"),
                 label: dateOption.format("ddd M/D/YY"),
             }));
-    }, [props.firstDate, props.numDays, props.disableWeekends]);
+    }, [props.disableWeekends, props.firstDate, props.numDays, props.scheduleBlocks, todayKey]);
 
-    // Create time options (between startTime and endTime)
-    const timeOptions = useMemo(() => {
-        return buildTimeOptions(props.startTime, props.endTime, props.timeStep);
-    }, [props.startTime, props.endTime,props.timeStep]);
+    const openWindowTimeOptionsByDate = useMemo(() => {
+        const map = new Map<string, { value: string; label: string }[]>();
+
+        (props.scheduleBlocks ?? []).forEach((block) => {
+            if ((block.blockType ?? "BLOCK").toUpperCase() !== "OPEN" || !block.startIso || !block.endIso) {
+                return;
+            }
+
+            const blockDate = dayjs(block.startIso).format("YYYY-MM-DD");
+            const options = buildTimeOptions(dayjs(block.startIso), dayjs(block.endIso), props.timeStep);
+            const existing = map.get(blockDate) ?? [];
+            map.set(blockDate, [...existing, ...options]);
+        });
+
+        return map;
+    }, [props.scheduleBlocks, props.timeStep]);
+
+    const normalizedDateOptions = useMemo(() => {
+        return dateOptions.map((option) => {
+            const enabled = props.allowWeekendDates || !option.isWeekend || option.hasOpenWindow;
+            return {
+                ...option,
+                disabled: !enabled,
+                label: option.isWeekend && !enabled ? `${option.label} (blocked)` : option.label,
+            };
+        });
+    }, [dateOptions, props.allowWeekendDates]);
 
     const selectedDay = useMemo(() => {
         if (!props.selectedDate) {
@@ -53,8 +97,41 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     }, [props.selectedDate]);
 
     const startTimeOptions = useMemo(() => {
-        return filterPastTimesForDate(timeOptions, selectedDay);
-    }, [timeOptions, selectedDay]);
+        const filteredBaseTimes = filterPastTimesForDate(baseTimeOptions, selectedDay);
+
+        if (!selectedDay) {
+            return filteredBaseTimes;
+        }
+
+        const openWindowOptions = filterPastTimesForDate(
+            openWindowTimeOptionsByDate.get(selectedDay.format("YYYY-MM-DD")) ?? [],
+            selectedDay
+        );
+
+        const isWeekend = selectedDay.day() === 0 || selectedDay.day() === 6;
+        if (isWeekend) {
+            if (props.allowWeekendDates) {
+                return filteredBaseTimes;
+            }
+
+            if (openWindowOptions.length === 0) {
+                return [];
+            }
+
+            return openWindowOptions;
+        }
+
+        if (openWindowOptions.length === 0) {
+            return filteredBaseTimes;
+        }
+
+        const merged = new Map<string, { value: string; label: string }>();
+        [...filteredBaseTimes, ...openWindowOptions].forEach((option) => {
+            merged.set(option.value, option);
+        });
+
+        return Array.from(merged.values()).sort((a, b) => a.value.localeCompare(b.value));
+    }, [baseTimeOptions, openWindowTimeOptionsByDate, selectedDay, props.allowWeekendDates]);
     const noStartTimesAvailable = Boolean(props.selectedDate) && startTimeOptions.length === 0;
 
     const toMinutes = (time: string) => {
@@ -89,8 +166,8 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
                     className={selectInputClassName}
                 >
                     <option value="">Select date</option>
-                    {dateOptions.map((d) => (
-                        <option key={d.value} value={d.value}>
+                    {normalizedDateOptions.map((d) => (
+                        <option key={d.value} value={d.value} disabled={d.disabled}>
                             {d.label}
                         </option>
                     ))}

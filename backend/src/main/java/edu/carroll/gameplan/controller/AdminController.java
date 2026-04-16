@@ -64,7 +64,7 @@ public class AdminController {
         User currentUser = userService.resolveCurrentUser(authentication);
         userService.requireAdmin(currentUser);
 
-        return adminService.updateUserRole(userId, request.role());
+        return adminService.updateUserRole(userId, request.role(), currentUser);
     }
 
     /**

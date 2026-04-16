@@ -2,6 +2,7 @@ package edu.carroll.gameplan.service;
 
 import edu.carroll.gameplan.model.Notification;
 import edu.carroll.gameplan.model.User;
+import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.NotificationRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 /**
@@ -28,6 +30,9 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private EmailNotificationService emailNotificationService;
+
     @InjectMocks
     private NotificationService notificationService;
 
@@ -37,6 +42,7 @@ class NotificationServiceTest {
     @Test
     void createNotificationPersistsMessage() {
         User recipient = new User();
+        recipient.setRole(UserRole.ATHLETE);
         when(notificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         notificationService.createNotification(recipient, "hello");
@@ -46,6 +52,18 @@ class NotificationServiceTest {
 
         assertThat(captor.getValue().getUser()).isEqualTo(recipient);
         assertThat(captor.getValue().getMessage()).isEqualTo("hello");
+        verify(emailNotificationService).sendNotificationEmail(recipient, "hello");
+    }
+
+    @Test
+    void createNotificationSkipsEmailForNonAthletes() {
+        User recipient = new User();
+        recipient.setRole(UserRole.ADMIN);
+        when(notificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        notificationService.createNotification(recipient, "hello");
+
+        verify(emailNotificationService, never()).sendNotificationEmail(any(), any());
     }
 
     /**

@@ -51,7 +51,8 @@ public class UserController {
                 user.getOidcUserId(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getRole() != null ? user.getRole().name() : UserRole.ATHLETE.name()
+                user.getRole() != null ? user.getRole().name() : UserRole.ATHLETE.name(),
+                user.isPendingApproval()
         );
 
         return ResponseEntity.ok(dto);

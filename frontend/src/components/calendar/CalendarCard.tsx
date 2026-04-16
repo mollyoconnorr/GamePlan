@@ -295,7 +295,7 @@ export default function CalendarCard({
             )}
 
             {(() => {
-                const baseBackground = event.color ?? "#1d4ed8";
+                const baseBackground = event.color ?? (event.isAvailability ? "#166534" : "#1d4ed8");
                 const computedBackground = event.conflict ? "#dc2626" : baseBackground;
                 const borderColor = event.borderColor ?? (event.conflict ? "#991b1b" : "black");
                 const borderStyle = event.borderStyle ?? "solid";
@@ -347,7 +347,7 @@ export default function CalendarCard({
                             {event.endTime && <p><span className="font-semibold">End:</span> {String(event.endTime)}</p>}
                             {event.description && (
                                 <p>
-                                    <span className="font-semibold">Reserved by:</span> {String(event.description)}
+                                    <span className="font-semibold">{event.isAvailability ? "Note:" : "Reserved by:"}</span> {String(event.description)}
                                 </p>
                             )}
                             {event.temp && <p className="text-red-600"><strong>Pending reservation</strong></p>}

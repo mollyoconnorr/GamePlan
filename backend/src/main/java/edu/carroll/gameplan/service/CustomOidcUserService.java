@@ -64,6 +64,7 @@ public class CustomOidcUserService extends OidcUserService {
                     newUser.setOidcUserId(oidcUserId);
                     newUser.setEmail(email);
                     newUser.setRole(UserRole.STUDENT);
+                    newUser.setPendingApproval(true);
                     logger.info("Provisioning new OIDC user record: email={}, oidcUserId={}", email, oidcUserId);
                     return newUser;
                 });
@@ -76,6 +77,6 @@ public class CustomOidcUserService extends OidcUserService {
 
         userRepository.save(user);
         logger.debug("OIDC user sync completed: userId={}, oidcUserId={}", user.getId(), oidcUserId);
-        return oidcUser;
+        return new VersionedOidcUser(oidcUser, user.getAuthVersion());
     }
 }

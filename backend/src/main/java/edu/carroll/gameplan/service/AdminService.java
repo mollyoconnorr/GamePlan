@@ -47,6 +47,7 @@ public class AdminService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setRole(UserRole.STUDENT);
+        user.setPendingApproval(true);
         user.setOidcUserId(request.getOidcUserId());
         User saved = userService.saveUser(user);
         logger.info("Admin created pending user: userId={}, email={}, role={}", saved.getId(), saved.getEmail(), saved.getRole());
@@ -56,9 +57,13 @@ public class AdminService {
     /**
      * Updates the role for an existing user.
      */
-    public AdminUserResponse updateUserRole(Long userId, String requestedRole) {
+    public AdminUserResponse updateUserRole(Long userId, String requestedRole, User actingUser) {
         if (requestedRole == null || requestedRole.isBlank()) {
             throw new IllegalArgumentException("Role is required");
+        }
+
+        if (actingUser != null && actingUser.getId() != null && actingUser.getId().equals(userId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Admins cannot change their own role");
         }
 
         User targetUser = userService.getUserById(userId);
@@ -70,6 +75,7 @@ public class AdminService {
         }
 
         UserRole previousRole = targetUser.getRole();
+        boolean stateChanged = !nextRole.equals(targetUser.getRole()) || targetUser.isPendingApproval();
         targetUser.setRole(nextRole);
         User saved = userService.saveUser(targetUser);
         logger.info(
@@ -87,7 +93,7 @@ public class AdminService {
      * @return number of student requests
      */
     public long countPendingStudents() {
-        return userService.countByRole(UserRole.STUDENT);
+        return userService.countPendingApproval();
     }
 
     private String requireEmail(String email) {
@@ -104,7 +110,8 @@ public class AdminService {
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getRole() != null ? user.getRole().name() : UserRole.ATHLETE.name()
+                user.getRole() != null ? user.getRole().name() : UserRole.ATHLETE.name(),
+                user.isPendingApproval()
         );
     }
 }

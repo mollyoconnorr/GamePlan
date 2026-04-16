@@ -5,6 +5,7 @@ import edu.carroll.gameplan.model.Reservation;
 import edu.carroll.gameplan.model.ReservationStatus;
 import edu.carroll.gameplan.model.ScheduleBlock;
 import edu.carroll.gameplan.model.ScheduleBlockStatus;
+import edu.carroll.gameplan.model.ScheduleBlockType;
 import edu.carroll.gameplan.model.User;
 import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.AppSettingsRepository;
@@ -19,8 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Set;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 /**
@@ -65,10 +69,14 @@ public class ScheduleBlockService {
             throw new IllegalArgumentException("Block query range is invalid");
         }
 
-        return scheduleBlockRepository.findByStatusOrderByStartDatetimeAsc(ScheduleBlockStatus.ACTIVE)
+        final List<ScheduleBlock> blocks = new ArrayList<>(scheduleBlockRepository.findByStatusOrderByStartDatetimeAsc(ScheduleBlockStatus.ACTIVE)
                 .stream()
                 .filter(block -> from == null || block.getEndDatetime().isAfter(from))
                 .filter(block -> to == null || block.getStartDatetime().isBefore(to))
+                .collect(Collectors.toList()));
+
+        return blocks.stream()
+                .sorted((left, right) -> left.getStartDatetime().compareTo(right.getStartDatetime()))
                 .collect(Collectors.toList());
     }
 
@@ -87,7 +95,9 @@ public class ScheduleBlockService {
                 .findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(start, end, ReservationStatus.ACTIVE);
 
         conflictingReservations.forEach(reservation -> reservation.setStatus(ReservationStatus.CANCELLED));
-        reservationRepository.saveAll(conflictingReservations);
+        if (!conflictingReservations.isEmpty()) {
+            reservationRepository.saveAll(conflictingReservations);
+        }
 
         final ScheduleBlock block = new ScheduleBlock();
         block.setCreatedBy(createdBy);
@@ -106,6 +116,47 @@ public class ScheduleBlockService {
                 conflictingReservations.size(),
                 saved.getReason()
         );
+        return new CreateBlockResult(saved, conflictingReservations.size());
+    }
+
+    @Transactional
+    public CreateBlockResult updateBlock(Long blockId, LocalDateTime start, LocalDateTime end, String reason, ScheduleBlockType blockType) {
+        validateRange(start, end);
+
+        final ScheduleBlock existingBlock = scheduleBlockRepository.findById(blockId)
+                .orElseThrow(() -> new IllegalArgumentException("Block not found: " + blockId));
+
+        if (!ScheduleBlockStatus.ACTIVE.equals(existingBlock.getStatus())) {
+            throw new IllegalArgumentException("Block is not active: " + blockId);
+        }
+
+        final ScheduleBlockType normalizedType = blockType == null ? ScheduleBlockType.BLOCK : blockType;
+
+        final List<ScheduleBlock> overlappingBlocks = scheduleBlockRepository
+                .findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(start, end, ScheduleBlockStatus.ACTIVE)
+                .stream()
+                .filter(block -> !blockId.equals(block.getId()))
+                .collect(Collectors.toList());
+
+        if (!overlappingBlocks.isEmpty()) {
+            throw new IllegalArgumentException("A block already exists for this time slot.");
+        }
+
+        final List<Reservation> conflictingReservations = normalizedType == ScheduleBlockType.BLOCK
+                ? reservationRepository.findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(start, end, ReservationStatus.ACTIVE)
+                : List.of();
+
+        conflictingReservations.forEach(reservation -> reservation.setStatus(ReservationStatus.CANCELLED));
+        if (!conflictingReservations.isEmpty()) {
+            reservationRepository.saveAll(conflictingReservations);
+        }
+
+        existingBlock.setStartDatetime(start);
+        existingBlock.setEndDatetime(end);
+        existingBlock.setBlockType(normalizedType);
+        existingBlock.setReason(normalizeReason(reason));
+
+        final ScheduleBlock saved = scheduleBlockRepository.save(existingBlock);
         return new CreateBlockResult(saved, conflictingReservations.size());
     }
 

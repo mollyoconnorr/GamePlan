@@ -15,6 +15,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -106,7 +109,8 @@ public class ScheduleBlockServiceTest {
                 trainerUser,
                 start,
                 end,
-                "Team event"
+                "Team event",
+                ScheduleBlockType.BLOCK
         );
 
         Reservation reloadedOverlap = reservationRepository.findById(overlapping.getId()).orElseThrow();
@@ -127,7 +131,8 @@ public class ScheduleBlockServiceTest {
                 trainerUser,
                 start,
                 end,
-                null
+                null,
+                ScheduleBlockType.BLOCK
         );
 
         assertTrue(scheduleBlockService.hasActiveBlockConflict(start.plusMinutes(1), end.minusMinutes(1)));
@@ -137,5 +142,98 @@ public class ScheduleBlockServiceTest {
         ScheduleBlock block = scheduleBlockRepository.findById(result.block().getId()).orElseThrow();
         assertEquals(ScheduleBlockStatus.CANCELLED, block.getStatus());
         assertFalse(scheduleBlockService.hasActiveBlockConflict(start.plusMinutes(1), end.minusMinutes(1)));
+    }
+
+    @Test
+    void testGetActiveBlocksIncludesWeekendBlocksForRange() {
+        LocalDateTime from = LocalDateTime.now()
+                .with(TemporalAdjusters.next(DayOfWeek.FRIDAY))
+                .withHour(0)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        LocalDateTime to = from.plusDays(3);
+
+        List<ScheduleBlock> blocks = scheduleBlockService.getActiveBlocks(from, to);
+
+        long weekendBlocks = blocks.stream()
+                .filter(block -> "Weekend".equals(block.getReason()))
+                .count();
+
+        assertEquals(2, weekendBlocks);
+        assertTrue(scheduleBlockService.hasWeekendConflict(from.plusHours(1), to.minusHours(1)));
+    }
+
+    @Test
+    void testCreateOpenWindowDoesNotCancelReservations() {
+        LocalDateTime start = LocalDateTime.now().with(TemporalAdjusters.next(DayOfWeek.SATURDAY))
+                .withHour(10)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        LocalDateTime end = start.plusHours(2);
+
+        Reservation reservation = new Reservation();
+        reservation.setUser(athleteUser);
+        reservation.setEquipment(equipment);
+        reservation.setStartDatetime(start.plusMinutes(30));
+        reservation.setEndDatetime(start.plusMinutes(60));
+        reservation.setStatus(ReservationStatus.ACTIVE);
+        reservationRepository.save(reservation);
+
+        ScheduleBlockService.CreateBlockResult result = scheduleBlockService.createBlock(
+                trainerUser,
+                start,
+                end,
+                "Open gym",
+                ScheduleBlockType.OPEN
+        );
+
+        Reservation reloaded = reservationRepository.findById(reservation.getId()).orElseThrow();
+        assertEquals(0, result.canceledReservations());
+        assertEquals(ReservationStatus.ACTIVE, reloaded.getStatus());
+        assertEquals(ScheduleBlockType.OPEN, result.block().getBlockType());
+    }
+
+    @Test
+    void testUpdateBlockCanCancelReservations() {
+        LocalDateTime start = LocalDateTime.now().with(TemporalAdjusters.next(DayOfWeek.THURSDAY))
+                .withHour(11)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+        LocalDateTime end = start.plusHours(1);
+
+        ScheduleBlockService.CreateBlockResult created = scheduleBlockService.createBlock(
+                trainerUser,
+                start,
+                end,
+                "Open gym",
+                ScheduleBlockType.OPEN
+        );
+
+        Reservation reservation = new Reservation();
+        reservation.setUser(athleteUser);
+        reservation.setEquipment(equipment);
+        reservation.setStartDatetime(start.plusMinutes(10));
+        reservation.setEndDatetime(end.minusMinutes(10));
+        reservation.setStatus(ReservationStatus.ACTIVE);
+        reservation = reservationRepository.save(reservation);
+
+        ScheduleBlockService.CreateBlockResult updated = scheduleBlockService.updateBlock(
+                created.block().getId(),
+                start,
+                end,
+                "Team event",
+                ScheduleBlockType.BLOCK
+        );
+
+        Reservation reloaded = reservationRepository.findById(reservation.getId()).orElseThrow();
+        ScheduleBlock reloadedBlock = scheduleBlockRepository.findById(created.block().getId()).orElseThrow();
+
+        assertEquals(1, updated.canceledReservations());
+        assertEquals(ReservationStatus.CANCELLED, reloaded.getStatus());
+        assertEquals(ScheduleBlockType.BLOCK, reloadedBlock.getBlockType());
+        assertEquals("Team event", reloadedBlock.getReason());
     }
 }

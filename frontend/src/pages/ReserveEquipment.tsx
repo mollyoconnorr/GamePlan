@@ -17,8 +17,14 @@ import ReservationDateTimePicker from "../components/ReservationDateTimePicker.t
 import {getFriendlyReservationErrorMessage} from "../util/ReservationErrorMessages.ts";
 import {getScheduleBlocks} from "../api/Blocks.ts";
 import {parseRawBlockToEvent} from "../util/ParseScheduleBlock.ts";
-import {getEquipmentTypeAttributeValues, type EquipmentTypeAttributeResponse} from "../api/Equipment.ts";
+import {getEquipmentTypeAttributes, type EquipmentTypeAttributeResponse} from "../api/Equipment.ts";
 import {cardPanelClassName, formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
+import AvailabilityNotice from "../components/AvailabilityNotice.tsx";
+import {
+    RESERVATION_DATA_CHANGED_EVENT,
+    dispatchReservationDataChanged,
+    type ReservationDataChangedDetail,
+} from "../util/AppDataEvents.ts";
 
 interface ReserveEquipmentProps extends CalendarData {
     reservations: Reservation[];
@@ -54,6 +60,22 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     const [selectedEndTime, setSelectedEndTime] = useState("");
     const [reservationErrorMessage, setReservationErrorMessage] = useState("");
     const [showCalendar, setShowCalendar] = useState(true);
+
+    const loadEquipmentTypeData = async (typeId: number) => {
+        const [attributeData, equipmentResponse] = await Promise.all([
+            getEquipmentTypeAttributes(typeId),
+            fetch(`/api/equipment-types/${typeId}/equipment`, {credentials: "include"}),
+        ]);
+
+        if (!equipmentResponse.ok) {
+            throw new Error("Failed to fetch equipment options.");
+        }
+
+        const definitions = parseTypeAttributes(attributeData);
+        const equipmentData = await equipmentResponse.json() as EquipmentWithReservations[];
+
+        return { definitions, equipmentData };
+    };
 
     const previewStart = selectedDate && selectedStartTime
         ? dayjs(`${selectedDate} ${selectedStartTime}`, "YYYY-MM-DD HH:mm")
@@ -115,6 +137,20 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     );
 
     const scheduleBlocksWithConflict = useMemo(() => {
+        const openWindowCoversPreview = Boolean(
+            previewStart &&
+            previewEnd &&
+            scheduleBlocks.some((event) => {
+                if (!event.isAvailability || !event.startIso || !event.endIso) {
+                    return false;
+                }
+
+                const eventStart = dayjs(event.startIso);
+                const eventEnd = dayjs(event.endIso);
+                return !previewStart.isBefore(eventStart) && !previewEnd.isAfter(eventEnd);
+            })
+        );
+
         return scheduleBlocks.map((event) => {
             if (!previewStart || !previewEnd || !event.startIso || !event.endIso) {
                 return { ...event, conflict: false };
@@ -123,8 +159,13 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
             const eventStart = dayjs(event.startIso);
             const eventEnd = dayjs(event.endIso);
             const overlaps = previewStart.isBefore(eventEnd) && eventStart.isBefore(previewEnd);
+            const conflict = event.isAvailability
+                ? false
+                : event.isWeekend
+                    ? overlaps && !openWindowCoversPreview
+                    : overlaps;
 
-            return { ...event, conflict: overlaps };
+            return { ...event, conflict };
         });
     }, [previewEnd, previewStart, scheduleBlocks]);
 
@@ -196,9 +237,12 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         userReservationConflict ||
         scheduleBlockConflict;
     const reservationStartsInPast = previewStart ? previewStart.isBefore(dayjs()) : false;
+    const firstConflictingScheduleBlock = scheduleBlocksWithConflict.find((event) => event.conflict);
     const conflictMessage = userReservationConflict
         ? "This overlaps another one of your reservations. Delete or adjust that reservation before booking again."
-        : scheduleBlockConflict
+        : firstConflictingScheduleBlock?.isWeekend
+            ? "Weekends are blocked off unless an open window is available. Choose a different time."
+        : firstConflictingScheduleBlock
             ? "This time slot is blocked by a trainer or admin. Pick a different slot."
         : "Someone else already has that equipment at this time; delete this pending reservation and try again or pick a different slot.";
 
@@ -244,29 +288,63 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         Boolean(selectedEndTime) &&
         Boolean(previewReservation);
 
-    // Fetch equipment data whenever one is selected
-    useEffect(() => {
-        if (!selectedEquipment) return;
+    const loadSelectedEquipmentReservations = async (silent = false) => {
+        if (!selectedEquipment) {
+            setEquipmentReservations([]);
+            return;
+        }
 
-        setLoading(true);
-        const fetchReservations = async () => {
-            try {
-                const data = await getEquipmentReservations(selectedEquipment);
-                setEquipmentReservations(data.map(parseRawResToEvent));
-            } catch (err) {
-                console.error(err);
-            } finally {
+        if (!silent) {
+            setLoading(true);
+        }
+
+        try {
+            const data = await getEquipmentReservations(selectedEquipment);
+            setEquipmentReservations(data.map(parseRawResToEvent));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            if (!silent) {
                 setLoading(false);
             }
-        };
+        }
+    };
 
-        fetchReservations();
+    const refreshSelectedType = async (silent = true) => {
+        if (selectedType === null) {
+            return;
+        }
+
+        try {
+            const { definitions, equipmentData } = await loadEquipmentTypeData(selectedType);
+            setAttributeDefinitions(definitions);
+            setAllEquipmentOptions(equipmentData);
+
+            if (selectedEquipment) {
+                await loadSelectedEquipmentReservations(true);
+            }
+        } catch (error) {
+            console.error(error);
+            if (!silent) {
+                setAttributeDefinitions([]);
+                setSelectedAttributeValues({});
+                setAllEquipmentOptions([]);
+            }
+        }
+    };
+
+    // Fetch equipment data whenever one is selected
+    useEffect(() => {
+        void loadSelectedEquipmentReservations();
     }, [selectedEquipment]);
 
     useEffect(() => {
         const fetchBlocks = async () => {
             try {
-                const data = await getScheduleBlocks();
+                const data = await getScheduleBlocks(
+                    firstDate.startOf("day").toISOString(),
+                    firstDate.add(numDays, "day").startOf("day").toISOString()
+                );
                 setScheduleBlocks(data.map(parseRawBlockToEvent));
             } catch (err) {
                 console.error("Failed to fetch schedule blocks:", err);
@@ -274,7 +352,54 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         };
 
         void fetchBlocks();
-    }, []);
+    }, [firstDate, numDays]);
+
+    useEffect(() => {
+        if (selectedType === null) {
+            return;
+        }
+
+        let active = true;
+        const refreshReservations = () => {
+            if (document.visibilityState !== "visible") {
+                return;
+            }
+
+            void refreshSelectedType(true).catch((error) => {
+                if (!active) return;
+                console.error(error);
+            });
+        };
+
+        const intervalId = window.setInterval(refreshReservations, 30_000);
+        window.addEventListener("focus", refreshReservations);
+        document.addEventListener("visibilitychange", refreshReservations);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+            window.removeEventListener("focus", refreshReservations);
+            document.removeEventListener("visibilitychange", refreshReservations);
+        };
+    }, [selectedEquipment, selectedType, selectedAttributeValues, allEquipmentOptions]);
+
+    useEffect(() => {
+        const handleReservationChange = (event: Event) => {
+            const detail = (event as CustomEvent<ReservationDataChangedDetail>).detail;
+            if (!detail) {
+                return;
+            }
+
+            if (selectedType === null) {
+                return;
+            }
+
+            void refreshSelectedType(true);
+        };
+
+        window.addEventListener(RESERVATION_DATA_CHANGED_EVENT, handleReservationChange);
+        return () => window.removeEventListener(RESERVATION_DATA_CHANGED_EVENT, handleReservationChange);
+    }, [selectedType, selectedEquipment, selectedAttributeValues, allEquipmentOptions]);
 
     useEffect(() => {
         // Clear stale API error copy when any selected reservation inputs change.
@@ -362,6 +487,48 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         return equipment.attributes.map((attribute) => `${attribute.name}: ${attribute.value}`).join(" · ");
     };
 
+    const availableAttributeOptions = useMemo(() => {
+        const optionsByAttribute = new Map<string, string[]>();
+
+        if (!selectedType || attributeDefinitions.length === 0 || allEquipmentOptions.length === 0) {
+            return optionsByAttribute;
+        }
+
+        attributeDefinitions.forEach((definition) => {
+            const matchingEquipment = allEquipmentOptions.filter((equipment) => {
+                const equipmentValues = new Map(
+                    equipment.attributes.map((attribute) => [attribute.name, attribute.value])
+                );
+
+                return attributeDefinitions.every((otherDefinition) => {
+                    if (otherDefinition.name === definition.name) {
+                        return true;
+                    }
+
+                    const selectedValue = selectedAttributeValues[otherDefinition.name];
+                    if (!selectedValue) {
+                        return true;
+                    }
+
+                    return equipmentValues.get(otherDefinition.name) === selectedValue;
+                });
+            });
+
+            const uniqueOptions = Array.from(new Set(
+                matchingEquipment
+                    .map((equipment) => {
+                        const value = equipment.attributes.find((attribute) => attribute.name === definition.name)?.value;
+                        return value?.trim() ?? "";
+                    })
+                    .filter(Boolean)
+            )).sort((left, right) => left.localeCompare(right));
+
+            optionsByAttribute.set(definition.name, uniqueOptions);
+        });
+
+        return optionsByAttribute;
+    }, [allEquipmentOptions, attributeDefinitions, selectedAttributeValues, selectedType]);
+
     // When equipment type changes
     const handleTypeChange = async (typeIdStr: string) => {
         const typeId = Number.parseInt(typeIdStr, 10);
@@ -376,18 +543,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         setAllEquipmentOptions([]);
 
         try {
-            const [attributeData, equipmentResponse] = await Promise.all([
-                getEquipmentTypeAttributeValues(typeId),
-                fetch(`/api/equipment-types/${typeId}/equipment`, {credentials: "include"}),
-            ]);
-
-            if (!equipmentResponse.ok) {
-                throw new Error("Failed to fetch equipment options.");
-            }
-
-            const definitions = parseTypeAttributes(attributeData);
-            const equipmentData = await equipmentResponse.json() as EquipmentWithReservations[];
-
+            const { definitions, equipmentData } = await loadEquipmentTypeData(typeId);
             setAttributeDefinitions(definitions);
             setSelectedAttributeValues(initializeSelectedAttributeValues(definitions));
             setAllEquipmentOptions(equipmentData);
@@ -428,6 +584,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
             const data = await makeReservation(payload);
 
             setReservations([...reservations, parseRawResToRes(data)])
+            dispatchReservationDataChanged("created");
 
             navigate("/app/home", {state: {toastMessage: "Reservation created!", view: "list"}});
 
@@ -474,6 +631,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                         {attributeDefinitions.map((attribute) => {
                             const normalizedAttributeName = attribute.name.toLowerCase().replace(/\s+/g, "-");
                             const attributeSelectId = `equipment-attribute-${normalizedAttributeName}`;
+                            const availableOptions = availableAttributeOptions.get(attribute.name) ?? [];
 
                             return (
                                 <div key={attribute.name}>
@@ -484,7 +642,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                         id={attributeSelectId}
                                         value={selectedAttributeValues[attribute.name] ?? ""}
                                         onChange={(value) => handleAttributeValueChange(attribute.name, value)}
-                                        options={attribute.options.map((option) => ({label: option, value: option}))}
+                                        options={availableOptions.map((option) => ({label: option, value: option}))}
                                         placeholder={`Select ${attribute.name}`}
                                     />
                                 </div>
@@ -568,6 +726,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                             timeStep={timeStep}
                             endTime={endTime}
                             maxResTime={maxResTime}
+                            scheduleBlocks={scheduleBlocks}
                             selectedDate={selectedDate}
                             selectedStartTime={selectedStartTime}
                             selectedEndTime={selectedEndTime}
@@ -611,6 +770,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                 {/* Calendar */}
                 {selectedEquipment && (
                     <>
+                        <AvailabilityNotice events={scheduleBlocks} className="mt-2" />
                         <div className="mt-4 flex flex-wrap gap-4 text-sm">
                             <LegendItem
                                 label="Your existing reservations"
@@ -625,9 +785,15 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                 borderStyle="dashed"
                             />
                             <LegendItem
-                                label="Admin/trainer blocked time"
+                                label="Unavailable time"
                                 fillColor="#111827"
                                 borderColor="#111827"
+                                borderStyle="solid"
+                            />
+                            <LegendItem
+                                label="Open window"
+                                fillColor="#166534"
+                                borderColor="#14532d"
                                 borderStyle="solid"
                             />
                         </div>

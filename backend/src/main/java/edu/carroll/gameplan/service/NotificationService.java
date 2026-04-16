@@ -2,6 +2,7 @@ package edu.carroll.gameplan.service;
 
 import edu.carroll.gameplan.model.Notification;
 import edu.carroll.gameplan.model.User;
+import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +20,12 @@ public class NotificationService {
     private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
+    private final EmailNotificationService emailNotificationService;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository,
+                               EmailNotificationService emailNotificationService) {
         this.notificationRepository = notificationRepository;
+        this.emailNotificationService = emailNotificationService;
     }
 
     /**
@@ -35,12 +39,19 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage(message);
-        Notification saved = notificationRepository.save(notification);
-        logger.debug(
-                "Notification created: notificationId={}, userId={}",
-                saved.getId(),
-                user != null ? user.getId() : null
-        );
+        notificationRepository.save(notification);
+        logger.debug("Created in-app notification for userId={}, role={}, email={}",
+                user != null ? user.getId() : null,
+                user != null ? user.getRole() : null,
+                user != null ? user.getEmail() : null);
+        if (user != null && UserRole.ATHLETE.equals(user.getRole())) {
+            logger.debug("Attempting notification email send for athlete userId={}", user.getId());
+            emailNotificationService.sendNotificationEmail(user, message);
+        } else {
+            logger.debug("Skipping notification email send because user is not ATHLETE. userId={}, role={}",
+                    user != null ? user.getId() : null,
+                    user != null ? user.getRole() : null);
+        }
     }
 
     /**

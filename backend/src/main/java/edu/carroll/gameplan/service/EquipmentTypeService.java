@@ -7,8 +7,11 @@ import edu.carroll.gameplan.model.Equipment;
 import edu.carroll.gameplan.model.EquipmentAttribute;
 import edu.carroll.gameplan.model.EquipmentStatus;
 import edu.carroll.gameplan.model.EquipmentType;
+import edu.carroll.gameplan.model.Reservation;
+import edu.carroll.gameplan.model.ReservationStatus;
 import edu.carroll.gameplan.repository.EquipmentRepository;
 import edu.carroll.gameplan.repository.EquipmentTypeRepository;
+import edu.carroll.gameplan.repository.ReservationRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -21,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 /**
  * Service class for handling business logic related to {@link EquipmentType}.
@@ -35,6 +39,7 @@ public class EquipmentTypeService {
 
     private final EquipmentTypeRepository equipmentTypeRepository;
     private final EquipmentRepository equipmentRepository;
+    private final ReservationRepository reservationRepository;
 
     /**
      * Constructor for dependency injection.
@@ -42,9 +47,11 @@ public class EquipmentTypeService {
      * @param equipmentTypeRepository repository for EquipmentType entities
      */
     public EquipmentTypeService(EquipmentTypeRepository equipmentTypeRepository,
-                                EquipmentRepository equipmentRepository) {
+                                EquipmentRepository equipmentRepository,
+                                ReservationRepository reservationRepository) {
         this.equipmentTypeRepository = equipmentTypeRepository;
         this.equipmentRepository = equipmentRepository;
+        this.reservationRepository = reservationRepository;
     }
 
     /**
@@ -369,9 +376,15 @@ public class EquipmentTypeService {
                 .map(attr -> new EquipmentAttributeDTO(attr.getName(), attr.getValue()))
                 .toList();
 
-        List<ReservationDTO> reservations = equipment.getReservations() == null
+        List<Reservation> activeReservations = equipment.getId() == null
                 ? List.of()
-                : equipment.getReservations().stream()
+                : reservationRepository.findByEquipmentIdAndEndDatetimeAfterAndStatusIs(
+                        equipment.getId(),
+                        LocalDateTime.now(),
+                        ReservationStatus.ACTIVE
+                );
+
+        List<ReservationDTO> reservations = activeReservations.stream()
                 .map(res -> new ReservationDTO(res.getId(), res.getStartDatetime(), res.getEndDatetime()))
                 .toList();
 

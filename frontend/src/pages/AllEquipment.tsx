@@ -7,6 +7,7 @@ import {getEquipmentTypeAttributes, updateEquipmentStatus} from "../api/Equipmen
 import {getEquipmentReservations} from "../api/Reservations.ts";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Toast from "../components/Toast.tsx";
+import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
 
 type StatusOption = {
     value: string;
@@ -70,6 +71,9 @@ export default function AllEquipment() {
                     ? ` ${canceledReservations} reservation${suffix} canceled.`
                     : "";
                 setToastMessage(`Equipment deleted.${canceledMessage}`);
+                if (canceledReservations > 0) {
+                    dispatchReservationDataChanged("canceled");
+                }
             } else {
                 setToastMessage("Failed to delete equipment");
             }
@@ -94,6 +98,9 @@ export default function AllEquipment() {
                 ? ` ${canceledReservations} reservation${suffix} canceled.`
                 : "";
             setToastMessage(`Status updated.${canceledMessage}`);
+            if (canceledReservations > 0) {
+                dispatchReservationDataChanged("canceled");
+            }
         } catch (error) {
             console.error("Failed to update equipment status:", error);
             setToastMessage("Failed to update equipment status");

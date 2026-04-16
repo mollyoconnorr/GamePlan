@@ -24,6 +24,10 @@ public class ScheduleBlock {
     @Column(nullable = false)
     private ScheduleBlockStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column
+    private ScheduleBlockType blockType = ScheduleBlockType.BLOCK;
+
     @Column(length = 500)
     private String reason;
 
@@ -39,12 +43,18 @@ public class ScheduleBlock {
 
     @PrePersist
     protected void onCreate() {
+        if (blockType == null) {
+            blockType = ScheduleBlockType.BLOCK;
+        }
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
     }
 
     @PreUpdate
     protected void onUpdate() {
+        if (blockType == null) {
+            blockType = ScheduleBlockType.BLOCK;
+        }
         updatedAt = LocalDateTime.now();
     }
 
@@ -78,6 +88,14 @@ public class ScheduleBlock {
 
     public void setStatus(ScheduleBlockStatus status) {
         this.status = status;
+    }
+
+    public ScheduleBlockType getBlockType() {
+        return blockType;
+    }
+
+    public void setBlockType(ScheduleBlockType blockType) {
+        this.blockType = blockType;
     }
 
     public String getReason() {

@@ -40,4 +40,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailIgnoreCase(String email);
 
     long countByRole(UserRole role);
+
+    long countByPendingApprovalTrue();
 }

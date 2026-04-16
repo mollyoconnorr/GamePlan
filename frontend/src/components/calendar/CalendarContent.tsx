@@ -8,6 +8,7 @@ import Toast from "../Toast.tsx";
 export default function CalendarContent(props: CalendarContentProps) {
     const cardMargin: number = 2;
     const [toastMessage, setToastMessage] = useState("");
+    const overlayEvents = props.events.filter((event) => !event.isBlock && !event.isAvailability);
 
     useEffect(() => {
         if (!toastMessage) return;
@@ -19,7 +20,7 @@ export default function CalendarContent(props: CalendarContentProps) {
     const dayEventMap: Map<number, CalendarEvent[]> = new Map();
 
     // Add events to their respective columns
-    props.events.forEach((e) => {
+    overlayEvents.forEach((e) => {
         // Column index (Each column is one day)
         const colIndex = props.dayMap.get(e.date);
 

@@ -8,6 +8,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.web.server.ResponseStatusException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -80,5 +85,46 @@ class UserServiceTest {
         when(userRepository.existsByEmailIgnoreCase("foo@example.com")).thenReturn(true);
 
         assertThat(userService.emailExists("foo@example.com")).isTrue();
+    }
+
+    /**
+     * Rejects stale sessions when the stored auth version no longer matches.
+     */
+    @Test
+    void resolveCurrentUserRejectsStaleAuthVersion() {
+        User user = new User();
+        user.setOidcUserId("sub-1");
+        user.setAuthVersion(2L);
+        when(userRepository.findByOidcUserId("sub-1")).thenReturn(java.util.Optional.of(user));
+
+        OAuth2AuthenticationToken authentication = org.mockito.Mockito.mock(OAuth2AuthenticationToken.class);
+        OidcUser principal = org.mockito.Mockito.mock(OidcUser.class);
+        when(authentication.getPrincipal()).thenReturn(principal);
+        when(principal.getAttribute("sub")).thenReturn("sub-1");
+        when(principal.getAttribute(VersionedOidcUser.AUTH_VERSION_ATTRIBUTE)).thenReturn(1L);
+
+        assertThatThrownBy(() -> userService.resolveCurrentUser(authentication))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
+     * Allows current sessions through when the auth version still matches.
+     */
+    @Test
+    void resolveCurrentUserAllowsMatchingAuthVersion() {
+        User user = new User();
+        user.setOidcUserId("sub-1");
+        user.setAuthVersion(2L);
+        when(userRepository.findByOidcUserId("sub-1")).thenReturn(java.util.Optional.of(user));
+
+        OAuth2AuthenticationToken authentication = org.mockito.Mockito.mock(OAuth2AuthenticationToken.class);
+        OidcUser principal = org.mockito.Mockito.mock(OidcUser.class);
+        when(authentication.getPrincipal()).thenReturn(principal);
+        when(principal.getAttribute("sub")).thenReturn("sub-1");
+        when(principal.getAttribute(VersionedOidcUser.AUTH_VERSION_ATTRIBUTE)).thenReturn(2L);
+
+        assertThatCode(() -> userService.resolveCurrentUser(authentication)).doesNotThrowAnyException();
     }
 }

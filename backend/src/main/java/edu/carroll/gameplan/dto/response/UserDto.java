@@ -13,6 +13,7 @@ package edu.carroll.gameplan.dto.response;
  * @param firstName The user's first name.
  * @param lastName  The user's last name.
  * @param role      The role of the user (e.g., ATHLETE, ADMIN).
+ * @param pendingApproval Whether the user is awaiting approval.
  */
 public record UserDto(
         String id,
@@ -20,6 +21,7 @@ public record UserDto(
         String username,
         String firstName,
         String lastName,
-        String role
+        String role,
+        boolean pendingApproval
 ) {
 }
