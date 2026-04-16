@@ -6,14 +6,18 @@ import {useLocation, useNavigate} from "react-router-dom";
 import ManageReservations from "../components/ManageReservations.tsx";
 import type {CalendarData, CalendarEvent, Notification, Reservation} from "../types.ts";
 import {deleteReservation, updateReservation} from "../api/Reservations.ts";
+import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
 import {fetchPendingUserCount} from "../api/Admin.ts";
 import {getNotifications, getUnreadNotificationCount, markNotificationAsRead} from "../api/Notifications.ts";
 import Toast from "../components/Toast.tsx";
+import AvailabilityNotice from "../components/AvailabilityNotice.tsx";
+import OffHoursReservationNotice from "../components/OffHoursReservationNotice.tsx";
+import BlockedTimeNotice from "../components/BlockedTimeNotice.tsx";
 
 interface HomeProps extends CalendarData {
     reservations: Reservation[];
     calendarEvents: CalendarEvent[];
-    loadReservations: () => Promise<void>;
+    loadReservations: (silent?: boolean) => Promise<void>;
     loading: boolean;
 }
 
@@ -23,7 +27,7 @@ type HomeLocationState = {
 }
 
 export default function Home(
-    { firstDate,startTime,endTime,timeStep,numDays,
+    { firstDate,startTime,endTime,timeStep,maxResTime,numDays,
         reservations, calendarEvents, loadReservations, loading}: HomeProps
 
 ){
@@ -32,6 +36,7 @@ export default function Home(
     const isTrainer = user.role === "AT";
     const isPrivileged = isTrainer || isAdmin;
     const isStudent = user.role === "STUDENT";
+    const isPendingApproval = Boolean(user.pendingApproval);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -140,10 +145,61 @@ export default function Home(
         };
     }, [isAdmin, showNotifications]);
 
+    useEffect(() => {
+        if (isAdmin) {
+            return;
+        }
+
+        let active = true;
+        const refreshNotificationsQuietly = () => {
+            if (document.visibilityState !== "visible") {
+                return;
+            }
+
+            if (showNotifications) {
+                getNotifications()
+                    .then((result) => {
+                        if (!active) return;
+                        setNotifications(result);
+                        setUnreadCount(0);
+                    })
+                    .catch((error) => {
+                        if (!active) return;
+                        const message = error instanceof Error ? error.message : "Failed to load notifications";
+                        setNotificationsError(message);
+                    });
+                return;
+            }
+
+            getUnreadNotificationCount()
+                .then((count) => {
+                    if (!active) return;
+                    setUnreadCount(count);
+                })
+                .catch((error) => {
+                    if (!active) return;
+                    const message = error instanceof Error ? error.message : "Failed to load notification count";
+                    setUnreadCountError(message);
+                });
+        };
+
+        const intervalId = window.setInterval(refreshNotificationsQuietly, 30_000);
+        window.addEventListener("focus", refreshNotificationsQuietly);
+        document.addEventListener("visibilitychange", refreshNotificationsQuietly);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+            window.removeEventListener("focus", refreshNotificationsQuietly);
+            document.removeEventListener("visibilitychange", refreshNotificationsQuietly);
+        };
+    }, [isAdmin, showNotifications]);
+
     const handleDeleteReservation = async (id: number) => {
         try {
             await deleteReservation(id);
-            await loadReservations();
+            await loadReservations(true);
+            dispatchReservationDataChanged("canceled");
         } catch (err) {
             console.error(err);
         }
@@ -214,7 +270,43 @@ export default function Home(
         };
     }, [isAdmin]);
 
-    if (isStudent) {
+    useEffect(() => {
+        if (!isAdmin) {
+            return;
+        }
+
+        let active = true;
+        const refreshPendingCount = () => {
+            if (document.visibilityState !== "visible") {
+                return;
+            }
+
+            setPendingCountError(null);
+            fetchPendingUserCount()
+                .then((count) => {
+                    if (!active) return;
+                    setPendingUserCount(count);
+                })
+                .catch((error) => {
+                    if (!active) return;
+                    const message = error instanceof Error ? error.message : "Failed to load pending users";
+                    setPendingCountError(message);
+                });
+        };
+
+        const intervalId = window.setInterval(refreshPendingCount, 30_000);
+        window.addEventListener("focus", refreshPendingCount);
+        document.addEventListener("visibilitychange", refreshPendingCount);
+
+        return () => {
+            active = false;
+            window.clearInterval(intervalId);
+            window.removeEventListener("focus", refreshPendingCount);
+            document.removeEventListener("visibilitychange", refreshPendingCount);
+        };
+    }, [isAdmin]);
+
+    if (isStudent && isPendingApproval) {
         return (
             <>
                 <Toast message={toastMessage} />
@@ -228,6 +320,23 @@ export default function Home(
                         </p>
                         <p className="mt-2 text-sm text-gray-500">
                             Once approved you will see the reservation calendar and reservation buttons appear here.
+                        </p>
+                    </div>
+                </section>
+            </>
+        );
+    }
+
+    if (isStudent) {
+        return (
+            <>
+                <Toast message={toastMessage} />
+                <section className="mx-5 md:mx-30 space-y-6">
+                    <h1 className="text-3xl font-bold text-gray-900">Hi, {user.firstName}</h1>
+                    <div className="rounded border bg-white p-6 shadow-sm">
+                        <p className="text-lg font-medium text-gray-900">Student access</p>
+                        <p className="mt-2 text-sm text-gray-600">
+                            Your account is set to student access. A trainer or admin can update your role if needed.
                         </p>
                     </div>
                 </section>
@@ -402,6 +511,21 @@ export default function Home(
                         )}
                     </div>
                 )}
+
+                {showCalendar && <AvailabilityNotice events={calendarEvents} />}
+
+                {showCalendar && <BlockedTimeNotice events={calendarEvents} className="mt-2" />}
+
+                {showCalendar && <OffHoursReservationNotice
+                    reservations={reservations}
+                    firstDate={firstDate}
+                    numDays={numDays}
+                    startTime={startTime}
+                    endTime={endTime}
+                    timeStep={timeStep}
+                    maxResTime={maxResTime}
+                    className="mt-2"
+                />}
 
                 {showCalendar && <Calendar
                     firstDate={firstDate}
