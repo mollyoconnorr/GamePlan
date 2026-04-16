@@ -2,7 +2,10 @@ package edu.carroll.gameplan.service;
 
 import edu.carroll.gameplan.model.Notification;
 import edu.carroll.gameplan.model.User;
+import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.NotificationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,10 +18,15 @@ import java.util.List;
 @Service
 public class NotificationService {
 
-    private final NotificationRepository notificationRepository;
+    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    private final NotificationRepository notificationRepository;
+    private final EmailNotificationService emailNotificationService;
+
+    public NotificationService(NotificationRepository notificationRepository,
+                               EmailNotificationService emailNotificationService) {
         this.notificationRepository = notificationRepository;
+        this.emailNotificationService = emailNotificationService;
     }
 
     /**
@@ -33,6 +41,18 @@ public class NotificationService {
         notification.setUser(user);
         notification.setMessage(message);
         notificationRepository.save(notification);
+        logger.debug("Created in-app notification for userId={}, role={}, email={}",
+                user != null ? user.getId() : null,
+                user != null ? user.getRole() : null,
+                user != null ? user.getEmail() : null);
+        if (user != null && UserRole.ATHLETE.equals(user.getRole())) {
+            logger.debug("Attempting notification email send for athlete userId={}", user.getId());
+            emailNotificationService.sendNotificationEmail(user, message);
+        } else {
+            logger.debug("Skipping notification email send because user is not ATHLETE. userId={}, role={}",
+                    user != null ? user.getId() : null,
+                    user != null ? user.getRole() : null);
+        }
     }
 
     /**
