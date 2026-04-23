@@ -101,6 +101,7 @@ describe("Equipment API", () => {
         const fetchMock = vi
             .fn()
             .mockResolvedValueOnce(response(true, { id: 5, name: "Bike 5" }))
+            .mockResolvedValueOnce(response(true))
             .mockResolvedValueOnce(response(true, { id: 5, name: "Bike Updated" }));
         vi.stubGlobal("fetch", fetchMock);
 

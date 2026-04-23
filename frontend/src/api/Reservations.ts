@@ -1,4 +1,5 @@
 import type {RawAdminReservation, RawReservation} from "../types.ts";
+import {apiFetch} from "./apiFetch.ts";
 
 /**
  * Tries to surface backend-provided error details from JSON or plain-text responses.
@@ -25,9 +26,8 @@ async function extractErrorMessage(response: Response, fallback: string) {
  * Fetches reservations belonging to the currently authenticated user.
  */
 export async function getReservations() {
-    const res = await fetch("/api/reservations", {
+    const res = await apiFetch("/api/reservations", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -38,9 +38,8 @@ export async function getReservations() {
 }
 
 export async function getActiveReservationsForAdmin() {
-    const res = await fetch("/api/reservations/admin", {
+    const res = await apiFetch("/api/reservations/admin", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -51,9 +50,8 @@ export async function getActiveReservationsForAdmin() {
 }
 
 export async function deleteReservation(id: number) {
-    const res = await fetch(`/api/reservations/${id}`, {
+    const res = await apiFetch(`/api/reservations/${id}`, {
         method: "DELETE",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -70,9 +68,8 @@ interface UpdateReservationRequest {
  * Updates an existing reservation's time range.
  */
 export async function updateReservation(id: number, request: UpdateReservationRequest) {
-    const res = await fetch(`/api/reservations/${id}`, {
+    const res = await apiFetch(`/api/reservations/${id}`, {
         method: "PUT",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -86,9 +83,8 @@ export async function updateReservation(id: number, request: UpdateReservationRe
 }
 
 export async function getEquipmentReservations(id: number) {
-    const res = await fetch(`/api/reservations/${id}`, {
+    const res = await apiFetch(`/api/reservations/${id}`, {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -108,9 +104,8 @@ interface MakeReservationRequest {
  * Creates a reservation for a specific equipment id and ISO date-time range.
  */
 export async function makeReservation(request: MakeReservationRequest) {
-    const res = await fetch("/api/reservations", {
+    const res = await apiFetch("/api/reservations", {
         method: "POST",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },

@@ -1,4 +1,5 @@
 import type {AdminUser} from "../types.ts";
+import {apiFetch} from "./apiFetch.ts";
 
 export async function extractErrorMessage(response: Response, fallback: string) {
     const body = await response.text();
@@ -19,9 +20,8 @@ export async function extractErrorMessage(response: Response, fallback: string) 
 }
 
 export async function fetchAdminUsers() {
-    const res = await fetch("/api/admin/users", {
+    const res = await apiFetch("/api/admin/users", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -33,9 +33,8 @@ export async function fetchAdminUsers() {
 }
 
 export async function updateUserRole(userId: number, role: string) {
-    const res = await fetch(`/api/admin/users/${userId}/role`, {
+    const res = await apiFetch(`/api/admin/users/${userId}/role`, {
         method: "POST",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -66,9 +65,8 @@ interface CreateAdminUserRequest {
 }
 
 export async function createAdminUser(request: CreateAdminUserRequest) {
-    const res = await fetch(`/api/admin/users`, {
+    const res = await apiFetch(`/api/admin/users`, {
         method: "POST",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -84,9 +82,8 @@ export async function createAdminUser(request: CreateAdminUserRequest) {
 }
 
 export async function fetchPendingUserCount(): Promise<number> {
-    const res = await fetch("/api/admin/users/pending-count", {
+    const res = await apiFetch("/api/admin/users/pending-count", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {

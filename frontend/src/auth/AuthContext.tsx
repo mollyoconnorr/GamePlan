@@ -1,5 +1,6 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import type {AuthState, User} from "../types.ts";
+import {apiFetch} from "../api/apiFetch.ts";
 
 const AuthContext = createContext<AuthState | null>(null);
 
@@ -23,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         try {
             // Call backend to refetch user data
-            const res = await fetch("/api/user");
+            const res = await apiFetch("/api/user");
 
             // If not code 200 (ok), user is not auth
             if (!res.ok) {

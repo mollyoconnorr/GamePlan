@@ -8,6 +8,7 @@ import {getEquipmentReservations} from "../api/Reservations.ts";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Toast from "../components/Toast.tsx";
 import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
+import {apiFetch} from "../api/apiFetch.ts";
 
 type StatusOption = {
     value: string;
@@ -58,9 +59,8 @@ export default function AllEquipment() {
     const handleDelete = async (id: number, canceledReservations = 0) => {
         setDeleteBusyId(id);
         try {
-            const response = await fetch(`/api/equipment/${id}`, {
+            const response = await apiFetch(`/api/equipment/${id}`, {
                 method: "DELETE",
-                credentials: "include",
             });
 
             if (response.ok) {
@@ -289,7 +289,7 @@ export default function AllEquipment() {
 
         const loadEquipment = async () => {
             try {
-                const response = await fetch("/api/equipment", { credentials: "include" });
+                const response = await apiFetch("/api/equipment");
                 const data = await response.json() as EquipmentDTO[];
                 if (cancelled) return;
                 setEquipmentList(data);

@@ -1,4 +1,5 @@
 import {extractErrorMessage} from "./Admin.ts";
+import {apiFetch} from "./apiFetch.ts";
 import type {RawScheduleBlock} from "../types.ts";
 
 interface CreateScheduleBlockRequest {
@@ -21,9 +22,8 @@ export async function getScheduleBlocks(from?: string, to?: string) {
     }
 
     const url = query.toString() ? `/api/blocks?${query.toString()}` : "/api/blocks";
-    const res = await fetch(url, {
+    const res = await apiFetch(url, {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -36,9 +36,8 @@ export async function getScheduleBlocks(from?: string, to?: string) {
 
 export async function createScheduleBlock(request: CreateScheduleBlockRequest) {
     // Creates a block and returns metadata (including canceled reservation count).
-    const res = await fetch("/api/blocks", {
+    const res = await apiFetch("/api/blocks", {
         method: "POST",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -54,9 +53,8 @@ export async function createScheduleBlock(request: CreateScheduleBlockRequest) {
 }
 
 export async function updateScheduleBlock(id: number, request: UpdateScheduleBlockRequest) {
-    const res = await fetch(`/api/blocks/${id}`, {
+    const res = await apiFetch(`/api/blocks/${id}`, {
         method: "PUT",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -73,9 +71,8 @@ export async function updateScheduleBlock(id: number, request: UpdateScheduleBlo
 
 export async function deleteScheduleBlock(id: number) {
     // Soft-deletes a persisted block.
-    const res = await fetch(`/api/blocks/${id}`, {
+    const res = await apiFetch(`/api/blocks/${id}`, {
         method: "DELETE",
-        credentials: "include",
     });
 
     if (!res.ok) {

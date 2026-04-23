@@ -5,6 +5,7 @@ import Toast from "../components/Toast.tsx";
 import {safeBack} from "../util/Navigation.ts";
 import {getEquipmentTypes, updateEquipmentType} from "../api/Equipment.ts";
 import {getEquipmentReservations} from "../api/Reservations.ts";
+import {apiFetch} from "../api/apiFetch.ts";
 import type {EquipmentDTO, EquipmentType} from "../api/Equipment.ts";
 import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
 
@@ -107,7 +108,7 @@ export default function EquipmentTypes() {
     }, []);
 
     const loadActiveReservationCountForType = async (typeId: number) => {
-        const equipmentResponse = await fetch("/api/equipment", {credentials: "include"});
+        const equipmentResponse = await apiFetch("/api/equipment");
         if (!equipmentResponse.ok) {
             throw new Error("Failed to load equipment for type deletion.");
         }
@@ -158,11 +159,10 @@ export default function EquipmentTypes() {
 
         setIsDeleting(true);
         try {
-            const response = await fetch(
+            const response = await apiFetch(
                 `/api/equipment-types/${deletingType.id}?force=true&confirm=confirm`,
                 {
                     method: "DELETE",
-                    credentials: "include",
                 }
             );
 

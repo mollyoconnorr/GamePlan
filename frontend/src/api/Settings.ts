@@ -1,4 +1,5 @@
 import {extractErrorMessage} from "./Admin.ts";
+import {apiFetch} from "./apiFetch.ts";
 import type {CalendarData} from "../types.ts";
 import {formatTwoDigits, parseTime, parseWholeNumber} from "../util/Time.ts";
 import dayjs from "dayjs";
@@ -45,9 +46,8 @@ type AppSettingsUpdatePayload = {
 export async function updateAppSettings(request: SettingsRequest): Promise<ParsedAppSettingsData> {
     const payload = toAppSettingsUpdatePayload(request);
 
-    const res = await fetch("/api/admin/settings", {
+    const res = await apiFetch("/api/admin/settings", {
         method: "PUT",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -97,9 +97,8 @@ function toAppSettingsUpdatePayload(request: SettingsRequest): AppSettingsUpdate
 }
 
 export async function getAppSettings(): Promise<ParsedAppSettingsData>{
-    const res = await fetch("/api/admin/settings", {
+    const res = await apiFetch("/api/admin/settings", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {

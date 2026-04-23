@@ -1,3 +1,5 @@
+import {apiFetch} from "./apiFetch.ts";
+
 export type EquipmentType = {
     id: number;
     name: string;
@@ -54,9 +56,8 @@ interface CreateEquipmentRequest {
 }
 
 export async function getEquipmentTypes() {
-    const res = await fetch("/api/equipment-types", {
+    const res = await apiFetch("/api/equipment-types", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -67,9 +68,8 @@ export async function getEquipmentTypes() {
 }
 
 export async function createEquipmentType(request: CreateEquipmentTypeRequest) {
-    const res = await fetch("/api/equipment-types", {
+    const res = await apiFetch("/api/equipment-types", {
         method: "POST",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -82,9 +82,8 @@ export async function createEquipmentType(request: CreateEquipmentTypeRequest) {
 }
 
 export async function updateEquipmentType(id: number, request: UpdateEquipmentTypeRequest) {
-    const res = await fetch(`/api/equipment-types/${id}`, {
+    const res = await apiFetch(`/api/equipment-types/${id}`, {
         method: "PUT",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -99,9 +98,8 @@ export async function updateEquipmentType(id: number, request: UpdateEquipmentTy
 }
 
 export async function getEquipmentTypeAttributes(typeId: number) {
-    const res = await fetch(`/api/equipment-types/${typeId}/attributes-all`, {
+    const res = await apiFetch(`/api/equipment-types/${typeId}/attributes-all`, {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -112,9 +110,8 @@ export async function getEquipmentTypeAttributes(typeId: number) {
 }
 
 export async function getEquipmentTypeAttributeValues(typeId: number) {
-    const res = await fetch(`/api/equipment-types/${typeId}/attributes`, {
+    const res = await apiFetch(`/api/equipment-types/${typeId}/attributes`, {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -125,9 +122,8 @@ export async function getEquipmentTypeAttributeValues(typeId: number) {
 }
 
 export async function createEquipment(request: CreateEquipmentRequest) {
-    const res = await fetch("/api/equipment", {
+    const res = await apiFetch("/api/equipment", {
         method: "POST",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -140,9 +136,8 @@ export async function createEquipment(request: CreateEquipmentRequest) {
 }
 
 export async function getEquipment(id: number) {
-    const res = await fetch(`/api/equipment/${id}`, {
+    const res = await apiFetch(`/api/equipment/${id}`, {
         method: "GET",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -153,9 +148,8 @@ export async function getEquipment(id: number) {
 }
 
 export async function updateEquipment(id: number, request: EquipmentUpdateRequest) {
-    const res = await fetch(`/api/equipment/${id}`, {
+    const res = await apiFetch(`/api/equipment/${id}`, {
         method: "PUT",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },
@@ -170,9 +164,8 @@ export async function updateEquipment(id: number, request: EquipmentUpdateReques
 }
 
 export async function deleteEquipment(id: number) {
-    const res = await fetch(`/api/equipment/${id}`, {
+    const res = await apiFetch(`/api/equipment/${id}`, {
         method: "DELETE",
-        credentials: "include",
     });
 
     if (!res.ok) {
@@ -181,9 +174,8 @@ export async function deleteEquipment(id: number) {
 }
 
 export async function updateEquipmentStatus(id: number, status: string) {
-    const res = await fetch(`/api/equipment/${id}/status`, {
+    const res = await apiFetch(`/api/equipment/${id}/status`, {
         method: "PUT",
-        credentials: "include",
         headers: {
             "Content-Type": "application/json",
         },

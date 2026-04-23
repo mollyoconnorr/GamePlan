@@ -52,14 +52,6 @@ describe("Admin API", () => {
         await promoteUserToTrainer(2);
         await demoteUserToAthlete(2);
 
-        expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/admin/users/2/role", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ role: "AT" }),
-        });
         expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/admin/users/2/role", {
             method: "POST",
             credentials: "include",
@@ -68,7 +60,15 @@ describe("Admin API", () => {
             },
             body: JSON.stringify({ role: "AT" }),
         });
-        expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/admin/users/2/role", {
+        expect(fetchMock).toHaveBeenNthCalledWith(4, "/api/admin/users/2/role", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ role: "AT" }),
+        });
+        expect(fetchMock).toHaveBeenNthCalledWith(6, "/api/admin/users/2/role", {
             method: "POST",
             credentials: "include",
             headers: {
@@ -81,6 +81,7 @@ describe("Admin API", () => {
     it("creates admin users and fetches pending count", async () => {
         const fetchMock = vi
             .fn()
+            .mockResolvedValueOnce(response(true))
             .mockResolvedValueOnce(response(true, { id: 3, email: "new@example.com" }))
             .mockResolvedValueOnce(response(true, { pending: 5 }));
         vi.stubGlobal("fetch", fetchMock);

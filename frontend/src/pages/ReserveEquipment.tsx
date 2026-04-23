@@ -12,6 +12,7 @@ import type {
     CalendarData
 } from "../types.ts";
 import {getEquipmentReservations, makeReservation} from "../api/Reservations.ts";
+import {apiFetch} from "../api/apiFetch.ts";
 import {parseRawResToEvent, parseRawResToRes, parseResToEvent} from "../util/ParseReservation.ts";
 import ReservationDateTimePicker from "../components/ReservationDateTimePicker.tsx";
 import {getFriendlyReservationErrorMessage} from "../util/ReservationErrorMessages.ts";
@@ -71,7 +72,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     const loadEquipmentTypeData = async (typeId: number) => {
         const [attributeData, equipmentResponse] = await Promise.all([
             getEquipmentTypeAttributes(typeId),
-            fetch(`/api/equipment-types/${typeId}/equipment`, {credentials: "include"}),
+            apiFetch(`/api/equipment-types/${typeId}/equipment`),
         ]);
 
         if (!equipmentResponse.ok) {
@@ -444,7 +445,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
     // Fetch equipment types on load
     useEffect(() => {
-        fetch("/api/equipment-types", {credentials: "include"})
+        apiFetch("/api/equipment-types")
             .then(res => res.json())
             .then(data => {
                 const formatted = (data as EquipmentTypeResponse[]).map((t) => ({

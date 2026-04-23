@@ -14,6 +14,8 @@ public class SecurityProps {
 
     private String logoutUrl;
 
+    private String baseUri;
+
     public String getSuccessUrl() {
         return successUrl;
     }
@@ -36,5 +38,13 @@ public class SecurityProps {
 
     public void setLogoutUrl(String logoutUrl) {
         this.logoutUrl = logoutUrl;
+    }
+
+    public String getBaseUri() {
+        return baseUri;
+    }
+
+    public void setBaseUri(String baseUri) {
+        this.baseUri = baseUri;
     }
 }

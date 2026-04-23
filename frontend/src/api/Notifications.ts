@@ -1,9 +1,9 @@
 import type {Notification} from "../types.ts";
+import {apiFetch} from "./apiFetch.ts";
 
 export async function getNotifications(): Promise<Notification[]> {
-    const response = await fetch("/api/notifications", {
+    const response = await apiFetch("/api/notifications", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!response.ok) {
@@ -14,9 +14,8 @@ export async function getNotifications(): Promise<Notification[]> {
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {
-    const response = await fetch("/api/notifications/unread-count", {
+    const response = await apiFetch("/api/notifications/unread-count", {
         method: "GET",
-        credentials: "include",
     });
 
     if (!response.ok) {
@@ -28,9 +27,8 @@ export async function getUnreadNotificationCount(): Promise<number> {
 }
 
 export async function markNotificationAsRead(id: number): Promise<void> {
-    const response = await fetch(`/api/notifications/${id}/read`, {
+    const response = await apiFetch(`/api/notifications/${id}/read`, {
         method: "PATCH",
-        credentials: "include",
     });
 
     if (!response.ok) {
