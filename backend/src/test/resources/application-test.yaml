@@ -11,9 +11,31 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: false
 
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/authorization-code/callback"
+            scope:
+              - openid
+              - profile
+              - email
+        provider:
+          okta:
+            authorization-uri: https://example.test/oauth2/v1/authorize
+            token-uri: https://example.test/oauth2/v1/token
+            jwk-set-uri: https://example.test/oauth2/v1/keys
+            user-info-uri: https://example.test/oauth2/v1/userinfo
+            user-name-attribute: sub
+
 # Need these in here so they can be passed to securityConfig but I don't think they're actually used.
 app:
   security:
+    base-uri: "/authorization-code/callback"
     success-url: "http://localhost:5173/app/home"
     logout-url: "http://localhost:5173/"
     allowed-origins:

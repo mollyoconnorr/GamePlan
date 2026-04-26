@@ -11,15 +11,15 @@ backend/out/
 backend/local.properties
 backend/.env
 backend/src/main/resources/application.properties
-backend/src/main/resources/
-# More explicit check just to make sure
+backend/src/main/resources/application.yaml
 backend/src/main/resources/application-dev.yaml
 backend/src/main/resources/application-prod.yaml
-backend/src/main/resources/application.yaml
 src/local.properties
 
 # Ignore static files
 backend/src/main/resources/static/*
+backend/logs/
+logs/
 
 .idea/
 *.iws
