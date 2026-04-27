@@ -16,6 +16,7 @@ export default function AdminUsers() {
     const [loading, setLoading] = useState(true);
     const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
     const [feedback, setFeedback] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
     const [pendingRoleMap, setPendingRoleMap] = useState<Record<number, "ATHLETE" | "AT">>({});
     const [confirmDialog, setConfirmDialog] = useState<{
         kind: "notApprove" | "makeAdmin" | "makeAthlete" | "makeStudent";
@@ -170,14 +171,35 @@ export default function AdminUsers() {
     const activeUsers = useMemo(() => users.filter((user) => !user.pendingApproval), [users]);
     const [view, setView] = useState<"pending" | "active">("pending");
     const [activeRoleFilter, setActiveRoleFilter] = useState<"ALL" | "STUDENT" | "ATHLETE" | "AT" | "ADMIN">("ALL");
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
-    const filteredActiveUsers = useMemo(() => {
-        if (activeRoleFilter === "ALL") {
-            return activeUsers;
+    const matchesSearchQuery = useCallback((user: AdminUser) => {
+        if (!normalizedSearchQuery) {
+            return true;
         }
 
-        return activeUsers.filter((user) => user.role === activeRoleFilter);
-    }, [activeRoleFilter, activeUsers]);
+        return [
+            user.firstName,
+            user.lastName,
+            `${user.firstName} ${user.lastName}`,
+            user.email,
+            user.role,
+            formatRoleLabel(user.role),
+        ].some((value) => value.toLowerCase().includes(normalizedSearchQuery));
+    }, [normalizedSearchQuery]);
+
+    const filteredPendingUsers = useMemo(
+        () => pendingUsers.filter(matchesSearchQuery),
+        [matchesSearchQuery, pendingUsers]
+    );
+
+    const filteredActiveUsers = useMemo(() => {
+        const roleFilteredUsers = activeRoleFilter === "ALL"
+            ? activeUsers
+            : activeUsers.filter((user) => user.role === activeRoleFilter);
+
+        return roleFilteredUsers.filter(matchesSearchQuery);
+    }, [activeRoleFilter, activeUsers, matchesSearchQuery]);
 
     const messageBanner = useMemo(() => {
         if (!feedback) return null;
@@ -207,6 +229,18 @@ export default function AdminUsers() {
 
                 {messageBanner}
 
+                <div className="max-w-xl">
+                    <label className="sr-only" htmlFor="admin-user-search">Search users</label>
+                    <input
+                        id="admin-user-search"
+                        type="search"
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Search by name, email, or role"
+                        className="w-full rounded border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                </div>
+
                 <div className="flex w-fit border rounded-sm shadow-md">
                     <Button
                         text="Pending"
@@ -234,9 +268,11 @@ export default function AdminUsers() {
                             <p className="text-sm text-gray-600">Loading pending requests...</p>
                         ) : pendingUsers.length === 0 ? (
                             <p className="text-sm text-gray-600">No pending requests.</p>
+                        ) : filteredPendingUsers.length === 0 ? (
+                            <p className="text-sm text-gray-600">No pending requests match your search.</p>
                         ) : (
                             <ul className="space-y-3">
-                                {pendingUsers.map((user) => {
+                                {filteredPendingUsers.map((user) => {
                                     const selectedRole = pendingRoleMap[user.id] ?? "ATHLETE";
                                     const isBusy = updatingUserId === user.id;
                                     return (
@@ -302,8 +338,10 @@ export default function AdminUsers() {
 
                         {loading ? (
                             <p>Loading users...</p>
-                        ) : filteredActiveUsers.length === 0 ? (
+                        ) : activeUsers.length === 0 ? (
                             <p>No active users yet.</p>
+                        ) : filteredActiveUsers.length === 0 ? (
+                            <p>No active users match your filters.</p>
                         ) : (
                             <ul className="space-y-3">
                                 {filteredActiveUsers.map((user) => {
