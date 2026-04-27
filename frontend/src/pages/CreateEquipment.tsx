@@ -24,11 +24,6 @@ type EquipmentTypeAttribute = {
     options: string[];
 };
 
-type SelectedAttribute = {
-    name: string;
-    value: string;
-};
-
 type PendingAction = "createType" | "createEquipment";
 
 const inputClassName = "w-full rounded-sm border border-gray-300 px-3 py-2 text-sm";
@@ -44,7 +39,7 @@ export default function CreateEquipment() {
     const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
     const [equipmentName, setEquipmentName] = useState("");
     const [attributes, setAttributes] = useState<EquipmentTypeAttribute[]>([]);
-    const [selectedAttribute, setSelectedAttribute] = useState<SelectedAttribute | null>(null);
+    const [selectedAttributeValues, setSelectedAttributeValues] = useState<Record<string, string>>({});
     const [toastMessage, setToastMessage] = useState("");
     const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,7 +167,7 @@ export default function CreateEquipment() {
     const handleTypeChange = async (typeIdValue: string) => {
         if (!typeIdValue) {
             setSelectedTypeId(null);
-            setSelectedAttribute(null);
+            setSelectedAttributeValues({});
             setAttributes([]);
             return;
         }
@@ -181,44 +176,41 @@ export default function CreateEquipment() {
         if (Number.isNaN(typeId)) return;
 
         setSelectedTypeId(typeId);
-        setSelectedAttribute(null);
+        setSelectedAttributeValues({});
         setAttributes([]);
 
         try {
             const data = await getEquipmentTypeAttributes(typeId);
-            setAttributes(parseAttributes(data));
+            const parsedAttributes = parseAttributes(data);
+            setAttributes(parsedAttributes);
+            setSelectedAttributeValues(
+                parsedAttributes.reduce<Record<string, string>>((acc, attr) => {
+                    acc[attr.name] = "";
+                    return acc;
+                }, {})
+            );
         } catch (error) {
             console.error(error);
             setAttributes([]);
+            setSelectedAttributeValues({});
             setToastMessage("Failed to load attributes.");
         }
     };
 
-    const handleAttributeChange = (selectedValue: string) => {
-        if (!selectedValue) {
-            setSelectedAttribute(null);
-            return;
-        }
-
-        try {
-            const parsed = JSON.parse(selectedValue) as SelectedAttribute;
-            if (!parsed.name || !parsed.value) {
-                setSelectedAttribute(null);
-                return;
-            }
-            setSelectedAttribute(parsed);
-        } catch (error) {
-            console.error("Invalid selected attribute payload:", error);
-            setSelectedAttribute(null);
-        }
+    const handleAttributeChange = (attributeName: string, selectedValue: string) => {
+        setSelectedAttributeValues((prev) => ({
+            ...prev,
+            [attributeName]: selectedValue,
+        }));
     };
 
     const createEquipment = async () => {
         if (!selectedType || !equipmentName.trim()) return false;
 
-        const attrMap = selectedAttribute
-            ? {[selectedAttribute.name]: selectedAttribute.value}
-            : {};
+        const attrMap = attributes.reduce<Record<string, string>>((acc, attr) => {
+            acc[attr.name] = selectedAttributeValues[attr.name] ?? "";
+            return acc;
+        }, {});
 
         try {
             await createEquipmentRequest({
@@ -230,7 +222,7 @@ export default function CreateEquipment() {
             setEquipmentName("");
             setSelectedTypeId(null);
             setAttributes([]);
-            setSelectedAttribute(null);
+            setSelectedAttributeValues({});
             setToastMessage("Equipment created.");
             return true;
         } catch (error) {
@@ -253,6 +245,13 @@ export default function CreateEquipment() {
             setToastMessage("Select a type and enter equipment name first.");
             return;
         }
+
+        const missingAttribute = attributes.find((attr) => !selectedAttributeValues[attr.name]);
+        if (missingAttribute) {
+            setToastMessage(`Select a value for ${missingAttribute.name}.`);
+            return;
+        }
+
         setPendingAction("createEquipment");
     };
 
@@ -416,30 +415,34 @@ export default function CreateEquipment() {
                     </div>
 
                     {attributes.length > 0 && (
-                        <div>
-                            <label htmlFor="equipment-attribute" className={labelClassName}>Attribute</label>
-                            <select
-                                id="equipment-attribute"
-                                value={selectedAttribute ? JSON.stringify(selectedAttribute) : ""}
-                                onChange={(e) => handleAttributeChange(e.target.value)}
-                                className={inputClassName}
-                            >
-                                <option value="">Select attribute</option>
-                                {attributes.map((attr) =>
-                                    attr.options.map((option) => {
-                                        const optionValue = JSON.stringify({
-                                            name: attr.name,
-                                            value: option,
-                                        });
-
-                                        return (
-                                            <option key={`${attr.name}-${option}`} value={optionValue}>
-                                                {attr.name}: {option}
-                                            </option>
-                                        );
-                                    })
-                                )}
-                            </select>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {attributes.map((attr) => (
+                                <div key={attr.name}>
+                                    <label htmlFor={`equipment-attribute-${attr.name}`} className={labelClassName}>
+                                        {attr.name}
+                                    </label>
+                                    <select
+                                        id={`equipment-attribute-${attr.name}`}
+                                        value={selectedAttributeValues[attr.name] ?? ""}
+                                        onChange={(e) => handleAttributeChange(attr.name, e.target.value)}
+                                        className={inputClassName}
+                                        disabled={attr.options.length === 0}
+                                    >
+                                        {attr.options.length === 0 ? (
+                                            <option value="">No options configured</option>
+                                        ) : (
+                                            <>
+                                                <option value="">Select {attr.name}</option>
+                                                {attr.options.map((option) => (
+                                                    <option key={`${attr.name}-${option}`} value={option}>
+                                                        {option}
+                                                    </option>
+                                                ))}
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
+                            ))}
                         </div>
                     )}
 
