@@ -1,73 +1,101 @@
-# React + TypeScript + Vite
+# GamePlan Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React, TypeScript, and Vite single-page app for GamePlan. The app lives in `frontend/`, talks to the Spring Boot backend through same-origin API paths, and is packaged into the backend JAR for production.
 
-Currently, two official plugins are available:
+For the full frontend manual, see `../documentation/manuals/FrontendDeveloperGuide.md`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Stack
 
-## React Compiler
+- React 19
+- TypeScript
+- Vite 7
+- React Router 7
+- Tailwind CSS 4
+- Day.js
+- Lucide React
+- Vitest, jsdom, React Testing Library, and jest-dom
+- ESLint 9
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Install
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm ci
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Use `npm ci` for normal setup from `package-lock.json`. Use `npm install` only when intentionally changing dependencies.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Development
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Start the backend from `../backend`:
+
+```bash
+./gradlew bootRun
 ```
+
+Then start Vite from this directory:
+
+```bash
+npm run dev
+```
+
+The frontend runs at:
+
+```text
+http://localhost:5173
+```
+
+Vite proxies `/api`, `/oauth2`, `/login`, and `/logout` to the backend at `http://localhost:8080` so session cookies, OAuth2 redirects, logout, and CSRF behavior work with same-origin frontend paths.
+
+## Scripts
+
+```bash
+npm run lint
+npm test
+npm run test:watch
+npm run build
+npm run preview
+```
+
+`npm run build` runs `tsc -b && vite build` and writes production assets to `dist/`.
+
+## Production Packaging
+
+The backend `bootJar` task builds and packages the frontend:
+
+```bash
+cd ../backend
+./gradlew bootJar
+```
+
+Gradle runs the frontend build and copies `frontend/dist` into the Spring Boot JAR under `BOOT-INF/classes/static`.
+
+## Project Layout
+
+```text
+src/
+  api/                 Backend API wrappers and shared apiFetch behavior
+  auth/                Auth provider, hooks, and route guard
+  components/          Shared UI components
+  components/calendar/ Calendar components and types
+  pages/               Route-level screens
+  styles/              Shared style helpers
+  util/                Parsing, time, navigation, and app event helpers
+  App.tsx              Authenticated app shell and routes
+  main.tsx             BrowserRouter/AuthProvider entry point
+  types.ts             Shared frontend types
+tests/
+  setup.ts             Vitest setup
+  unit/                Unit and component tests
+```
+
+## Development Rules
+
+- Use API wrappers in `src/api/` and call `apiFetch` instead of raw `fetch` for backend calls.
+- Add shared types to `src/types.ts` when multiple modules need them.
+- Keep route-level UI in `src/pages/` and reusable UI in `src/components/`.
+- Add or update tests under `tests/unit/` for behavior changes.
+- Run `npm run lint`, `npm test`, and `npm run build` before merging frontend changes.
+
+## Generated Files
+
+`dist/` is build output. `coverage/` is generated test coverage output; do not update it manually. If coverage artifacts are not intentionally part of a change, leave them out of commits.

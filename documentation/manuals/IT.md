@@ -1,57 +1,317 @@
-This manual documents how to set up a remote Virtual Machine and run GamePlan on that VM. It covers installing the required dependencies and compiling / running the app.
-# Software installation
+# GamePlan IT Manual
+
+This manual documents how to set up a Ubuntu VM for GamePlan and run the app as a `systemd` service. The production deployment uses one Spring Boot JAR that contains both the backend and the built frontend.
+
+# Software Installation
+
 ## Java
-GamePlan was built with Java 21, to install on a Ubuntu VM:
-1. Update package list
+
+GamePlan requires Java 21.
+
 ```bash
-$ sudo apt update
+sudo apt update
+sudo apt install -y openjdk-21-jdk
+java --version
 ```
-2. Install OpenJDK 21
-```bash
-$ sudo apt install openjdk-17-jdk
-```
-3. Verify Installation
-```bash
-$ java --version
-# Should Show something like: 
-openjdk 21.0.10 2026-01-20
-OpenJDK Runtime Environment (build 21.0.10+7-Ubuntu-124.04)
-OpenJDK 64-Bit Server VM (build 21.0.10+7-Ubuntu-124.04, mixed mode, sharing)
-```
+
+The version output should show OpenJDK 21.
+
 ## MySQL
 
-
-## Node.js / npm
-
-## NGINX
-To allow access to the app via `gameplan.carroll.edu` instead of `gameplan.carroll.edu:8080` we set up a reverse proxy on the VM using nginx. Here are the steps we followed for setting this up:
-1. Install nginx
 ```bash
-$ sudo apt install nginx
+sudo apt update
+sudo apt install -y mysql-server
+sudo systemctl start mysql
+sudo systemctl enable mysql
+sudo systemctl status mysql
 ```
 
-Verify installation with: 
+Secure the installation:
+
 ```bash
-$ nginx -version
-# Should show something like
-nginx version: nginx/1.24.0 (Ubuntu)
+sudo mysql_secure_installation
 ```
-2. Make sure the app is bound locally <br>
-This means running the app on `127.0.0.1:8080`. This keeps port `8080` off the public internet.
-We did this by adding the following to our production yaml file:
+
+Typical choices:
+
+- Set root password: yes
+- Remove anonymous users: yes
+- Disallow remote root login: yes
+- Remove test database: yes
+- Reload privileges: yes
+
+## Node.js and npm
+
+The Gradle production build runs the frontend build, so Node.js and npm must be installed wherever `./gradlew bootJar` is run.
+
+```bash
+sudo apt update
+sudo apt install -y nodejs npm
+node -v
+npm -v
+```
+
+## Git
+
+The VM should clone the repository and build the application locally.
+
+```bash
+sudo apt update
+sudo apt install -y git
+git --version
+```
+
+# Database Setup
+
+Log in to MySQL as root:
+
+```bash
+sudo mysql -u root -p
+```
+
+Create the database and application user:
+
+```sql
+CREATE DATABASE gameplan_db;
+CREATE USER 'gameplan_user'@'localhost' IDENTIFIED BY 'Your_password_here';
+GRANT ALL PRIVILEGES ON gameplan_db.* TO 'gameplan_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Replace `Your_password_here` with a secure password. Use the same database name, username, and password in the production YAML files below.
+
+# Application Directories
+
+Create a log directory for GamePlan so the app can write log files outside the repository, and give `csadmin` permission because the systemd service runs as `csadmin`.
+
+```bash
+sudo mkdir -p /var/log/gameplan
+sudo chown -R csadmin:csadmin /var/log/gameplan
+```
+
+# Configuration YAML Files
+
+For production, keep VM-specific configuration outside the Git checkout. Put the config files in:
+
+```text
+/etc/gameplan/application.yaml
+/etc/gameplan/application-prod.yaml
+```
+
+Create `/etc/gameplan` to hold production config outside the Git checkout. This keeps VM-specific settings and secrets from being overwritten by `git pull`.
+
+```bash
+sudo mkdir -p /etc/gameplan
+```
+
+## `/etc/gameplan/application.yaml`
+
+This file contains settings shared by all profiles. Production database credentials can live here because the systemd service loads this external config directory.
+
 ```yaml
 server:
-	port: 8080
-	address: 127.0.0.1
+  port: 8080
+
+spring:
+  profiles:
+    default: prod
+  datasource:
+    url: jdbc:mysql://localhost:3306/gameplan_db
+    username: gameplan_user
+    password: Your_password_here
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
 ```
 
-3. Create an nginx site config
-Create:
-```bash
-$ sudo nano /etc/nginx/sites-available/gameplan
+## `/etc/gameplan/application-prod.yaml`
+
+This file contains production-only settings. The app binds to `127.0.0.1` so nginx can expose it publicly while port `8080` stays local to the VM.
+
+```yaml
+server:
+  port: 8080
+  address: 127.0.0.1
+  forward-headers-strategy: framework
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            redirect-uri: "{baseUrl}/authorization-code/callback"
+            client-id: Your_okta_client_id
+            client-secret: Your_okta_client_secret
+            scope:
+              - openid
+              - profile
+              - email
+            authorization-grant-type: authorization_code
+        provider:
+          okta:
+            issuer-uri: https://carroll.okta.com
+
+logging:
+  level:
+    root: INFO
+    edu.carroll.gameplan: INFO
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [req:%X{requestId:-}] [user:%X{principal:-}] %logger{36} - %msg%n"
+
+gameplan:
+  logging:
+    dir: /var/log/gameplan
+
+app:
+  security:
+    success-url: "http://gameplan.carroll.edu/app/home"
+    logout-url: "http://gameplan.carroll.edu/"
+    allowed-origins:
+      - "http://gameplan.carroll.edu"
+    base-uri: "/authorization-code/callback"
 ```
-And we put the following in it:
+
+Replace `Your_password_here`, `Your_okta_client_id`, and `Your_okta_client_secret` with production values. Keep secrets out of the repository.
+
+Lock down the config files so `root` owns them, `csadmin` can read them, and other users cannot read production secrets.
+
 ```bash
+sudo chown -R root:csadmin /etc/gameplan
+sudo chmod 750 /etc/gameplan
+sudo chmod 640 /etc/gameplan/application.yaml /etc/gameplan/application-prod.yaml
+```
+
+# Build the Project
+
+Clone the repository into the `csadmin` home directory. This is where systemd will run the app from, and keeping the checkout under `csadmin` lets normal deploy commands run without changing file ownership.
+
+```bash
+cd /home/csadmin
+git clone https://github.com/mollyoconnorr/GamePlan.git
+```
+
+Build the production JAR on the VM:
+
+```bash
+cd /home/csadmin/GamePlan/backend
+./gradlew bootJar
+```
+
+The `bootJar` task builds the frontend from `frontend/`, copies the built assets into the backend JAR, and writes the deployable artifact to:
+
+```text
+/home/csadmin/GamePlan/backend/build/libs/GamePlan-0.0.1.jar
+```
+
+# Run GamePlan with systemd
+
+Create the service file:
+
+This file tells systemd how to start GamePlan, which user to run it as, where the JAR is located, and when to restart it.
+
+```bash
+sudo nano /etc/systemd/system/gameplan.service
+```
+
+Use this service definition:
+
+```ini
+[Unit]
+Description=GamePlan Spring Boot App
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+User=csadmin
+Group=csadmin
+WorkingDirectory=/home/csadmin/GamePlan
+ExecStart=/usr/bin/java -jar /home/csadmin/GamePlan/backend/build/libs/GamePlan-0.0.1.jar --spring.profiles.active=prod --spring.config.additional-location=file:/etc/gameplan/
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Load and start the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable gameplan
+sudo systemctl start gameplan
+sudo systemctl status gameplan
+```
+
+`enable` starts the app automatically after reboot. `Restart=always` starts it again if the Java process exits unexpectedly.
+
+## Updating the App
+
+Pull the latest code, rebuild the JAR, and restart the service:
+
+```bash
+cd /home/csadmin/GamePlan
+git pull
+cd backend
+./gradlew bootJar
+sudo systemctl restart gameplan
+sudo systemctl status gameplan
+```
+
+## Useful systemd Commands
+
+```bash
+sudo systemctl status gameplan
+sudo systemctl restart gameplan
+sudo systemctl stop gameplan
+sudo systemctl start gameplan
+sudo systemctl disable gameplan
+```
+
+# Logging
+
+Application logs are written to `/var/log/gameplan/gameplan.log` when `gameplan.logging.dir` is set as shown in `application-prod.yaml`.
+
+View service logs from systemd:
+
+```bash
+sudo journalctl -u gameplan -f
+```
+
+View the application log file:
+
+```bash
+sudo tail -f /var/log/gameplan/gameplan.log
+```
+
+# NGINX
+
+NGINX exposes the app at `gameplan.carroll.edu` and proxies requests to the Spring Boot app on `127.0.0.1:8080`.
+
+Install nginx:
+
+```bash
+sudo apt install -y nginx
+nginx -version
+```
+
+Create the nginx site config. This file tells nginx to accept traffic for `gameplan.carroll.edu` and forward it to the local Spring Boot server.
+
+```bash
+sudo nano /etc/nginx/sites-available/gameplan
+```
+
+Use this config:
+
+```nginx
 server {
     listen 80;
     server_name gameplan.carroll.edu;
@@ -71,132 +331,66 @@ server {
 }
 ```
 
-`server_name` is how nginx matches requests for the alias to the correct server block, and nginx’s docs describe using `proxy_pass` for proxying plus special handling for WebSocket upgrade headers when needed.
-4. Enable the site
-```bash
-$ sudo ln -s /etc/nginx/sites-available/myapp /etc/nginx/sites-enabled/
-```
-
-Optional: remove the default site if it is conflicting:
+Enable the site by linking it into `sites-enabled`, which is the directory nginx reads for active site configs.
 
 ```bash
-$ sudo rm /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/gameplan /etc/nginx/sites-enabled/
 ```
 
-5. Test and reload nginx
+If the default site conflicts, remove it:
+
 ```bash
-$ sudo nginx -t  
-
-# Should show something like
-nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
-nginx: configuration file /etc/nginx/nginx.conf test is successful
-
-$ sudo systemctl reload nginx
+sudo rm /etc/nginx/sites-enabled/default
 ```
-The nginx guide documents testing config and reloading after changes.
-# Build Project
 
-Navigate to `gameplan/backend`
+Test and reload nginx:
+
 ```bash
-$ cd backend # If in root folder
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-```
-$ ./gradlew bootJar
-```
+# Add an Admin User
 
-This will build the React project into the `resources/static` folder of the Spring Boot / Java backend. Then, it builds the backend and the frontend into a runnable application JAR. This is built into the `build/libs` folder, and the full path and name looks something like
+Log in to MySQL with the GamePlan user:
+
 ```bash
-$ build/libs/GamePlan-0.0.1.jar
+mysql -u gameplan_user -p
 ```
 
-To run this jar, run
-```bash
-$ java -jar build/libs/GamePlan-0.0.1.jar --spring.profiles.active=prod
+Select the database:
+
+```sql
+USE gameplan_db;
 ```
 
-`--spring.profiles.active=prod` runs the app in **production mode**. To run in **development mode**, change `prod` to `dev`.
-## What happens
+Insert the admin user:
 
-- Starts embedded server (Tomcat by default)
-- Runs on port `8080` (unless configured otherwise)
-- Serves:
-    - API endpoints (e.g., `/api/...`)
-    - frontend (`index.html` + assets)
-
-## Copy jar to VM
-If you don't have the project on the VM, you can copy just the jar to the VM
-```
-$ scp build/libs/gameplan-0.0.1.jar user@your-vm-ip:/home/user/
-```
-Replace user with your username on the vm and `your-vm-ip` ewit hthe ip address
-
-**NOTE**:
-This will replace the file on the VM if it exists with the same name. If a process is running that file, it will be unaffected so it'll need to be restarted to apply the new code.
-# Run app
-1. SSH into the VM
-```bash
-$ ssh user@your-vm-ip
-```
-2. Make sure Java is installed
-```bash
-$ java --version
-```
-3. Run the app
-**Before doing this, make sure to stop any running instances, see [Stop app](#Stop app) FIX LINK**
-```bash
-$ nohup java -jar gameplan-0.0.1.jar --spring.profiles.active=prod > app.log 2>&1 &
-```
-What this command does:
-*  `nohup`
-	- “no hang up”
-	- prevents the process from stopping when your SSH session ends
-	- without this, the app dies when you close the terminal
-* `java -jar gameplan-0.0.1.jar --spring.profiles.active=prod`
-	- starts the Spring Boot app in production mode
-* * `> app.log`
-	- redirects **standard output (stdout)** to `app.log`
-	- this includes normal logs (e.g., Spring Boot startup logs)
-* `2>&1`
-	- redirects **standard error (stderr)** to the same place as stdout
-	- so errors also go into `app.log`
-* `&`
-	- runs the process in the background
-	- returns your terminal immediately
-<a id="stop-app"></a> 
-# Stop app
-
-There's probably a few ways to stop running the app, but here's the way we used:
-1. Find the process ID:
-```bash
-$ ps aux | grep gameplan
-```
-This will show something like:
-```bash
-csadmin   139223  0.1  5.5 5817644 448448 ?      Sl   Apr09   1:41 java -jar **gameplan**-0.0.1.jar --spring.profiles.active=prod # This shows only if the app is running 
-
-csadmin   144169  0.0  0.0   6544  2456 pts/0    S+   14:04   0:00 grep --color=auto **gameplan** # This is you searching for the app
+```sql
+INSERT INTO users (
+    pending_approval,
+    auth_version,
+    created_at,
+    email,
+    first_name,
+    last_name,
+    oidc_user_id,
+    role
+)
+VALUES (
+    FALSE,
+    0,
+    NOW(),
+    'newuser@carroll.edu',
+    'New',
+    'User',
+    NULL,
+    'ADMIN'
+);
 ```
 
-From the output, the process ID (PID) is `139223`.
-2. Kill the process
-```bash
-$ kill <PID> # 139223 would go here
-```
+Replace the email, first name, and last name with the real admin's information.
 
-# Useful commands
-### Check logs:
-```bash
-$ tail -f app.log
-```
-This looks at the tail of the file and then streams it, so any new lines written will be shown while this command is being ran. 
+The OIDC ID can stay `NULL`. When the admin logs in, GamePlan matches the Okta email, fills in the OIDC ID automatically, and keeps the seeded role.
 
-### Find the process:
-```bash
-$ ps aux | grep gameplan
-```
-
-### Kill it:
-```bash
-$ kill <PID>
-```
+Make sure the seeded email exactly matches the email Okta sends, ignoring case. If Okta sends a different alias, GamePlan may create a separate pending student account.

@@ -92,7 +92,7 @@ Use `npm ci` for reproducible installs from `package-lock.json`. Use `npm instal
 Start the backend first from `backend/`:
 
 ```bash
-./run-dev.sh
+./gradlew bootRun
 ```
 
 Then start the frontend from `frontend/`:
@@ -144,8 +144,9 @@ npm run lint
 The lint config applies to TypeScript and TSX files, ignores `dist`, and includes recommended rules for JavaScript, TypeScript, React Hooks, and React Refresh/Vite.
 
 ## Building For Production
-**NOTE: The current production setup builds the frontend into the backend when .`/gradlew bootJar` is ran** <br>
-<br>
+
+The production setup builds the frontend into the backend when `./gradlew bootJar` runs from `backend/`.
+
 Build the frontend directly:
 
 ```bash
@@ -221,6 +222,8 @@ Important authenticated routes include:
 - `/app/allEquipment`
 - `/app/equipment/:equipmentId/edit`
 
+Note: `AppShell` currently redirects privileged users from `/app` and `/app/reserveEquipment` to `/app/admin/reservations`. If that route is not implemented, those redirects should be updated or the admin reservations route should be added.
+
 ## Auth And API Access
 
 Auth state lives in `src/auth/AuthContext.tsx`.
@@ -250,6 +253,7 @@ Unsafe methods are any methods outside `GET`, `HEAD`, `OPTIONS`, and `TRACE`.
 - Shared app-level calendar state and reservation refresh logic live in `AppShell` inside `src/App.tsx`.
 - Reservation data refreshes on initial load, relevant custom app events, focus/visibility changes, and a 30-second visible-tab interval.
 - App settings from `/api/admin/settings` drive calendar window, time step, maximum reservation time, and weekend blocking behavior.
+- Athlete home notifications use `src/api/Notifications.ts` and poll unread notification state while the user is active in the app.
 
 ## Adding New Frontend Features
 
@@ -295,6 +299,11 @@ npm audit
 - Review audit output before running automatic fixes. `npm audit fix --force` can introduce breaking major-version upgrades and should not be used blindly.
 - Remove unused dependencies instead of leaving them in `package.json`.
 - Watch major framework upgrades carefully, especially React, React Router, Vite, Vitest, Tailwind, and TypeScript.
+
+### Generated Artifacts
+
+- `frontend/dist/` is production build output.
+- `frontend/coverage/` is generated test coverage output. Do not update it manually, and leave it out of commits unless the project intentionally tracks refreshed coverage reports.
 
 ### Browser Security
 
