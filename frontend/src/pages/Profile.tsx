@@ -6,7 +6,8 @@ export default function Profile() {
     const roleMap: Map<string, string> = new Map([
         ["ATHLETE","Athlete"],
         ["AT","Athletic Trainer"],
-        ["ADMIN","Administrator"]
+        ["ADMIN","Administrator"],
+        ["STUDENT","Student"]
     ]);
 
     return (
@@ -23,9 +24,6 @@ export default function Profile() {
 
                     <p className="font-semibold text-gray-700 my-5">Role</p>
                     <p className="my-5">{roleMap.get(user.role) || `Unknown`}</p>
-
-                    <p className="font-semibold text-gray-700">Username</p>
-                    <p>{user.username}</p>
 
                     <p className="font-semibold text-gray-700">Email</p>
                     <p>{user.email}</p>
