@@ -4,18 +4,44 @@ import Spinner from "../components/Spinner.tsx";
 
 const BACKEND_LOGOUT_URL = "/api/logout";
 
+type CsrfResponse = {
+    parameterName?: string;
+    token?: string;
+};
+
 export default function Logout() {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-    const handleConfirmLogout = () => {
+    const handleConfirmLogout = async () => {
         setIsLoggingOut(true);
 
-        // Use top-level form POST so browser follows Spring/OIDC logout redirects
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = BACKEND_LOGOUT_URL;
-        document.body.appendChild(form);
-        form.submit();
+        try {
+            const response = await fetch("/api/csrf", {
+                method: "GET",
+                credentials: "include",
+            });
+
+            const csrf = response.ok ? await response.json() as CsrfResponse : {};
+
+            // Use top-level form POST so browser follows Spring/OIDC logout redirects.
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = BACKEND_LOGOUT_URL;
+
+            if (csrf.parameterName && csrf.token) {
+                const csrfInput = document.createElement("input");
+                csrfInput.type = "hidden";
+                csrfInput.name = csrf.parameterName;
+                csrfInput.value = csrf.token;
+                form.appendChild(csrfInput);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        } catch (error) {
+            console.error("Failed to start logout:", error);
+            setIsLoggingOut(false);
+        }
     };
 
     return (
