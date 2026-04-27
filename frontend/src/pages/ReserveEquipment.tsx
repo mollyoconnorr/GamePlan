@@ -357,11 +357,22 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     }, [selectedEquipment]);
 
     useEffect(() => {
+        if (numDays <= 0 || !firstDate.isValid()) {
+            return;
+        }
+
         const fetchBlocks = async () => {
+            const from = firstDate.startOf("day");
+            const to = firstDate.add(numDays, "day").startOf("day");
+
+            if (!to.isAfter(from)) {
+                return;
+            }
+
             try {
                 const data = await getScheduleBlocks(
-                    firstDate.startOf("day").toISOString(),
-                    firstDate.add(numDays, "day").startOf("day").toISOString()
+                    from.toISOString(),
+                    to.toISOString()
                 );
                 setScheduleBlocks(data.map(parseRawBlockToEvent));
             } catch (err) {
@@ -850,6 +861,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                 variant={"equip"}
                                 reservations={visibleDisplayedReservations}
                                 loading={loading}
+                                focusStartIso={previewReservation?.startIso}
                             />
                         ) : (
                             <ManageReservations

@@ -11,6 +11,7 @@ export interface CalendarProps {
     reservations?: CalendarEvent[];
     equipmentId?: number;
     loading: boolean;
+    focusStartIso?: string;
     onEditReservation?: (id: number, start: Dayjs, end: Dayjs) => Promise<void> | void;
     onDeleteReservation?: (id: number) => Promise<void> | void;
 }

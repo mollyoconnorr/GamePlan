@@ -128,6 +128,7 @@ export default function Calendar(props: CalendarProps) {
 
     // Used to align absolutely-positioned overlay events with the rendered grid width.
     const divRef = useRef<HTMLDivElement | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const [size, setSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
@@ -143,8 +144,47 @@ export default function Calendar(props: CalendarProps) {
         return () => observer.disconnect();
     }, []);
 
+    useEffect(() => {
+        if (!props.focusStartIso || !scrollContainerRef.current) {
+            return;
+        }
+
+        const focusStart = dayjs(props.focusStartIso);
+        if (!focusStart.isValid()) {
+            return;
+        }
+
+        const dayIndex = focusStart.startOf("day").diff(props.firstDate.startOf("day"), "day");
+        if (dayIndex < 0 || dayIndex >= props.numDays) {
+            return;
+        }
+
+        const minutesFromStart = focusStart.diff(
+            focusStart
+                .hour(props.startTime.hour())
+                .minute(props.startTime.minute())
+                .second(0)
+                .millisecond(0),
+            "minute"
+        );
+        const rowIndex = Math.max(0, Math.floor(minutesFromStart / props.timeStepMin));
+        const dayWidth = Math.max(
+            DAY_MIN_W,
+            (scrollContainerRef.current.scrollWidth - TIME_W) / props.numDays
+        );
+
+        scrollContainerRef.current.scrollTo({
+            left: Math.max(0, TIME_W + dayWidth * dayIndex - TIME_W),
+            top: Math.max(0, CELL_H + rowIndex * CELL_H - CELL_H * 2),
+            behavior: "smooth",
+        });
+    }, [props.focusStartIso, props.firstDate, props.numDays, props.startTime, props.timeStepMin]);
+
     return (
-        <div className="relative bg-gray-300 rounded-sm border shadow-md overflow-x-auto overflow-y-auto">
+        <div
+            ref={scrollContainerRef}
+            className="relative bg-gray-300 rounded-sm border shadow-md overflow-x-auto overflow-y-auto"
+        >
             {/* HEADER ROW */}
             <div className="sticky top-0 z-30 grid bg-gray-400" style={headerGridStyle} ref={divRef}>
                 {/* top-left corner cell */}

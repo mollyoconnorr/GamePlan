@@ -100,7 +100,12 @@ export default function CalendarContent(props: CalendarContentProps) {
             const groupEndIndex = Math.max(...indexedEvents.map((e) => e.endIndex));
 
             // Push group to days array (Key is col index, each col represents a day)
-            const groupKey = `${key}-${groupStartIndex}-${groupEndIndex}-${indexedEvents.map((e) => e.event.id).join("-")}`;
+            const groupKey = [
+                key,
+                groupStartIndex,
+                groupEndIndex,
+                ...indexedEvents.map((e) => buildCalendarEventKey(e.event)),
+            ].join("-");
 
             dayEventMapHTML.get(key)!.push(
                 <div
@@ -113,7 +118,7 @@ export default function CalendarContent(props: CalendarContentProps) {
                         right: 0,
                     }}
                 >
-                    {overlapping.map((e) => {
+                    {overlapping.map((e, eventIndex) => {
                         // Time index
                         const startIndex = props.timeMap.get(e.startTime);
                         const endIndex = props.timeMap.get(e.endTime);
@@ -124,7 +129,7 @@ export default function CalendarContent(props: CalendarContentProps) {
 
                         // Day card
                         return <CalendarCard
-                            key={e.name + e.date + e.startTime}
+                            key={`${buildCalendarEventKey(e)}-${eventIndex}`}
                             event={e}
                             eventDay={props.firstDate.add(key, "day")}
                             startTime={props.startTime}
@@ -172,4 +177,16 @@ export default function CalendarContent(props: CalendarContentProps) {
             </div>
         </>
     );
+}
+
+function buildCalendarEventKey(event: CalendarEvent) {
+    return [
+        event.id,
+        event.name,
+        event.date,
+        event.startIso ?? event.startTime,
+        event.endIso ?? event.endTime,
+        event.description ?? "",
+        event.temp ? "temp" : "saved",
+    ].join("|");
 }
