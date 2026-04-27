@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,6 +51,22 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertTrue(String.valueOf(response.getBody()).contains("forbidden"));
+    }
+
+    @Test
+    void handleResponseStatusExceptionPreservesStatusAndReason() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/notifications/unread-count");
+
+        ResponseEntity<?> response = handler.handleResponseStatus(
+                new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your role changed. Please sign in again."),
+                request
+        );
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        String body = String.valueOf(response.getBody());
+        assertTrue(body.contains("Unauthorized"));
+        assertTrue(body.contains("Your role changed. Please sign in again."));
     }
 
     @Test

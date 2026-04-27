@@ -3,6 +3,7 @@ import { Component, type PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth, useAuthedUser } from "../../../src/auth/AuthContext.tsx";
 import type { User } from "../../../src/types.ts";
+import { SESSION_INVALIDATED_EVENT } from "../../../src/api/apiFetch.ts";
 
 function authResponse(ok: boolean, user?: User): Response {
     return {
@@ -13,12 +14,13 @@ function authResponse(ok: boolean, user?: User): Response {
 
 function AuthProbe() {
     // Probe exposes context state to assertions
-    const { loading, user, refresh } = useAuth();
+    const { loading, user, sessionMessage, refresh } = useAuth();
 
     return (
         <div>
             <div data-testid="loading">{String(loading)}</div>
             <div data-testid="username">{user?.username ?? "none"}</div>
+            <div data-testid="session-message">{sessionMessage ?? "none"}</div>
             <button type="button" onClick={() => void refresh()}>
                 refresh
             </button>
@@ -163,6 +165,34 @@ describe("AuthContext", () => {
         fireEvent.click(screen.getByRole("button", { name: "refresh" }));
         await waitFor(() => expect(screen.getByTestId("username")).toHaveTextContent("second"));
         expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("shows a session message and clears the user when the session is invalidated", async () => {
+        const user: User = {
+            id: "u1",
+            email: "test@example.com",
+            username: "tester",
+            firstName: "Test",
+            lastName: "User",
+            role: "ATHLETE",
+        };
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(authResponse(true, user)));
+
+        render(
+            <AuthProvider>
+                <AuthProbe />
+            </AuthProvider>,
+        );
+
+        await waitFor(() => expect(screen.getByTestId("username")).toHaveTextContent("tester"));
+
+        window.dispatchEvent(new CustomEvent(SESSION_INVALIDATED_EVENT, {
+            detail: { message: "Your role changed. Please sign in again." },
+        }));
+
+        await waitFor(() => expect(screen.getByTestId("username")).toHaveTextContent("none"));
+        expect(screen.getByTestId("session-message")).toHaveTextContent("Your role changed. Please sign in again.");
+        expect(screen.getAllByText("Your role changed. Please sign in again.").length).toBeGreaterThan(0);
     });
 
     it("useAuthedUser returns a non-null user when authenticated", async () => {

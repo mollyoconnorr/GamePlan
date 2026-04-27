@@ -308,6 +308,7 @@ export default function AdminUsers() {
                             <ul className="space-y-3">
                                 {filteredActiveUsers.map((user) => {
                                     const isTrainer = user.role === "AT";
+                                    const isAthlete = user.role === "ATHLETE";
                                     const isAdmin = user.role === "ADMIN";
                                     const isSelf = currentUser?.username === user.oidcUserId;
                                     const disableChange = updatingUserId === user.id || isSelf;
@@ -338,14 +339,16 @@ export default function AdminUsers() {
                                                     disabled={isTrainer || disableChange}
                                                 />
                                                 <Button
-                                                    text={user.role === "STUDENT" ? "Make athlete" : "Revert to athlete"}
+                                                    text={user.role === "STUDENT" ? "Make athlete" : isAthlete ? "Athlete" : "Revert to athlete"}
                                                     className={`border ${
-                                                        user.role === "STUDENT"
+                                                        isAthlete
+                                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                            : user.role === "STUDENT"
                                                             ? "bg-primary text-white hover:bg-primary-hover"
                                                             : "bg-white text-gray-700 hover:bg-gray-50"
                                                     }`}
-                                                    onClick={() => !disableChange && handleMakeAthlete(user.id, `${user.firstName} ${user.lastName}`)}
-                                                    disabled={disableChange}
+                                                    onClick={() => !isAthlete && !disableChange && handleMakeAthlete(user.id, `${user.firstName} ${user.lastName}`)}
+                                                    disabled={isAthlete || disableChange}
                                                 />
                                                 <Button
                                                     text="Make admin"

@@ -37,6 +37,8 @@ function toHeaderObject(headers?: HeadersInit): Record<string, string> {
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+export const SESSION_INVALIDATED_EVENT = "gameplan:session-invalidated";
+const ROLE_CHANGED_MESSAGE = "Your role changed. Please sign in again.";
 
 async function ensureXsrfToken(): Promise<string | undefined> {
     await fetch("/api/csrf", {
@@ -73,5 +75,31 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
         requestInit.headers = headers;
     }
 
-    return fetch(input, requestInit);
+    const response = await fetch(input, requestInit);
+    void notifyIfSessionInvalidated(response);
+    return response;
+}
+
+async function notifyIfSessionInvalidated(response: Response) {
+    if (response.status !== 401 || typeof window === "undefined") {
+        return;
+    }
+
+    const message = await extractResponseMessage(response);
+    if (message !== ROLE_CHANGED_MESSAGE) {
+        return;
+    }
+
+    window.dispatchEvent(new CustomEvent(SESSION_INVALIDATED_EVENT, {
+        detail: { message },
+    }));
+}
+
+async function extractResponseMessage(response: Response): Promise<string> {
+    try {
+        const body = await response.clone().json() as { message?: string };
+        return body.message ?? "";
+    } catch {
+        return "";
+    }
 }

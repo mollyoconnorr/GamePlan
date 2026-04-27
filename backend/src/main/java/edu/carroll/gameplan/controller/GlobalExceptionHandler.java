@@ -6,12 +6,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 
@@ -38,6 +40,13 @@ public class GlobalExceptionHandler {
         return buildResponse(status, ex, request);
     }
 
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiErrorResponse> handleResponseStatus(ResponseStatusException ex,
+                                                                 HttpServletRequest request) {
+        logHandledException(request, ex.getStatusCode(), ex);
+        return buildResponse(ex.getStatusCode(), ex, request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
         final HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -54,7 +63,7 @@ public class GlobalExceptionHandler {
         return buildResponse(status, ex, request);
     }
 
-    private void logHandledException(HttpServletRequest request, HttpStatus status, Exception ex) {
+    private void logHandledException(HttpServletRequest request, HttpStatusCode status, Exception ex) {
         logger.warn(
                 "Handled request exception: method={}, path={}, status={}, requestId={}, message={}",
                 request.getMethod(),
@@ -68,17 +77,46 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status,
                                                            Exception ex,
                                                            HttpServletRequest request) {
+        return buildResponse((HttpStatusCode) status, ex, request);
+    }
+
+    private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatusCode status,
+                                                           Exception ex,
+                                                           HttpServletRequest request) {
         final String requestId = resolveRequestId(request);
-        final String message = StringUtils.hasText(ex.getMessage()) ? ex.getMessage() : status.getReasonPhrase();
+        final String error = resolveReasonPhrase(status);
+        final String message = resolveErrorMessage(status, ex, error);
         final ApiErrorResponse body = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),
-                status.getReasonPhrase(),
+                error,
                 message,
                 request.getRequestURI(),
                 requestId
         );
         return ResponseEntity.status(status).body(body);
+    }
+
+    private String resolveReasonPhrase(HttpStatusCode status) {
+        if (status instanceof HttpStatus httpStatus) {
+            return httpStatus.getReasonPhrase();
+        }
+
+        return "HTTP " + status.value();
+    }
+
+    private String resolveErrorMessage(HttpStatusCode status, Exception ex, String fallback) {
+        if (ex instanceof ResponseStatusException responseStatusException
+                && StringUtils.hasText(responseStatusException.getReason())) {
+            return responseStatusException.getReason();
+        }
+
+        final String message = ex.getMessage();
+        if (StringUtils.hasText(message)) {
+            return message;
+        }
+
+        return fallback;
     }
 
     private String resolveRequestId(HttpServletRequest request) {
