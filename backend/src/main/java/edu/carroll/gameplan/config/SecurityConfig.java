@@ -1,5 +1,6 @@
 package edu.carroll.gameplan.config;
 
+import edu.carroll.gameplan.service.CustomOidcUserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,12 +10,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -40,6 +43,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    LogoutSuccessHandler oidcLogoutSuccessHandler,
+                                                   CustomOidcUserService customOidcUserService,
                                                    @Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps props){
         CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
 
@@ -60,6 +64,9 @@ public class SecurityConfig {
                         .redirectionEndpoint(redir -> redir
                                 .baseUri(props.getBaseUri())
                         )
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .oidcUserService(customOidcUserService)
+                        )
                         .defaultSuccessUrl(props.getSuccessUrl(), true)
                         .failureHandler((request, response, exception) ->
                                 response.sendRedirect(buildLoginFailureRedirectUrl(props.getLogoutUrl()))
@@ -68,6 +75,12 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/api/logout")
                         .logoutSuccessHandler(oidcLogoutSuccessHandler)
+                )
+                .exceptionHandling(exceptions -> exceptions
+                        .defaultAuthenticationEntryPointFor(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                                request -> request.getRequestURI().startsWith(request.getContextPath() + "/api/")
+                        )
                 )
                 // Ensure SPA clients receive XSRF-TOKEN cookie to mirror into X-XSRF-TOKEN header.
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
