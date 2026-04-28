@@ -1,11 +1,17 @@
 import {useMemo} from "react";
 import type {CalendarData, Reservation} from "../types.ts";
 
+/**
+ * Defines the props required by the OffHoursReservationNotice component.
+ */
 type OffHoursReservationNoticeProps = CalendarData & {
     reservations?: Reservation[];
     className?: string;
 };
 
+/**
+ * Renders the OffHoursReservationNotice view.
+ */
 export default function OffHoursReservationNotice({
     reservations = [],
     startTime,

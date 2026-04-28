@@ -1,6 +1,9 @@
 import type {CalendarEvent, RawAdminReservation, RawReservation, Reservation} from "../types.ts";
 import dayjs from "dayjs";
 
+/**
+ * Parses input into RawResToRes.
+ */
 export function parseRawResToRes(reservation: RawReservation): Reservation {
     return {
         start: dayjs(reservation.start),
@@ -11,6 +14,9 @@ export function parseRawResToRes(reservation: RawReservation): Reservation {
     };
 }
 
+/**
+ * Parses input into ResToEvent.
+ */
 export function parseResToEvent(reservation: Reservation): CalendarEvent {
     return {
         id: reservation.id,
@@ -25,10 +31,16 @@ export function parseResToEvent(reservation: Reservation): CalendarEvent {
     };
 }
 
+/**
+ * Parses input into RawResToEvent.
+ */
 export function parseRawResToEvent(reservation: RawReservation): CalendarEvent {
     return parseResToEvent(parseRawResToRes(reservation));
 }
 
+/**
+ * Parses input into AdminRawResToEvent.
+ */
 export function parseAdminRawResToEvent(reservation: RawAdminReservation): CalendarEvent {
     const athleteName = [reservation.athleteFirstName, reservation.athleteLastName]
         .filter(Boolean)
@@ -47,6 +59,9 @@ export function parseAdminRawResToEvent(reservation: RawAdminReservation): Calen
     };
 }
 
+/**
+ * Parses input into AdminRawResToRes.
+ */
 export function parseAdminRawResToRes(reservation: RawAdminReservation): Reservation {
     const athleteName = [reservation.athleteFirstName, reservation.athleteLastName]
         .filter(Boolean)

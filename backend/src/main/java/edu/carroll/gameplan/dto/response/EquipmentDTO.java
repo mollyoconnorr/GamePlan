@@ -14,32 +14,20 @@ public class EquipmentDTO {
     /**
      * Unique identifier of the equipment.
      */
-    /**
-     * Unique identifier of the equipment.
-     */
     private Long id;
 
     /**
      * Name of the equipment.
-     */
-    /**
-     * Equipment display name.
      */
     private String name;
 
     /**
      * Status of the equipment (e.g., AVAILABLE, RESERVED).
      */
-    /**
-     * Current status label for the equipment (AVAILABLE, etc.).
-     */
     private String status;
 
     /**
      * Name of the equipment type this equipment belongs to.
-     */
-    /**
-     * Human-readable name of the equipment type.
      */
     private String typeName;
 
@@ -50,9 +38,6 @@ public class EquipmentDTO {
 
     /**
      * List of attribute DTOs describing additional properties of the equipment.
-     */
-    /**
-     * Attribute list describing equipment properties.
      */
     private List<AttributeDTO> attributes;
 

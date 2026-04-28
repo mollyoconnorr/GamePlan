@@ -20,8 +20,9 @@ import java.util.Locale;
 /**
  * Service class for managing reservations.
  * <p>
- * Handles CRUD operations for {@link Reservation}, including creating, updating,
- * canceling, and fetching reservations for a user. Also handles equipment availability checks.
+ * Manages {@link Reservation} creation, updates, cancellation, and lookup. This service owns the
+ * reservation-specific business rules for equipment availability, user conflicts, schedule blocks,
+ * and weekend booking restrictions.
  * </p>
  */
 @Service
@@ -175,6 +176,9 @@ public class ReservationService {
         return saved;
     }
 
+    /**
+     * Notifies a reservation owner when staff cancels the reservation on their behalf.
+     */
     private void notifyOwnerOfCancellation(Reservation reservation, User actingUser) {
         if (reservation == null || reservation.getUser() == null) {
             return;
@@ -198,6 +202,9 @@ public class ReservationService {
         notificationService.createNotification(reservation.getUser(), message);
     }
 
+    /**
+     * Formats the staff user's display name for cancellation notifications.
+     */
     private String formatActingUserName(User actingUser) {
         if (actingUser == null) {
             return "an athletic trainer";
@@ -224,6 +231,11 @@ public class ReservationService {
         return builder.toString();
     }
 
+    /**
+     * Returns future active reservations for a single equipment item.
+     *
+     * @return active reservations whose end time has not passed
+     */
     @Transactional(readOnly = true)
     public List<Reservation> getActiveReservationsForEquipment(Long equipmentId) {
         return reservationRepository.findByEquipmentIdAndEndDatetimeAfterAndStatusIs(
@@ -353,6 +365,9 @@ public class ReservationService {
                 .orElseThrow(() -> new IllegalArgumentException("Equipment not found with id: " + equipmentId));
     }
 
+    /**
+     * Prevents athlete-created reservations that touch a weekend while weekend blocking is enabled.
+     */
     private void enforceWeekendRestrictionForAthletes(User user, LocalDateTime start, LocalDateTime end) {
         if (user == null || UserRole.ADMIN.equals(user.getRole()) || UserRole.AT.equals(user.getRole())) {
             return;
@@ -371,8 +386,12 @@ public class ReservationService {
         }
     }
 
+    /**
+     * Checks whether any date in a half-open reservation range falls on Saturday or Sunday.
+     */
     private boolean rangeTouchesWeekend(LocalDateTime start, LocalDateTime end) {
         LocalDate current = start.toLocalDate();
+        // Treat the reservation end as exclusive so a booking ending exactly at midnight does not count the next day.
         LocalDate inclusiveEnd = end.minusNanos(1).toLocalDate();
 
         while (!current.isAfter(inclusiveEnd)) {

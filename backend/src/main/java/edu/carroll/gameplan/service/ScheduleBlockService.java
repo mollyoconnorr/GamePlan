@@ -45,6 +45,9 @@ public class ScheduleBlockService {
     private final AppSettingsRepository appSettingsRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Creates a schedule block service with the repositories needed to manage blocks and affected reservations.
+     */
     public ScheduleBlockService(ScheduleBlockRepository scheduleBlockRepository,
                                 ReservationRepository reservationRepository,
                                 AppSettingsRepository appSettingsRepository,
@@ -61,6 +64,11 @@ public class ScheduleBlockService {
     public record CreateBlockResult(ScheduleBlock block, int canceledReservations) {
     }
 
+    /**
+     * Returns active blocks that overlap the optional query window.
+     *
+     * @return active schedule blocks ordered by start time
+     */
     @Transactional(readOnly = true)
     public List<ScheduleBlock> getActiveBlocks(LocalDateTime from, LocalDateTime to) {
         if (from != null && to != null && !from.isBefore(to)) {
@@ -78,11 +86,17 @@ public class ScheduleBlockService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Creates a manual blocking schedule block.
+     */
     @Transactional
     public CreateBlockResult createBlock(User createdBy, LocalDateTime start, LocalDateTime end, String reason) {
         return createBlock(createdBy, start, end, reason, ScheduleBlockType.BLOCK);
     }
 
+    /**
+     * Creates a schedule block and cancels active reservations when the block type prevents booking.
+     */
     @Transactional
     public CreateBlockResult createBlock(User createdBy, LocalDateTime start, LocalDateTime end, String reason, ScheduleBlockType blockType) {
         validateRange(start, end);
@@ -126,6 +140,9 @@ public class ScheduleBlockService {
         return new CreateBlockResult(saved, conflictingReservations.size());
     }
 
+    /**
+     * Updates an active schedule block and cancels reservations newly covered by a hard block.
+     */
     @Transactional
     public CreateBlockResult updateBlock(Long blockId, LocalDateTime start, LocalDateTime end, String reason, ScheduleBlockType blockType) {
         validateRange(start, end);
@@ -167,6 +184,9 @@ public class ScheduleBlockService {
         return new CreateBlockResult(saved, conflictingReservations.size());
     }
 
+    /**
+     * Cancels an active schedule block by marking it inactive.
+     */
     @Transactional
     public void cancelBlock(Long id) {
         final ScheduleBlock block = scheduleBlockRepository.findById(id)
@@ -182,6 +202,9 @@ public class ScheduleBlockService {
         logger.info("Schedule block cancelled: blockId={}", id);
     }
 
+    /**
+     * Checks whether the requested range overlaps any active block.
+     */
     @Transactional(readOnly = true)
     public boolean hasActiveBlockConflict(LocalDateTime start, LocalDateTime end) {
         validateRange(start, end);
@@ -238,6 +261,7 @@ public class ScheduleBlockService {
                     .toList();
 
             if (!blocksToCancel.isEmpty()) {
+                // Replace partial/manual overlaps so the weekend setting owns the full configured day window.
                 blocksToCancel.forEach(block -> block.setStatus(ScheduleBlockStatus.CANCELLED));
                 scheduleBlockRepository.saveAll(blocksToCancel);
                 blocksCancelled += blocksToCancel.size();
@@ -258,6 +282,7 @@ public class ScheduleBlockService {
                     );
 
             if (!conflictingReservations.isEmpty()) {
+                // Weekend auto-blocks make the day unavailable immediately, so existing bookings must be cancelled.
                 conflictingReservations.forEach(reservation -> reservation.setStatus(ReservationStatus.CANCELLED));
                 reservationRepository.saveAll(conflictingReservations);
                 reservationsCancelled += conflictingReservations.size();
@@ -303,6 +328,9 @@ public class ScheduleBlockService {
         logger.info("Weekend auto blocks removed: cancelledBlocks={}", autoWeekendBlocks.size());
     }
 
+    /**
+     * Validates that a block range has both endpoints and a positive duration.
+     */
     private void validateRange(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             throw new IllegalArgumentException("Block start and end time are required.");
@@ -313,6 +341,9 @@ public class ScheduleBlockService {
         }
     }
 
+    /**
+     * Normalizes empty block reasons to null before persistence.
+     */
     private String normalizeReason(String reason) {
         if (reason == null) {
             return null;
@@ -322,6 +353,9 @@ public class ScheduleBlockService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    /**
+     * Resolves the user that should be recorded as the creator for automatic weekend blocks.
+     */
     private User resolveWeekendBlockCreator(User triggerUser) {
         if (triggerUser != null && (UserRole.ADMIN.equals(triggerUser.getRole()) || UserRole.AT.equals(triggerUser.getRole()))) {
             return triggerUser;
@@ -333,6 +367,11 @@ public class ScheduleBlockService {
                 .orElse(null);
     }
 
+    /**
+     * Indicates whether a block was generated by the weekend auto-block workflow.
+     *
+     * @return true when the block reason matches a known weekend auto-block label
+     */
     private boolean isWeekendAutoBlock(ScheduleBlock block) {
         if (block == null || block.getReason() == null) {
             return false;
@@ -341,6 +380,11 @@ public class ScheduleBlockService {
         return WEEKEND_AUTO_BLOCK_REASONS.contains(block.getReason().trim());
     }
 
+    /**
+     * Indicates whether a weekend auto block already covers the exact expected range.
+     *
+     * @return true when the block is an auto weekend block for the expected range
+     */
     private boolean isTargetWeekendAutoBlock(ScheduleBlock block, LocalDateTime expectedStart, LocalDateTime expectedEnd) {
         return block != null
                 && isWeekendAutoBlock(block)

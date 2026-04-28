@@ -259,11 +259,17 @@ public class EquipmentTypeService {
         );
     }
 
+    /**
+     * Loads an equipment type or fails with a clear validation error when the id is unknown.
+     */
     private EquipmentType fetchEquipmentType(Long id) {
         return equipmentTypeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("EquipmentType not found"));
     }
 
+    /**
+     * Validates and trims equipment type names before uniqueness checks and persistence.
+     */
     private String requireName(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Equipment type name is required");
@@ -271,6 +277,9 @@ public class EquipmentTypeService {
         return name.trim();
     }
 
+    /**
+     * Ensures no other equipment type already uses the requested display name.
+     */
     private void ensureNameAvailable(String name, Long ignoreId) {
         boolean taken = equipmentTypeRepository.findAll().stream()
                 .anyMatch(existing -> !Objects.equals(existing.getId(), ignoreId)
@@ -280,6 +289,9 @@ public class EquipmentTypeService {
         }
     }
 
+    /**
+     * Converts blank text input to null while preserving non-empty text.
+     */
     private String trimToNull(String value) {
         if (value == null) {
             return null;
@@ -288,6 +300,9 @@ public class EquipmentTypeService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    /**
+     * Adds default values for newly introduced schema attributes to existing equipment.
+     */
     private void applyDefaultsForNewAttributes(EquipmentType type, String nextFieldSchema) {
         if (type == null || nextFieldSchema == null || nextFieldSchema.isBlank()) {
             return;
@@ -335,6 +350,7 @@ public class EquipmentTypeService {
                     continue;
                 }
 
+                // Use the first configured option as a stable default so old equipment remains valid after schema edits.
                 String defaultValue = newAttribute.options() == null
                         ? ""
                         : newAttribute.options().stream()
@@ -359,6 +375,9 @@ public class EquipmentTypeService {
         }
     }
 
+    /**
+     * Maps an equipment entity into the DTO returned by equipment endpoints.
+     */
     private EquipmentTypeDTO toDto(EquipmentType type) {
         return new EquipmentTypeDTO(
                 type.getId(),
@@ -369,6 +388,9 @@ public class EquipmentTypeService {
         );
     }
 
+    /**
+     * Maps equipment into the availability DTO that includes future reservation summaries.
+     */
     private EquipmentWithReservationsDTO toEquipmentWithReservations(Equipment equipment) {
         List<EquipmentAttributeDTO> attributes = equipment.getAttributes() == null
                 ? List.of()

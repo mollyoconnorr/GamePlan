@@ -8,6 +8,9 @@ import {safeBack} from "../util/Navigation.ts";
 import {useAuth} from "../auth/AuthContext.tsx";
 import {APP_DATA_CHANGED_EVENT, type AppDataChangedDetail, dispatchAppDataChanged} from "../util/AppDataEvents.ts";
 
+/**
+ * Renders the AdminUsers view.
+ */
 export default function AdminUsers() {
     const navigate = useNavigate();
     const { user: currentUser } = useAuth();
@@ -47,6 +50,9 @@ export default function AdminUsers() {
 
     useEffect(() => {
         let active = true;
+        /**
+         * Refreshes the user list in the background so approval badges and role changes stay current.
+         */
         const refreshUsers = () => {
             if (document.visibilityState !== "visible") {
                 return;
@@ -71,6 +77,9 @@ export default function AdminUsers() {
     }, [loadUsers]);
 
     useEffect(() => {
+        /**
+         * Reacts to cross-page user updates, such as another admin creating or approving a user.
+         */
         const handleDataChanged = (event: Event) => {
             const detail = (event as CustomEvent<AppDataChangedDetail>).detail;
             if (!detail || detail.kind !== "users") {
@@ -92,6 +101,9 @@ export default function AdminUsers() {
         return () => clearTimeout(timer);
     }, [feedback]);
 
+    /**
+     * Persists a role change and reloads users so pending flags and auth versions reflect backend state.
+     */
     const handleRoleChange = async (userId: number, role: "AT" | "ATHLETE" | "ADMIN" | "STUDENT") => {
         setUpdatingUserId(userId);
         try {
@@ -107,12 +119,24 @@ export default function AdminUsers() {
         }
     };
 
+    /**
+     * Approves a pending student using the role selected in that row.
+     */
     const handleApproveStudent = (userId: number) => handleRoleChange(userId, pendingRoleMap[userId] ?? "ATHLETE");
 
+    /**
+     * Opens the shared confirmation dialog for potentially disruptive role changes.
+     */
     const openConfirmDialog = (dialog: NonNullable<typeof confirmDialog>) => setConfirmDialog(dialog);
 
+    /**
+     * Closes the confirm dialog flow and clears temporary state.
+     */
     const closeConfirmDialog = () => setConfirmDialog(null);
 
+    /**
+     * Applies the role change selected in the confirmation dialog.
+     */
     const handleConfirmedDialog = async () => {
         if (!confirmDialog) {
             return;
@@ -128,10 +152,16 @@ export default function AdminUsers() {
         await handleRoleChange(userId, targetRole);
     };
 
+    /**
+     * Stores the role an admin selected for a pending student before approval.
+     */
     const handlePendingRoleChange = (userId: number, role: "AT" | "ATHLETE") => {
         setPendingRoleMap((prev) => ({ ...prev, [userId]: role }));
     };
 
+    /**
+     * Starts the confirmation flow for granting admin access.
+     */
     const handleMakeAdmin = (userId: number, userLabel: string) => {
         openConfirmDialog({
             kind: "makeAdmin",
@@ -141,6 +171,9 @@ export default function AdminUsers() {
         });
     };
 
+    /**
+     * Starts the confirmation flow for changing a user to athlete access.
+     */
     const handleMakeAthlete = (userId: number, userLabel: string) => {
         openConfirmDialog({
             kind: "makeAthlete",
@@ -150,6 +183,9 @@ export default function AdminUsers() {
         });
     };
 
+    /**
+     * Starts the confirmation flow for moving a user back to student access.
+     */
     const handleMakeStudent = (userId: number, userLabel: string) => {
         openConfirmDialog({
             kind: "makeStudent",
@@ -159,6 +195,9 @@ export default function AdminUsers() {
         });
     };
 
+    /**
+     * Formats role label for display.
+     */
     const formatRoleLabel = (role?: string) => {
         if (!role) {
             return "Unknown";

@@ -179,6 +179,9 @@ export default function CalendarContent(props: CalendarContentProps) {
     );
 }
 
+/**
+ * Builds CalendarEventKey.
+ */
 function buildCalendarEventKey(event: CalendarEvent) {
     return [
         event.id,

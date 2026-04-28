@@ -27,12 +27,18 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(RequestLoggingFilter.class);
 
+    /**
+     * Skips request logging for health checks and static resources that would add noise to logs.
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         final String uri = request.getRequestURI();
         return uri == null || (!uri.startsWith("/api") && !"/health".equals(uri));
     }
 
+    /**
+     * Adds request correlation data to logs while preserving normal filter-chain execution.
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -84,6 +90,9 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * Uses an inbound request id when available or creates one for log correlation.
+     */
     private String resolveRequestId(HttpServletRequest request) {
         final String incomingRequestId = request.getHeader(REQUEST_ID_HEADER);
         if (StringUtils.hasText(incomingRequestId)) {
@@ -92,11 +101,17 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         return UUID.randomUUID().toString();
     }
 
+    /**
+     * Builds the path and query string used in request logs.
+     */
     private String resolvePath(HttpServletRequest request) {
         final String uri = request.getRequestURI();
         return StringUtils.hasText(uri) ? uri : "/";
     }
 
+    /**
+     * Returns the authenticated principal name for logs without forcing authentication.
+     */
     private String resolvePrincipal() {
         final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {

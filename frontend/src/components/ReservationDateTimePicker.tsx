@@ -4,6 +4,9 @@ import dayjs, {type Dayjs} from "dayjs";
 import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
 import {formLabelClassName, selectInputClassName} from "../styles/formStyles.ts";
 
+/**
+ * Defines the props required by the DateTimeRangePicker component.
+ */
 interface DateTimeRangePickerProps extends CalendarData {
     scheduleBlocks?: CalendarEvent[];
     allowWeekendDates?: boolean;
@@ -22,6 +25,9 @@ interface DateTimeRangePickerProps extends CalendarData {
     disableWeekends?: boolean;
 }
 
+/**
+ * Renders the DateTimeRangePicker view.
+ */
 export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     // Date options, from given start date + numDays
     const todayKey = dayjs().format("YYYY-MM-DD");
@@ -93,6 +99,9 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
 
     // Merges base day options with OPEN windows and enforces weekend locking rules.
     const startTimeOptions = useMemo(() => {
+        /**
+         * Filters unavailable calendar events down to the selected day for time picker validation.
+         */
         const filterForDay = (options: { value: string; label: string }[]) =>
             props.allowPastDateTimes ? options : filterPastTimesForDate(options, selectedDay);
 
@@ -132,6 +141,9 @@ export default function DateTimeRangePicker(props: DateTimeRangePickerProps) {
     }, [baseTimeOptions, openWindowTimeOptionsByDate, props.allowPastDateTimes, selectedDay, weekendLockEnabled]);
     const noStartTimesAvailable = Boolean(props.selectedDate) && startTimeOptions.length === 0;
 
+    /**
+     * Converts a date-time value into minutes since midnight for picker comparisons.
+     */
     const toMinutes = (time: string) => {
         const [h, m] = time.split(":").map(Number);
         return h * 60 + m;

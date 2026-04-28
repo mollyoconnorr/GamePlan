@@ -35,11 +35,17 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.Supplier;
 
+/**
+ * Configures Spring Security for OIDC login, CSRF protection, CORS, logout, and API authorization rules.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(SecurityProps.class)
 public class SecurityConfig {
 
+    /**
+     * Defines the application security rules, login flow, logout behavior, and CSRF integration.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    LogoutSuccessHandler oidcLogoutSuccessHandler,
@@ -88,6 +94,9 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Builds CORS settings from configured frontend origins so local and deployed clients can call the API.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(@Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps props) {
         final CorsConfiguration config = new CorsConfiguration();
@@ -104,6 +113,9 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Creates the logout handler that signs users out locally and redirects them back to the configured frontend URL.
+     */
     @Bean
     public LogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository,
                                                          @Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps props) {
@@ -114,6 +126,9 @@ public class SecurityConfig {
         return successHandler;
     }
 
+    /**
+     * Builds a frontend-safe login failure URL with the encoded OAuth error reason.
+     */
     private String buildLoginFailureRedirectUrl(String logoutUrl) {
         if (logoutUrl == null || logoutUrl.isBlank()) {
             return "/?loginError=true";
@@ -124,6 +139,9 @@ public class SecurityConfig {
     }
 
     private static final class CsrfCookieFilter extends OncePerRequestFilter {
+        /**
+         * Forces lazy CSRF token creation so Spring writes the XSRF-TOKEN cookie for the SPA.
+         */
         @Override
         protected void doFilterInternal(HttpServletRequest request,
                                         @NonNull HttpServletResponse response,
@@ -141,6 +159,9 @@ public class SecurityConfig {
         private final CsrfTokenRequestHandler plain = new CsrfTokenRequestAttributeHandler();
         private final CsrfTokenRequestHandler xor = new XorCsrfTokenRequestAttributeHandler();
 
+        /**
+         * Delegates CSRF token exposure to Spring Security's XOR handler while custom resolution supports SPA headers.
+         */
         @Override
         public void handle(HttpServletRequest request,
                            HttpServletResponse response,
@@ -148,6 +169,9 @@ public class SecurityConfig {
             this.xor.handle(request, response, csrfToken);
         }
 
+        /**
+         * Reads CSRF tokens from SPA headers first and falls back to Spring Security token resolution.
+         */
         @Override
         public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
             String headerValue = request.getHeader(csrfToken.getHeaderName());

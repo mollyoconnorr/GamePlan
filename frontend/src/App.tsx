@@ -44,6 +44,9 @@ function AppShell() {
     // Privileged users can access admin/trainer routes and view all active reservations.
     const hasPrivilegedAccess = user!.role === "AT" || user!.role === "ADMIN";
 
+    /**
+     * Returns the privileged app routes when the signed-in user has trainer or admin access.
+     */
     const renderForPrivileged = (element: JSX.Element) => {
         if (hasPrivilegedAccess) {
             return element;
@@ -56,7 +59,7 @@ function AppShell() {
 
     const [loading, setLoading] = useState(true);
 
-    // Combine reservations and blocks and sort them by ISO time
+    // Combine reservations and blocks once at the shell so every page receives the same calendar feed.
     const calendarEvents = useMemo(
         () => {
             const reservationEvents = reservations.map(parseResToEvent);
@@ -100,7 +103,7 @@ function AppShell() {
                 });
 
             if (hasPrivilegedAccess) {
-                // Get all active reservations if admin
+                // Trainers/admins manage the shared schedule, so they need all active reservations.
                 const [reservationData, blocks] = await Promise.all([
                     getActiveReservationsForAdmin(),
                     blocksPromise,
@@ -109,7 +112,7 @@ function AppShell() {
                 setReservations(reservationData.map(parseAdminRawResToRes));
                 setGlobalBlockEvents(blocks);
             } else {
-                // Just get users reservations
+                // Athletes only see their own reservations plus global schedule blocks.
                 const [data, blocks] = await Promise.all([
                     getReservations(),
                     blocksPromise,
@@ -131,6 +134,9 @@ function AppShell() {
     }, [loadReservations]);
 
     useEffect(() => {
+        /**
+         * Refreshes shared reservation state when another page creates or cancels a reservation.
+         */
         const handleReservationChange = (event: Event) => {
             const detail = (event as CustomEvent<ReservationDataChangedDetail>).detail;
             if (!detail) {
@@ -158,6 +164,9 @@ function AppShell() {
             return;
         }
 
+        /**
+         * Refreshes reservation and block data without showing a loading screen.
+         */
         const refreshSilently = () => {
             if (document.visibilityState === "visible") {
                 void loadReservations(true);
@@ -177,6 +186,9 @@ function AppShell() {
 
     // App settings drive the shared calendar behavior for every major page.
     useEffect(() => {
+        /**
+         * Fetches the latest app settings before refreshing calendar configuration.
+         */
         async function getSettings() {
             setLoading(true);
             try {
@@ -289,6 +301,9 @@ function AppShell() {
     );
 }
 
+/**
+ * Renders the App view.
+ */
 export default function App() {
     return (
         <Routes>

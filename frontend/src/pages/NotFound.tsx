@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
 
+/**
+ * Renders the NotFound view.
+ */
 export default function NotFound({
     compact = false,
 }: {

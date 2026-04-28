@@ -23,6 +23,9 @@ public class UserService {
 
     private final UserRepository userRepository;
 
+    /**
+     * Resolves authenticated OIDC users to local user records and manages approval state.
+     */
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
@@ -54,6 +57,11 @@ public class UserService {
         return user;
     }
 
+    /**
+     * Returns the SessionAuthVersion.
+     *
+     * @return the current value
+     */
     private long getSessionAuthVersion(OAuth2User principal) {
         Object authVersion = principal.getAttribute(VersionedOidcUser.AUTH_VERSION_ATTRIBUTE);
         if (authVersion instanceof Number number) {

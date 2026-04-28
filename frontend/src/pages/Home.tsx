@@ -14,6 +14,9 @@ import AvailabilityNotice from "../components/AvailabilityNotice.tsx";
 import OffHoursReservationNotice from "../components/OffHoursReservationNotice.tsx";
 import BlockedTimeNotice from "../components/BlockedTimeNotice.tsx";
 
+/**
+ * Defines the props required by the Home component.
+ */
 interface HomeProps extends CalendarData {
     reservations: Reservation[];
     calendarEvents: CalendarEvent[];
@@ -21,6 +24,9 @@ interface HomeProps extends CalendarData {
     loading: boolean;
 }
 
+/**
+ * Optional router state used to open a specific Home tab after navigation.
+ */
 type HomeLocationState = {
     toastMessage?: string;
     view?: "calendar" | "list";
@@ -55,7 +61,7 @@ export default function Home(
 
     const preferredView = locationState?.view;
 
-    // Store current event view in local storage so it persists across refreshes
+    // View state is local to Home, but persisted so repeat users keep their preferred calendar/list layout.
     const [showCalendar, setShowCalendar] = useState(() => {
         const stored = localStorage.getItem("showCalendar");
 
@@ -96,7 +102,7 @@ export default function Home(
         return () => clearTimeout(timeout);
     }, [location.pathname, navigate, toastMessage]);
 
-    // Non-admin users fetch full notification payload only when panel is open.
+    // Non-admin users fetch full notification payload only when the panel is open to keep Home cheap by default.
     useEffect(() => {
         if (isAdmin || !showNotifications) {
             return;
@@ -168,6 +174,9 @@ export default function Home(
         }
 
         let active = true;
+        /**
+         * Refreshes either notification rows or the unread count, depending on which notification UI is visible.
+         */
         const refreshNotificationsQuietly = () => {
             if (document.visibilityState !== "visible") {
                 return;
@@ -212,6 +221,9 @@ export default function Home(
         };
     }, [isAdmin, showNotifications]);
 
+    /**
+     * Deletes a reservation, refreshes local reservations, and broadcasts the change to other open pages.
+     */
     const handleDeleteReservation = async (id: number) => {
         try {
             await deleteReservation(id);
@@ -222,6 +234,9 @@ export default function Home(
         }
     }
 
+    /**
+     * Marks a notification as read and removes it from the open notification list immediately.
+     */
     const handleMarkAsRead = async (id: number) => {
         setMarkError(null);
         setMarkingNotificationId(id);
@@ -295,6 +310,9 @@ export default function Home(
         }
 
         let active = true;
+        /**
+         * Refreshes the admin pending-user badge while the Home page remains open.
+         */
         const refreshPendingCount = () => {
             if (document.visibilityState !== "visible") {
                 return;
@@ -325,6 +343,7 @@ export default function Home(
         };
     }, [isAdmin]);
 
+    // Students have intentionally limited Home states until an admin promotes them.
     if (isStudent && isPendingApproval) {
         return (
             <>
@@ -437,7 +456,7 @@ export default function Home(
                 ) : null}
 
 
-                {/*Toggle for calendar view*/}
+                {/* Calendar/list mode drives both reservations display and which helper notices are useful. */}
                 <div className="flex w-48 border rounded-sm shadow-md">
                     <Button
                         text="Calendar"
@@ -455,6 +474,7 @@ export default function Home(
                     />
                 </div>
 
+                {/* Athletes and trainers use notifications for reservation cancellations and system updates. */}
                 {!isAdmin && (
                     <div className="flex flex-col space-y-3">
                         <div className="relative inline-flex">

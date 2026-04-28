@@ -44,10 +44,20 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             Equipment equipment, LocalDateTime end, LocalDateTime start, ReservationStatus status
     );
 
+    /**
+     * Finds active reservations that overlap a requested time range.
+     *
+     * @return overlapping reservations with the requested status
+     */
     List<Reservation> findByEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
             LocalDateTime end, LocalDateTime start, ReservationStatus status
     );
 
+    /**
+     * Finds reservations for a user that overlap a requested time range.
+     *
+     * @return overlapping reservations for the user with the requested status
+     */
     List<Reservation> findByUserAndEndDatetimeAfterAndStartDatetimeBeforeAndStatusIs(
             User user, LocalDateTime end, LocalDateTime start, ReservationStatus status
     );
@@ -60,6 +70,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      */
     List<Reservation> findByStatus(ReservationStatus status);
 
+    /**
+     * Finds future active reservations for a specific equipment id.
+     *
+     * @return reservations for the equipment with the requested status
+     */
     List<Reservation> findByEquipmentIdAndEndDatetimeAfterAndStatusIs(Long equipmentId,
                                                                        LocalDateTime endDatetime,
                                                                        ReservationStatus status);

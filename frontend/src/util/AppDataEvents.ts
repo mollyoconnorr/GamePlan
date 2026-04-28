@@ -1,10 +1,16 @@
 export const APP_DATA_CHANGED_EVENT = "gameplan:data-changed";
 export const RESERVATION_DATA_CHANGED_EVENT = "gameplan:reservation-data-changed";
 
+/**
+ * Event payload describing non-reservation app data that changed elsewhere.
+ */
 export type AppDataChangedDetail = {
     kind: "users";
 };
 
+/**
+ * Event payload describing reservation lifecycle changes from another page.
+ */
 export type ReservationDataChangedDetail = {
     action: "created" | "canceled";
 };

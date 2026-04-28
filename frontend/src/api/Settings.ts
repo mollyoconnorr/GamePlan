@@ -4,6 +4,9 @@ import type {CalendarData} from "../types.ts";
 import {formatTwoDigits, parseTime, parseWholeNumber} from "../util/Time.ts";
 import dayjs from "dayjs";
 
+/**
+ * Raw settings response returned by the backend.
+ */
 type RawAppSettingsData = {
     startDay: "WEEK" | "CURR_DAY";
     startDate: string;
@@ -15,11 +18,17 @@ type RawAppSettingsData = {
     weekendAutoBlockEnabled?: boolean;
 }
 
+/**
+ * Frontend settings model after time strings are parsed for controls.
+ */
 export interface ParsedAppSettingsData extends CalendarData {
     firstDateToShow: "week" | "day";
     weekendAutoBlockEnabled: boolean;
 }
 
+/**
+ * Payload sent when saving global app settings.
+ */
 type SettingsRequest = {
     firstDateToShow: "week" | "day";
     numDaysInput: string;
@@ -30,6 +39,9 @@ type SettingsRequest = {
     weekendAutoBlockEnabled?: boolean;
 };
 
+/**
+ * Partial settings payload built from valid editable fields.
+ */
 type AppSettingsUpdatePayload = {
     startDay: "WEEK" | "CURR_DAY";
     startTime: string;
@@ -62,6 +74,9 @@ export async function updateAppSettings(request: SettingsRequest): Promise<Parse
     return parseAppDataToAppSettings(await res.json() as RawAppSettingsData);
 }
 
+/**
+ * Builds the backend settings update payload while omitting fields that were not supplied.
+ */
 function toAppSettingsUpdatePayload(request: SettingsRequest): AppSettingsUpdatePayload {
     const numDaysToShow = parseWholeNumber(request.numDaysInput);
     const timeStep = parseWholeNumber(request.timeStepInput);
@@ -96,6 +111,9 @@ function toAppSettingsUpdatePayload(request: SettingsRequest): AppSettingsUpdate
     };
 }
 
+/**
+ * Fetches global app settings and parses time fields for frontend controls.
+ */
 export async function getAppSettings(): Promise<ParsedAppSettingsData>{
     const res = await apiFetch("/api/admin/settings", {
         method: "GET",
@@ -109,6 +127,9 @@ export async function getAppSettings(): Promise<ParsedAppSettingsData>{
     return parseAppDataToAppSettings(await res.json() as RawAppSettingsData);
 }
 
+/**
+ * Parses input into AppDataToAppSettings.
+ */
 function parseAppDataToAppSettings(rawAppData: RawAppSettingsData): ParsedAppSettingsData {
     // Backend stores times as strings; UI works with dayjs objects for comparisons/math.
     const parsedStartTime = parseTime(rawAppData.startTime);

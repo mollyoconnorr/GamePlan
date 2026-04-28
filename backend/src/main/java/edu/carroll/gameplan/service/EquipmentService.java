@@ -27,7 +27,8 @@ import java.util.Map;
 
 /**
  * Service responsible for equipment operations, including creation, updates, deletions, and status
- * transitions. Handles DTO mapping and notification dispatch for maintenance cancellations.
+ * transitions. Centralizes DTO mapping and notification dispatch so maintenance cancellations stay
+ * consistent across inventory workflows.
  */
 @Service
 public class EquipmentService {
@@ -42,6 +43,9 @@ public class EquipmentService {
     private final ReservationService reservationService;
     private final NotificationService notificationService;
 
+    /**
+     * Creates an equipment service with repositories and services needed for inventory updates and cancellation notifications.
+     */
     public EquipmentService(EquipmentRepository equipmentRepository,
                             EquipmentTypeRepository equipmentTypeRepository,
                             ReservationRepository reservationRepository,
@@ -185,11 +189,17 @@ public class EquipmentService {
         return true;
     }
 
+    /**
+     * Loads an equipment entity or raises a clear error when the id is unknown.
+     */
     private Equipment fetchEquipment(Long id) {
         return equipmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Equipment not found: " + id));
     }
 
+    /**
+     * Resolves equipment type from request or application context.
+     */
     private EquipmentType resolveEquipmentType(Long typeId) {
         if (typeId == null) {
             throw new IllegalArgumentException("Equipment type is required");
@@ -198,6 +208,9 @@ public class EquipmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid equipment type: " + typeId));
     }
 
+    /**
+     * Builds equipment attribute entities from request data and attaches them to the owning equipment.
+     */
     private List<EquipmentAttribute> buildAttributes(Map<String, String> attributes, Equipment equipment) {
         List<EquipmentAttribute> result = new ArrayList<>();
         if (attributes == null) {
@@ -217,6 +230,9 @@ public class EquipmentService {
         return result;
     }
 
+    /**
+     * Converts a status string from the API into an EquipmentStatus enum with a clear error for invalid values.
+     */
     private EquipmentStatus parseStatus(String statusValue) {
         if (statusValue == null) {
             throw new IllegalArgumentException("Status is required");
@@ -228,6 +244,9 @@ public class EquipmentService {
         }
     }
 
+    /**
+     * Cancels active reservations when equipment becomes unavailable for maintenance.
+     */
     private int cancelActiveReservationsForMaintenance(Equipment equipment, User actingUser) {
         List<Reservation> activeReservations = reservationService.getActiveReservationsForEquipment(equipment.getId());
         int cancelled = 0;
@@ -239,6 +258,9 @@ public class EquipmentService {
         return cancelled;
     }
 
+    /**
+     * Creates the notification shown when maintenance cancels an equipment reservation.
+     */
     private void sendCancelledMessage(Reservation reservation) {
         if (reservation == null || reservation.getUser() == null || reservation.getEquipment() == null) {
             return;
@@ -253,6 +275,9 @@ public class EquipmentService {
         notificationService.createNotification(reservation.getUser(), message);
     }
 
+    /**
+     * Maps an equipment entity into the DTO returned by equipment endpoints.
+     */
     private EquipmentDTO toDto(Equipment equipment) {
         EquipmentDTO dto = new EquipmentDTO();
         dto.setId(equipment.getId());

@@ -1,6 +1,9 @@
 // Ensures hour/minute values render as HH:mm.
 import type {ParsedTime} from "../types.ts";
 
+/**
+ * Formats two digits for display.
+ */
 export const formatTwoDigits = (value: number) => value.toString().padStart(2, "0");
 
 // Accept only complete integer strings (no decimals and no partial parse).

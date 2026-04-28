@@ -19,6 +19,9 @@ public class AdminService {
 
     private final UserService userService;
 
+    /**
+     * Centralizes admin-only user management rules so controllers stay thin and role changes are validated consistently.
+     */
     public AdminService(UserService userService) {
         this.userService = userService;
     }
@@ -100,6 +103,9 @@ public class AdminService {
         return userService.countPendingApproval();
     }
 
+    /**
+     * Validates and normalizes an email address before admin-created users are persisted.
+     */
     private String requireEmail(String email) {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email is required");
@@ -107,6 +113,9 @@ public class AdminService {
         return email.trim();
     }
 
+    /**
+     * Maps a user entity into the admin response shape expected by the frontend.
+     */
     private AdminUserResponse toResponse(User user) {
         return new AdminUserResponse(
                 user.getId(),

@@ -2,11 +2,17 @@ import {useMemo} from "react";
 import dayjs from "dayjs";
 import type {CalendarEvent} from "../types.ts";
 
+/**
+ * Defines the props required by the AvailabilityNotice component.
+ */
 type AvailabilityNoticeProps = {
     events?: CalendarEvent[];
     className?: string;
 };
 
+/**
+ * Renders the AvailabilityNotice view.
+ */
 export default function AvailabilityNotice({events = [], className = ""}: AvailabilityNoticeProps) {
     const availabilityEvents = useMemo(() => {
         return events

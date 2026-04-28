@@ -1,5 +1,8 @@
 import Spinner from "../components/Spinner.tsx";
 
+/**
+ * Renders the LoadingPage view.
+ */
 export default function LoadingPage() {
     return (
         <section className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-200 px-6 py-10">

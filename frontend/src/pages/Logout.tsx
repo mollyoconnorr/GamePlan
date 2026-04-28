@@ -4,14 +4,23 @@ import Spinner from "../components/Spinner.tsx";
 
 const BACKEND_LOGOUT_URL = "/api/logout";
 
+/**
+ * Response returned by the CSRF endpoint when the logout page prepares a safe POST.
+ */
 type CsrfResponse = {
     parameterName?: string;
     token?: string;
 };
 
+/**
+ * Renders the Logout view.
+ */
 export default function Logout() {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+    /**
+     * Processes the confirm logout interaction and updates the affected UI state.
+     */
     const handleConfirmLogout = async () => {
         setIsLoggingOut(true);
 

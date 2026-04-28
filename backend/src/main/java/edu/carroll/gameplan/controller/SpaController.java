@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class SpaController {
 
+    /**
+     * Forwards unmatched routes to the SPA entry point so browser refresh works on client-side routes.
+     */
     @GetMapping({"/app", "/app/{path:[^.]*}", "/app/{path:^(?!api$).*$}/**"})
     public String forward() {
         return "forward:/index.html";

@@ -2,6 +2,9 @@ import {useEffect} from "react";
 import {createPortal} from "react-dom";
 import Button from "./Button.tsx";
 
+/**
+ * Defines the props required by the ConfirmDialog component.
+ */
 type ConfirmDialogProps = {
     open: boolean;
     title: string;
@@ -17,6 +20,9 @@ type ConfirmDialogProps = {
     onCancel: () => void;
 };
 
+/**
+ * Renders the ConfirmDialog view.
+ */
 export default function ConfirmDialog({
     open,
     title,

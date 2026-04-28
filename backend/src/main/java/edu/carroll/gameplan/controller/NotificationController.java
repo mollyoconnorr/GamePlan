@@ -26,6 +26,9 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final UserService userService;
 
+    /**
+     * Exposes notification list, unread count, and read-state endpoints for the current user.
+     */
     public NotificationController(NotificationService notificationService,
                                   UserService userService) {
         this.notificationService = notificationService;
@@ -44,12 +47,20 @@ public class NotificationController {
                 .toList();
     }
 
+    /**
+     * Returns the UnreadCount.
+     *
+     * @return the current value
+     */
     @GetMapping("/unread-count")
     public NotificationCountResponse getUnreadCount(OAuth2AuthenticationToken authentication) {
         User user = userService.resolveCurrentUser(authentication);
         return new NotificationCountResponse(notificationService.countUnread(user));
     }
 
+    /**
+     * Marks read through the backend API and updates local state.
+     */
     @PatchMapping("/{id}/read")
     public ResponseEntity<Void> markRead(@PathVariable Long id,
                                          OAuth2AuthenticationToken authentication) {

@@ -4,7 +4,13 @@ import Spinner from "../components/Spinner.tsx";
 
 const LOGIN_REDIRECT_DELAY_MS = 700;
 
+/**
+ * Renders the Login view.
+ */
 export default function Login() {
+    /**
+     * Sends the browser to the backend OAuth login entry point.
+     */
     const redirectToLogin = () => {
         window.location.href = "/oauth2/authorization/okta";
     };

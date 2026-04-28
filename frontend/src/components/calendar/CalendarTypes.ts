@@ -1,6 +1,9 @@
 import type {Dayjs} from "dayjs";
 import type {CalendarEvent} from "../../types.ts";
 
+/**
+ * Defines the props required by the Calendar component.
+ */
 export interface CalendarProps {
     firstDate: Dayjs;
     numDays: number;
@@ -16,6 +19,9 @@ export interface CalendarProps {
     onDeleteReservation?: (id: number) => Promise<void> | void;
 }
 
+/**
+ * Defines the props required by the CalendarContent component.
+ */
 export interface CalendarContentProps {
     firstDate: Dayjs,
     startTime: Dayjs,

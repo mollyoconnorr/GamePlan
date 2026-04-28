@@ -8,6 +8,9 @@ import {createPortal} from "react-dom";
 import {getFriendlyReservationErrorMessage} from "../../util/ReservationErrorMessages.ts";
 import {buildTimeOptions, filterPastTimesForDate} from "../../util/TimeOptions.ts";
 
+/**
+ * Defines the props required by the CalendarCard component.
+ */
 type CalendarCardProps = {
     event: CalendarEvent;
     eventDay: Dayjs;
@@ -25,6 +28,9 @@ type CalendarCardProps = {
     variant: "user" | "equip" | "trainer"
 };
 
+/**
+ * Renders the CalendarCard view.
+ */
 export default function CalendarCard({
                                          event,
                                          eventDay,
@@ -50,14 +56,17 @@ export default function CalendarCard({
     const [selectedStartTime, setSelectedStartTime] = useState("");
     const [selectedEndTime, setSelectedEndTime] = useState("");
 
+    // Edit modal options must match the parent calendar's bounds and step size.
     const timeOptions = useMemo(() => {
         return buildTimeOptions(startTime, endTime, timeStepMin);
     }, [startTime, endTime, timeStepMin]);
 
+    // Same-day edits should not offer start times that have already passed.
     const startTimeOptions = useMemo(() => {
         return filterPastTimesForDate(timeOptions, eventDay);
     }, [timeOptions, eventDay]);
 
+    // End options are derived from start selection so invalid ranges cannot be submitted.
     const endTimeOptions = useMemo(() => {
         if (!selectedStartTime) return [];
         return startTimeOptions.filter((option) => option.value > selectedStartTime);
@@ -70,6 +79,9 @@ export default function CalendarCard({
         return eventDay.isBefore(dayjs(), "day");
     }, [event.startIso, eventDay]);
 
+    /**
+     * Confirms deletion through the parent callback and closes the popup after success.
+     */
     const handleConfirmDelete = async () => {
         if (!pendingDelete) return;
 
@@ -91,6 +103,9 @@ export default function CalendarCard({
         }
     };
 
+    /**
+     * Opens the edit modal with event times clamped to currently selectable bounds.
+     */
     const handleOpenEdit = () => {
         if (eventStartsInPast) {
             return;
@@ -110,6 +125,9 @@ export default function CalendarCard({
         setShowEditModal(true);
     };
 
+    /**
+     * Closes the edit modal unless a save is in progress.
+     */
     const handleCloseEdit = () => {
         if (isEditing) return;
         setShowEditModal(false);
@@ -117,6 +135,9 @@ export default function CalendarCard({
         setSelectedEndTime("");
     };
 
+    /**
+     * Converts the selected time strings back into Dayjs values and submits the edit.
+     */
     const handleSaveEdit = async () => {
         if (!selectedStartTime || !selectedEndTime) return;
 
@@ -171,6 +192,7 @@ export default function CalendarCard({
         }
     };
 
+    // Keep past-start validation in one derived value shared by button disabled state and helper copy.
     const selectedStartDateTime = useMemo(() => {
         if (!selectedStartTime) {
             return null;

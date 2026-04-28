@@ -13,22 +13,34 @@ import {
     type EquipmentTypeAttributeResponse,
 } from "../api/Equipment.ts";
 
+/**
+ * Editable equipment type attribute row before it is serialized into the backend schema string.
+ */
 type EquipmentTypeAttributeDraft = {
     id: string;
     name: string;
     options: string;
 };
 
+/**
+ * Final equipment type attribute definition after draft options are split into selectable values.
+ */
 type EquipmentTypeAttribute = {
     name: string;
     options: string[];
 };
 
+/**
+ * Tracks which create workflow is waiting for confirmation before submitting.
+ */
 type PendingAction = "createType" | "createEquipment";
 
 const inputClassName = "w-full rounded-sm border border-gray-300 px-3 py-2 text-sm";
 const labelClassName = "mb-1 block text-sm font-semibold text-gray-700";
 
+/**
+ * Renders the CreateEquipment view.
+ */
 export default function CreateEquipment() {
     const navigate = useNavigate();
     const [types, setTypes] = useState<EquipmentType[]>([]);
@@ -55,11 +67,15 @@ export default function CreateEquipment() {
         return () => clearTimeout(timeout);
     }, [toastMessage]);
 
+    /**
+     * Adds a blank attribute definition to the equipment type creation form.
+     */
     const addAttribute = () => {
         const draftId = `attr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         setAttributesSchema((prev) => [...prev, {id: draftId, name: "", options: ""}]);
     };
 
+    // Draft rows remain strings until save so users can type comma-separated options freely.
     const updateAttributeDraft = (
         index: number,
         field: keyof EquipmentTypeAttributeDraft,
@@ -70,6 +86,9 @@ export default function CreateEquipment() {
         );
     };
 
+    /**
+     * Serializes attribute draft rows into the backend field schema format.
+     */
     const buildSchema = () => {
         const schema: Record<string, { type: "enum"; options: string[] }> = {};
 
@@ -89,6 +108,7 @@ export default function CreateEquipment() {
         return JSON.stringify(schema);
     };
 
+    // The backend can return attribute values from schema or existing equipment; group them into dropdown options.
     const parseAttributes = (data: EquipmentTypeAttributeResponse[]): EquipmentTypeAttribute[] => {
         const groupedOptions = new Map<string, Set<string>>();
 
@@ -122,6 +142,9 @@ export default function CreateEquipment() {
         }));
     };
 
+    /**
+     * Loads equipment types used by both the type picker and selected type lookup.
+     */
     const loadTypes = async () => {
         try {
             const data = await getEquipmentTypes();
@@ -141,6 +164,9 @@ export default function CreateEquipment() {
             });
     }, []);
 
+    /**
+     * Creates a new equipment type, reloads the picker options, and clears the type form.
+     */
     const createEquipmentType = async () => {
         const trimmedName = typeName.trim();
         if (!trimmedName) return false;
@@ -164,6 +190,9 @@ export default function CreateEquipment() {
         }
     };
 
+    /**
+     * Loads the selected type's attributes and initializes one selected value for each required attribute.
+     */
     const handleTypeChange = async (typeIdValue: string) => {
         if (!typeIdValue) {
             setSelectedTypeId(null);
@@ -197,6 +226,9 @@ export default function CreateEquipment() {
         }
     };
 
+    /**
+     * Records the selected value for one dynamic equipment attribute.
+     */
     const handleAttributeChange = (attributeName: string, selectedValue: string) => {
         setSelectedAttributeValues((prev) => ({
             ...prev,
@@ -204,6 +236,9 @@ export default function CreateEquipment() {
         }));
     };
 
+    /**
+     * Creates equipment for the selected type with the currently selected dynamic attribute values.
+     */
     const createEquipment = async () => {
         if (!selectedType || !equipmentName.trim()) return false;
 
@@ -232,6 +267,9 @@ export default function CreateEquipment() {
         }
     };
 
+    /**
+     * Opens confirmation for creating a new equipment type after minimum required input is present.
+     */
     const openCreateTypeConfirm = () => {
         if (!typeName.trim()) {
             setToastMessage("Enter a type name first.");
@@ -240,6 +278,9 @@ export default function CreateEquipment() {
         setPendingAction("createType");
     };
 
+    /**
+     * Opens confirmation for creating equipment after required type, name, and attributes are selected.
+     */
     const openCreateEquipmentConfirm = () => {
         if (!selectedType || !equipmentName.trim()) {
             setToastMessage("Select a type and enter equipment name first.");
@@ -255,6 +296,9 @@ export default function CreateEquipment() {
         setPendingAction("createEquipment");
     };
 
+    /**
+     * Runs the pending create workflow from the shared confirmation dialog.
+     */
     const handleConfirmAction = async () => {
         if (!pendingAction) return;
 

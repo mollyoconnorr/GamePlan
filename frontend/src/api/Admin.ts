@@ -1,6 +1,9 @@
 import type {AdminUser} from "../types.ts";
 import {apiFetch} from "./apiFetch.ts";
 
+/**
+ * Extracts the backend validation message from an error response when admin requests fail.
+ */
 export async function extractErrorMessage(response: Response, fallback: string) {
     const body = await response.text();
     if (!body) {
@@ -19,6 +22,9 @@ export async function extractErrorMessage(response: Response, fallback: string) 
     return body.trim();
 }
 
+/**
+ * Fetches the admin user list used by the user management table.
+ */
 export async function fetchAdminUsers() {
     const res = await apiFetch("/api/admin/users", {
         method: "GET",
@@ -32,6 +38,9 @@ export async function fetchAdminUsers() {
     return await res.json() as Promise<AdminUser[]>;
 }
 
+/**
+ * Saves updated user role data and applies the resulting state.
+ */
 export async function updateUserRole(userId: number, role: string) {
     const res = await apiFetch(`/api/admin/users/${userId}/role`, {
         method: "POST",
@@ -49,14 +58,23 @@ export async function updateUserRole(userId: number, role: string) {
     return await res.json() as Promise<AdminUser>;
 }
 
+/**
+ * Promotes a user to trainer by reusing the shared role update endpoint.
+ */
 export async function promoteUserToTrainer(userId: number) {
     return updateUserRole(userId, "AT");
 }
 
+/**
+ * Demotes a user to athlete by reusing the shared role update endpoint.
+ */
 export async function demoteUserToAthlete(userId: number) {
     return updateUserRole(userId, "ATHLETE");
 }
 
+/**
+ * Payload used when an admin pre-creates an athlete account for later OIDC linking.
+ */
 interface CreateAdminUserRequest {
     email: string;
     firstName: string;
@@ -64,6 +82,9 @@ interface CreateAdminUserRequest {
     oidcUserId?: string;
 }
 
+/**
+ * Creates admin user and applies the resulting state.
+ */
 export async function createAdminUser(request: CreateAdminUserRequest) {
     const res = await apiFetch(`/api/admin/users`, {
         method: "POST",
@@ -81,6 +102,9 @@ export async function createAdminUser(request: CreateAdminUserRequest) {
     return await res.json() as Promise<AdminUser>;
 }
 
+/**
+ * Fetches the count of users still waiting for admin approval.
+ */
 export async function fetchPendingUserCount(): Promise<number> {
     const res = await apiFetch("/api/admin/users/pending-count", {
         method: "GET",

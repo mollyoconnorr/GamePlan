@@ -1,3 +1,6 @@
+/**
+ * Reads a named browser cookie, which is needed for Spring Security XSRF token forwarding.
+ */
 function getCookie(name: string): string | undefined {
     if (typeof document === "undefined" || !document.cookie) {
         return undefined;
@@ -16,6 +19,9 @@ function getCookie(name: string): string | undefined {
     return undefined;
 }
 
+/**
+ * Normalizes every HeadersInit variant into a mutable object so apiFetch can add security headers.
+ */
 function toHeaderObject(headers?: HeadersInit): Record<string, string> {
     if (!headers) {
         return {};
@@ -40,6 +46,9 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 export const SESSION_INVALIDATED_EVENT = "gameplan:session-invalidated";
 const ROLE_CHANGED_MESSAGE = "Your role changed. Please sign in again.";
 
+/**
+ * Requests the CSRF endpoint to force Spring Security to issue the XSRF-TOKEN cookie before unsafe requests.
+ */
 async function ensureXsrfToken(): Promise<string | undefined> {
     await fetch("/api/csrf", {
         method: "GET",
@@ -80,6 +89,9 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
     return response;
 }
 
+/**
+ * Broadcasts a session invalidation event when the backend reports that the user role changed.
+ */
 async function notifyIfSessionInvalidated(response: Response) {
     if (response.status !== 401 || typeof window === "undefined") {
         return;
@@ -95,6 +107,9 @@ async function notifyIfSessionInvalidated(response: Response) {
     }));
 }
 
+/**
+ * Reads the optional JSON error message from a response without consuming the original body.
+ */
 async function extractResponseMessage(response: Response): Promise<string> {
     try {
         const body = await response.clone().json() as { message?: string };

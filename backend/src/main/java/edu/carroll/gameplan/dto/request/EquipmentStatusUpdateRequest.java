@@ -10,6 +10,9 @@ public class EquipmentStatusUpdateRequest {
      */
     private String status;
 
+    /**
+     * Request body used when changing equipment availability status.
+     */
     public EquipmentStatusUpdateRequest() {
     }
 

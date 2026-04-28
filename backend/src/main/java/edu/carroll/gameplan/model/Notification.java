@@ -32,10 +32,16 @@ public class Notification {
     @Column(name = "is_read", nullable = false)
     private boolean read;
 
+    /**
+     * Creates a notification entity for a user-facing message.
+     */
     public Notification() {
         this.read = false;
     }
 
+    /**
+     * Initializes timestamps and read state before a notification is first saved.
+     */
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();

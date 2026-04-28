@@ -1,4 +1,7 @@
 
+/**
+ * Renders the Footer view.
+ */
 export default function Footer() {
     return (
         <footer className="bg-primary flex items-center justify-center text-white p-6">

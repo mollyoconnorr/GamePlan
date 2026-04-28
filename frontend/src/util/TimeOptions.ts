@@ -1,5 +1,8 @@
 import dayjs, { type Dayjs } from "dayjs";
 
+/**
+ * Selectable time option used by time pickers.
+ */
 export type TimeOption = {
     value: string;
     label: string;

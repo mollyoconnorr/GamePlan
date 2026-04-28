@@ -4,6 +4,9 @@ import Button from "../components/Button.tsx";
 import Footer from "../components/Footer.tsx";
 import {useAuth} from "../auth/AuthContext.tsx";
 
+/**
+ * Renders the Welcome view.
+ */
 export default function Welcome() {
     const navigate = useNavigate();
 

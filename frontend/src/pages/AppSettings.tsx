@@ -24,6 +24,9 @@ import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
 const WEEKEND_AUTO_BLOCK_REASON = "Weekend";
 
 // Parent-owned app settings plus callbacks to persist validated updates.
+/**
+ * Defines the props required by the AppSetting component.
+ */
 interface AppSettingProps extends CalendarData {
     firstDateToShow: "week" | "day";
     setFirstDateToShow: (firstDateToShow: "week" | "day") => void;
@@ -40,10 +43,19 @@ interface AppSettingProps extends CalendarData {
 }
 
 // Field keys used by validation and dynamic input styling.
+/**
+ * Names the app settings fields that can display validation errors.
+ */
 type SettingField = "numDays" | "timeStep" | "maxResTime" | "startTime" | "endTime";
+/**
+ * Maps editable settings fields to their current validation message.
+ */
 type FieldErrors = Partial<Record<SettingField, string>>;
 
 // Raw string state mirrors what users are typing into each input.
+/**
+ * String-backed form values used before settings are parsed and validated.
+ */
 type SettingsInputs = {
     numDaysInput: string;
     timeStepInput: string;
@@ -51,7 +63,9 @@ type SettingsInputs = {
     startTimeInput: string;
     endTimeInput: string;
 };
-// Validation returns both errors and parsed values so valid fields can be applied immediately.
+/**
+ * Validation output containing field errors and parsed values that can be applied immediately.
+ */
 type ValidationResult = {
     errors: FieldErrors;
     parsedNumDays: number | null;
@@ -62,10 +76,12 @@ type ValidationResult = {
     hasValidTimeStep: boolean;
 };
 
-// Shared Tailwind class fragments to keep form styles consistent.
+/** Shared Tailwind class fragments used by settings form helper text. */
 const helperTextClassName = "mt-1 text-xs text-gray-500";
 
-// Centralized validation for all settings, including cross-field constraints.
+/**
+ * Validates all settings form inputs, including cross-field time and duration constraints.
+ */
 const validateSettings = (inputs: SettingsInputs): ValidationResult => {
     const parsedNumDays = parseWholeNumber(inputs.numDaysInput);
     const parsedTimeStep = parseWholeNumber(inputs.timeStepInput);
@@ -124,10 +140,16 @@ const validateSettings = (inputs: SettingsInputs): ValidationResult => {
     };
 };
 
+/**
+ * Renders the AppSettings view.
+ */
 export default function AppSettings(props: AppSettingProps) {
     const navigate = useNavigate();
     const blockEditorRef = useRef<HTMLDivElement | null>(null);
 
+    /**
+     * Refreshes main calendar data while preserving the current page state.
+     */
     const refreshMainCalendar = () => {
         void props.refreshCalendarData().catch((err) => {
             console.error("Failed to refresh main calendar data:", err);
@@ -244,6 +266,7 @@ export default function AppSettings(props: AppSettingProps) {
     const [toastMessage, setToastMessage] = useState("");
     const [blockToDelete, setBlockToDelete] = useState<CalendarEvent | null>(null);
 
+    // Derive weekend days from the preview range so the toggle explains exactly what will be blocked.
     const weekendRanges = useMemo(() => {
         const ranges: Array<{ label: string; start: Dayjs; end: Dayjs }> = [];
         const rangeStart = previewFirstDate.startOf("day");
@@ -282,6 +305,9 @@ export default function AppSettings(props: AppSettingProps) {
         return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
     }, [weekendRanges]);
 
+    /**
+     * Determines whether the current value should be treated as weekend auto block.
+     */
     const isWeekendAutoBlock = (slot: CalendarEvent) => {
         if (slot.isWeekend || (slot.blockType ?? "").toUpperCase() === "WEEKEND") {
             return true;
@@ -292,12 +318,14 @@ export default function AppSettings(props: AppSettingProps) {
             || normalizedDescription === "weekend closed";
     };
 
+    // Auto-generated weekend blocks are controlled by the weekend toggle, not the manual block list.
     const manageableBlocks = useMemo(() => {
         return blockedSlots
             .filter((slot) => slot.id > 0 && !isWeekendAutoBlock(slot))
             .sort((a, b) => (a.startIso ?? "").localeCompare(b.startIso ?? ""));
     }, [blockedSlots]);
 
+    // Repeat options reuse the current visible date range and exclude dates that would violate weekend rules.
     const repeatDateOptions = useMemo(() => {
         if (!selectedBlockDate || editingBlockId !== null) {
             return [] as Array<{ value: string; label: string }>;
@@ -333,11 +361,13 @@ export default function AppSettings(props: AppSettingProps) {
     }, [blockedSlots, blockTypeInput, editingBlockId, previewFirstDate, previewNumDays, selectedBlockDate]);
 
     useEffect(() => {
+        // If the visible range or block type changes, drop repeat selections that are no longer valid.
         setAdditionalBlockDates((previous) => previous.filter((date) =>
             repeatDateOptions.some((option) => option.value === date)
         ));
     }, [repeatDateOptions]);
 
+    // Editing targets exactly one block; creation can target the primary date plus repeat dates.
     const targetBlockDates = useMemo(() => {
         if (!selectedBlockDate) {
             return [] as string[];
@@ -350,6 +380,7 @@ export default function AppSettings(props: AppSettingProps) {
         return Array.from(new Set([selectedBlockDate, ...additionalBlockDates])).sort();
     }, [additionalBlockDates, editingBlockId, selectedBlockDate]);
 
+    // Convert the form dates/times into concrete ranges and precompute validation flags for each one.
     const pendingBlockRanges = useMemo(() => {
         if (!selectedBlockStartTime || !selectedBlockEndTime || targetBlockDates.length === 0) {
             return [] as Array<{
@@ -400,6 +431,7 @@ export default function AppSettings(props: AppSettingProps) {
     const pendingBlockHasPastStart = pendingBlockRanges.some((range) => range.startsInPast);
     const pendingBlockStartsInPast = editingBlockId === null && pendingBlockHasPastStart;
 
+    // These lists drive concise validation messages when batch-created blocks have mixed validity.
     const conflictingBlockDates = useMemo(() => {
         return pendingBlockRanges
             .filter((range) => range.conflict)
@@ -413,6 +445,7 @@ export default function AppSettings(props: AppSettingProps) {
     }, [pendingBlockRanges]);
 
     // Temporary events used only for live calendar preview before blocks are saved.
+    // Negative ids make them easy to distinguish from persisted backend blocks.
     const pendingBlockEvents = pendingBlockRanges.map((range, index) => ({
         id: -(index + 1),
         name: "Pending block",
@@ -463,6 +496,9 @@ export default function AppSettings(props: AppSettingProps) {
         let cancelled = false;
 
         // Hydrate the page with existing persisted blocks on first load.
+        /**
+         * Loads blocks data required to render this view.
+         */
         const loadBlocks = async () => {
             setBlocksLoading(true);
             setBlockErrorMessage("");
@@ -497,6 +533,9 @@ export default function AppSettings(props: AppSettingProps) {
         };
     }, [previewFirstDate, previewNumDays]);
 
+    /**
+     * Clears the block editor back to its default create-mode values.
+     */
     const resetBlockForm = () => {
         setSelectedBlockDate("");
         setSelectedBlockStartTime("");
@@ -507,6 +546,9 @@ export default function AppSettings(props: AppSettingProps) {
         setEditingBlockId(null);
     };
 
+    /**
+     * Saves one edited block or a batch of new blocks, then refreshes reservation data if conflicts were cancelled.
+     */
     const handleSaveBlock = async () => {
         if (addBlockDisabled || pendingBlockRanges.length === 0) {
             return;
@@ -542,6 +584,7 @@ export default function AppSettings(props: AppSettingProps) {
                 }
             }
 
+            // Backend returns cancellation counts per block; combine them for the toast and refresh decision.
             const canceledReservations = createdBlocks.reduce(
                 (total, block) => total + (block.canceledReservations ?? 0),
                 0
@@ -588,6 +631,9 @@ export default function AppSettings(props: AppSettingProps) {
         }
     };
 
+    /**
+     * Loads a persisted block into the editor so admins can adjust its date, time, type, or reason.
+     */
     const handleEditBlock = (block: CalendarEvent) => {
         if (!block.startIso || !block.endIso) {
             return;
@@ -609,11 +655,17 @@ export default function AppSettings(props: AppSettingProps) {
         });
     };
 
+    /**
+     * Processes the cancel edit interaction and updates the affected UI state.
+     */
     const handleCancelEdit = () => {
         resetBlockForm();
         setBlockErrorMessage("");
     };
 
+    /**
+     * Removes a persisted block and refreshes reservation views that may have been affected by the change.
+     */
     const handleDeleteBlock = async (id: number) => {
         // Pending preview blocks are local-only and should never hit DELETE API.
         if (id <= 0) {
@@ -639,11 +691,17 @@ export default function AppSettings(props: AppSettingProps) {
         refreshMainCalendar();
     };
 
+    /**
+     * Toggles automatic weekend blocks through settings because weekend state is global, not a manual block.
+     */
     const handleToggleWeekendBlocks = async () => {
         if (blocksLoading || isSavingBlock || isTogglingWeekendBlocks) {
             return;
         }
 
+        /**
+         * Reloads blocks after the weekend setting changes so generated blocks appear or disappear immediately.
+         */
         const refreshBlocks = async () => {
             const data = await getScheduleBlocks();
             setBlockedSlots(sortEventsByStartIso(data.map(parseRawBlockToEvent)));
@@ -687,12 +745,18 @@ export default function AppSettings(props: AppSettingProps) {
         }
     };
 
+    /**
+     * Updates the primary block date and clears repeat dates because their valid options depend on it.
+     */
     const handleSelectedBlockDateChange = (date: string) => {
         setSelectedBlockDate(date);
         setAdditionalBlockDates([]);
     };
 
     // Highlight invalid fields while reusing the base input styling.
+    /**
+     * Builds the input class list for settings fields, including validation error styling.
+     */
     const getInputClassName = (field: SettingField) =>
         `${baseInputClassName} ${
             errors[field]
@@ -701,6 +765,9 @@ export default function AppSettings(props: AppSettingProps) {
         }`;
 
     // Push only valid, changed fields to parent state; invalid fields stay local.
+    /**
+     * Applies only validated settings values to local state after a successful save.
+     */
     const applyValidSettings = async (inputs: SettingsInputs) => {
         const next = validateSettings(inputs);
 

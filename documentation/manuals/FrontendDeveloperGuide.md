@@ -283,7 +283,7 @@ When adding a new backend-backed feature:
 - Do not put secrets in frontend code, Vite config, `.env` files committed to git, or built assets.
 - Only expose frontend environment variables intentionally. Vite exposes variables prefixed with `VITE_` to browser code.
 - Treat any value in the frontend bundle as public.
-- OAuth client secrets, database passwords, mail passwords, and signing secrets must stay server-side and should be supplied through environment-specific backend configuration.
+- OAuth client secrets, database passwords, and signing secrets must stay server-side and should be supplied through environment-specific backend configuration.
 
 ### Dependency Safety
 

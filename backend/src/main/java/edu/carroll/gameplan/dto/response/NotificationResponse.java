@@ -11,6 +11,9 @@ public record NotificationResponse(Long id, String message, String createdAt) {
     private static final DateTimeFormatter FORMATTER =
             DateTimeFormatter.ofPattern("EEEE, MMM d 'at' h:mm a");
 
+    /**
+     * Creates the notification response DTO returned to the authenticated user.
+     */
     public NotificationResponse(Long id, String message, LocalDateTime createdAt) {
         this(id, message, createdAt.format(FORMATTER));
     }
