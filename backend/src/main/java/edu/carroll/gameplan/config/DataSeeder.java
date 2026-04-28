@@ -114,6 +114,19 @@ public class DataSeeder {
             ur.save(kris);
         }
 
+        // testing purposes
+        User nick = ur.findByEmailIgnoreCase("nclouse@carroll.edu").orElse(null);
+
+        if (nick == null){
+            nick = new User();
+            nick.setEmail("nclouse@carroll.edu");
+            nick.setFirstName("Nick");
+            nick.setLastName("Clouse");
+            nick.setOidcUserId(null);
+            nick.setRole(UserRole.ADMIN);
+            ur.save(nick);
+        }
+
         EquipmentType wiredBootsType = etr.findByName("Wired Boots").orElseThrow();
         EquipmentType wirelessBootsType = etr.findByName("Wireless Boots").orElseThrow();
         EquipmentType bathType = etr.findByName("Bath").orElseThrow();

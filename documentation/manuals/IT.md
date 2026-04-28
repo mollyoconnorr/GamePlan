@@ -104,6 +104,20 @@ Create `/etc/gameplan` to hold production config outside the Git checkout. This 
 sudo mkdir -p /etc/gameplan
 ```
 
+Because `/etc/gameplan` is owned by `root`, create and edit these files with `sudo`:
+
+```bash
+sudo nano /etc/gameplan/application.yaml
+sudo nano /etc/gameplan/application-prod.yaml
+```
+
+If the files do not exist yet and you want to create them before editing, run:
+
+```bash
+sudo install -o root -g csadmin -m 640 /dev/null /etc/gameplan/application.yaml
+sudo install -o root -g csadmin -m 640 /dev/null /etc/gameplan/application-prod.yaml
+```
+
 ## `/etc/gameplan/application.yaml`
 
 This file contains settings shared by all profiles. Production database credentials can live here because the systemd service loads this external config directory.
@@ -193,6 +207,13 @@ sudo chmod 640 /etc/gameplan/application.yaml /etc/gameplan/application-prod.yam
 
 Clone the repository into the `csadmin` home directory. This is where systemd will run the app from, and keeping the checkout under `csadmin` lets normal deploy commands run without changing file ownership.
 
+Before cloning or building, make sure the `csadmin` home directory is owned by `csadmin`. Gradle and npm write caches under `/home/csadmin`, so a root-owned home directory can cause `java.io.IOException: Permission denied` during `./gradlew bootJar`.
+
+```bash
+sudo chown -R csadmin:csadmin /home/csadmin
+chmod 750 /home/csadmin
+```
+
 ```bash
 cd /home/csadmin
 git clone https://github.com/mollyoconnorr/GamePlan.git
@@ -201,6 +222,14 @@ git clone https://github.com/mollyoconnorr/GamePlan.git
 Build the production JAR on the VM:
 
 ```bash
+cd /home/csadmin/GamePlan/backend
+./gradlew bootJar
+```
+
+Do not run the Gradle build with `sudo`. If the build fails with `Permission denied`, fix the ownership of `/home/csadmin` and the checkout, then run the build again as `csadmin`:
+
+```bash
+sudo chown -R csadmin:csadmin /home/csadmin
 cd /home/csadmin/GamePlan/backend
 ./gradlew bootJar
 ```
