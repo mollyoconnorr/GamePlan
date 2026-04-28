@@ -8,6 +8,8 @@ import {createPortal} from "react-dom";
 import {getFriendlyReservationErrorMessage} from "../../util/ReservationErrorMessages.ts";
 import {buildTimeOptions, filterPastTimesForDate} from "../../util/TimeOptions.ts";
 
+const EDIT_RESERVATION_MAX_AHEAD_MINUTES = 30;
+
 /**
  * Defines the props required by the CalendarCard component.
  */
@@ -69,7 +71,23 @@ export default function CalendarCard({
     // End options are derived from start selection so invalid ranges cannot be submitted.
     const endTimeOptions = useMemo(() => {
         if (!selectedStartTime) return [];
-        return startTimeOptions.filter((option) => option.value > selectedStartTime);
+        const [startHour, startMinute] = selectedStartTime.split(":").map((value) => Number(value));
+        if (Number.isNaN(startHour) || Number.isNaN(startMinute)) {
+            return [];
+        }
+
+        const startMinutes = startHour * 60 + startMinute;
+        const maxEndMinutes = startMinutes + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
+
+        return startTimeOptions.filter((option) => {
+            const [hour, minute] = option.value.split(":").map((value) => Number(value));
+            if (Number.isNaN(hour) || Number.isNaN(minute)) {
+                return false;
+            }
+
+            const optionMinutes = hour * 60 + minute;
+            return optionMinutes > startMinutes && optionMinutes <= maxEndMinutes;
+        });
     }, [selectedStartTime, startTimeOptions]);
     const eventStartsInPast = useMemo(() => {
         if (event.startIso) {
@@ -115,7 +133,17 @@ export default function CalendarCard({
         const eventEnd = startTimeOptions.find((option) => option.label === event.endTime)?.value ?? "";
 
         const boundedStartTime = eventStart || (startTimeOptions[0]?.value ?? "");
-        const boundedEndTimeOptions = startTimeOptions.filter((option) => option.value > boundedStartTime);
+        const [startHour, startMinute] = boundedStartTime.split(":").map((value) => Number(value));
+        const startMinutes = startHour * 60 + startMinute;
+        const boundedEndTimeOptions = startTimeOptions.filter((option) => {
+            const [hour, minute] = option.value.split(":").map((value) => Number(value));
+            if (Number.isNaN(hour) || Number.isNaN(minute)) {
+                return false;
+            }
+
+            const optionMinutes = hour * 60 + minute;
+            return optionMinutes > startMinutes && optionMinutes <= startMinutes + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
+        });
         const boundedEndTime = boundedEndTimeOptions.some((option) => option.value === eventEnd)
             ? eventEnd
             : (boundedEndTimeOptions[0]?.value ?? "");

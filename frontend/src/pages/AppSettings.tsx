@@ -1007,6 +1007,52 @@ export default function AppSettings(props: AppSettingProps) {
                         </div>
                     </div>
 
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label className={formLabelClassName} htmlFor="block-type">
+                                Block type
+                            </label>
+                            <select
+                                id="block-type"
+                                value={blockTypeInput}
+                                onChange={(event) => {
+                                    const nextType = event.target.value as "BLOCK" | "OPEN";
+                                    setBlockTypeInput(nextType);
+                                    setSelectedBlockDate("");
+                                    setSelectedBlockStartTime("");
+                                    setSelectedBlockEndTime("");
+                                    setAdditionalBlockDates([]);
+                                }}
+                                className={selectInputClassName}
+                            >
+                                <option value="BLOCK">Blocked time</option>
+                                <option value="OPEN">Open window</option>
+                            </select>
+                            <p className={helperTextClassName}>
+                                Open windows override the weekend lock and show the gym is staffed.
+                            </p>
+                        </div>
+
+                        <div className="max-w-xl">
+                            <label className={formLabelClassName} htmlFor="block-reason">
+                                {blockTypeInput === "OPEN" ? "Open window note (optional)" : "Block reason (optional)"}
+                            </label>
+                            <input
+                                id="block-reason"
+                                type="text"
+                                value={blockReasonInput}
+                                onChange={(event) => setBlockReasonInput(event.target.value)}
+                                placeholder={blockTypeInput === "OPEN"
+                                    ? "Example: Staffed by athletic trainer, open gym"
+                                    : "Example: Team lift, facility event, maintenance window"}
+                                className={selectInputClassName}
+                            />
+                            <p className={helperTextClassName}>
+                                This note appears on the calendar when someone opens the time slot.
+                            </p>
+                        </div>
+                    </div>
+
                     <ReservationDateTimePicker
                         firstDate={previewFirstDate}
                         numDays={previewNumDays}
@@ -1016,6 +1062,7 @@ export default function AppSettings(props: AppSettingProps) {
                         allowPastDateTimes={editingBlockId !== null}
                         timeWindowStart={blockTypeInput === "OPEN" ? openWindowStartTime : undefined}
                         timeWindowEnd={blockTypeInput === "OPEN" ? openWindowEndTime : undefined}
+                        hideConfiguredWindowTimes={blockTypeInput === "OPEN"}
                         maxResTime={blockMaxDuration}
                         scheduleBlocks={blockedSlots}
                         allowWeekendDates={blockTypeInput === "OPEN"}
@@ -1080,52 +1127,6 @@ export default function AppSettings(props: AppSettingProps) {
                             )}
                         </div>
                     )}
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label className={formLabelClassName} htmlFor="block-type">
-                                Block type
-                            </label>
-                            <select
-                                id="block-type"
-                                value={blockTypeInput}
-                                onChange={(event) => {
-                                    const nextType = event.target.value as "BLOCK" | "OPEN";
-                                    setBlockTypeInput(nextType);
-                                    setSelectedBlockDate("");
-                                    setSelectedBlockStartTime("");
-                                    setSelectedBlockEndTime("");
-                                    setAdditionalBlockDates([]);
-                                }}
-                                className={selectInputClassName}
-                            >
-                                <option value="BLOCK">Blocked time</option>
-                                <option value="OPEN">Open window</option>
-                            </select>
-                            <p className={helperTextClassName}>
-                                Open windows override the weekend lock and show the gym is staffed.
-                            </p>
-                        </div>
-
-                        <div className="max-w-xl">
-                        <label className={formLabelClassName} htmlFor="block-reason">
-                            {blockTypeInput === "OPEN" ? "Open window note (optional)" : "Block reason (optional)"}
-                        </label>
-                        <input
-                            id="block-reason"
-                            type="text"
-                            value={blockReasonInput}
-                            onChange={(event) => setBlockReasonInput(event.target.value)}
-                            placeholder={blockTypeInput === "OPEN"
-                                ? "Example: Staffed by athletic trainer, open gym"
-                                : "Example: Team lift, facility event, maintenance window"}
-                            className={selectInputClassName}
-                        />
-                        <p className={helperTextClassName}>
-                            This note appears on the calendar when someone opens the time slot.
-                        </p>
-                    </div>
-                    </div>
 
                     {pendingBlockConflict && (
                         <p className="text-sm font-semibold text-red-600">

@@ -13,6 +13,8 @@ import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
 /**
  * Defines the props required by the ManageReservations component.
  */
+const EDIT_RESERVATION_MAX_AHEAD_MINUTES = 30;
+
 type ManageReservationsProps = {
     reservations: Reservation[];
     calendarEvents?: CalendarEvent[];
@@ -118,7 +120,23 @@ export default function ManageReservations({
     // End time options are constrained by the selected start time so the modal cannot build invalid ranges.
     const endTimeOptions = useMemo(() => {
         if (!selectedStartTime) return [];
-        return startTimeOptions.filter((option) => option.value > selectedStartTime);
+        const startMinutes = selectedStartTime.split(":").map(Number);
+        const [startHour, startMinute] = startMinutes;
+        if (Number.isNaN(startHour) || Number.isNaN(startMinute)) {
+            return [];
+        }
+
+        const maxEndMinutes = startHour * 60 + startMinute + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
+
+        return startTimeOptions.filter((option) => {
+            const [hour, minute] = option.value.split(":").map(Number);
+            if (Number.isNaN(hour) || Number.isNaN(minute)) {
+                return false;
+            }
+
+            const optionMinutes = hour * 60 + minute;
+            return optionMinutes > startHour * 60 + startMinute && optionMinutes <= maxEndMinutes;
+        });
     }, [selectedStartTime, startTimeOptions]);
 
     /**
@@ -160,7 +178,17 @@ export default function ManageReservations({
             ? reservationStart
             : (availableStartTimeOptions[0]?.value ?? "");
 
-        const boundedEndTimeOptions = availableStartTimeOptions.filter((option) => option.value > boundedStartTime);
+        const [boundedStartHour, boundedStartMinute] = boundedStartTime.split(":").map(Number);
+        const boundedStartMinutes = boundedStartHour * 60 + boundedStartMinute;
+        const boundedEndTimeOptions = availableStartTimeOptions.filter((option) => {
+            const [hour, minute] = option.value.split(":").map(Number);
+            if (Number.isNaN(hour) || Number.isNaN(minute)) {
+                return false;
+            }
+
+            const optionMinutes = hour * 60 + minute;
+            return optionMinutes > boundedStartMinutes && optionMinutes <= boundedStartMinutes + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
+        });
         const boundedEndTime = boundedEndTimeOptions.some((option) => option.value === reservationEnd)
             ? reservationEnd
             : (boundedEndTimeOptions[0]?.value ?? "");
