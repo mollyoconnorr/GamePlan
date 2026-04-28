@@ -1234,6 +1234,7 @@ export default function AppSettings(props: AppSettingProps) {
                     startTime={previewStartTime}
                     endTime={previewEndTime}
                     timeStepMin={previewTimeStep}
+                    maxResTime={validation.parsedMaxResTime ?? props.maxResTime}
                     variant={"trainer"}
                     reservations={blockedSlotsWithPreview}
                     onDeleteReservation={handleDeleteBlock}

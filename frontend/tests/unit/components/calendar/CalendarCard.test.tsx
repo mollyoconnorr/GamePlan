@@ -33,6 +33,7 @@ function buildProps(overrides: Partial<ComponentProps<typeof CalendarCard>> = {}
         startTime: eventDay.hour(8).minute(0).second(0).millisecond(0),
         endTime: eventDay.hour(12).minute(0).second(0).millisecond(0),
         timeStepMin: 30,
+        maxResTime: 120,
         startIndex: 2,
         endIndex: 4,
         groupStartIndex: 2,
@@ -149,6 +150,17 @@ describe("CalendarCard", () => {
             expect(onShowToast).toHaveBeenCalledWith("Weekend reservations are disabled. Choose a weekday.");
         });
         expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    it("limits edit end times using the configured max reservation time", async () => {
+        render(<CalendarCard {...buildProps({ maxResTime: 30 })} />);
+
+        fireEvent.click(screen.getByRole("button", { name: "Power Rack" }));
+        fireEvent.click(screen.getByTitle("Edit Reservation"));
+
+        const endSelect = await screen.findByLabelText("End time");
+        expect(endSelect).toHaveTextContent("9:30 AM");
+        expect(endSelect).not.toHaveTextContent("10:00 AM");
     });
 
     it("hides action controls for equipment calendar variant", () => {

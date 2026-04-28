@@ -10,6 +10,7 @@ export interface CalendarProps {
     startTime: Dayjs;
     endTime: Dayjs;
     timeStepMin: number
+    maxResTime: number
     variant: "user" | "equip" | "trainer"
     reservations?: CalendarEvent[];
     equipmentId?: number;
@@ -27,6 +28,7 @@ export interface CalendarContentProps {
     startTime: Dayjs,
     endTime: Dayjs,
     timeStepMin: number,
+    maxResTime: number,
     top: number,
     left: number,
     height: number,

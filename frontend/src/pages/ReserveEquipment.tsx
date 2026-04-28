@@ -905,6 +905,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                 startTime={startTime}
                                 endTime={endTime}
                                 timeStepMin={timeStep}
+                                maxResTime={maxResTime}
                                 variant={"equip"}
                                 reservations={visibleDisplayedReservations}
                                 loading={loading}
@@ -918,6 +919,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                 startTime={startTime}
                                 endTime={endTime}
                                 timeStepMin={timeStep}
+                                maxResTime={maxResTime}
                                 isPrivileged={false}
                                 readOnly
                                 emptyMessage="No reservations found for the selected equipment this week."

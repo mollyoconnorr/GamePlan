@@ -8,12 +8,7 @@ import ConfirmDialog from "./ConfirmDialog.tsx";
 import Toast from "./Toast.tsx";
 import { createPortal } from "react-dom";
 import { getFriendlyReservationErrorMessage } from "../util/ReservationErrorMessages.ts";
-import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
-
-/**
- * Defines the props required by the ManageReservations component.
- */
-const EDIT_RESERVATION_MAX_AHEAD_MINUTES = 30;
+import {buildTimeOptions, filterEndTimesByMaxDuration, filterPastTimesForDate} from "../util/TimeOptions.ts";
 
 type ManageReservationsProps = {
     reservations: Reservation[];
@@ -22,6 +17,7 @@ type ManageReservationsProps = {
     startTime: Dayjs;
     endTime: Dayjs;
     timeStepMin: number;
+    maxResTime: number;
     onEditReservation?: (id: number, start: Dayjs, end: Dayjs) => Promise<void> | void;
     onDeleteReservation?: (id: number) => Promise<void> | void;
     isPrivileged: boolean;
@@ -51,6 +47,7 @@ export default function ManageReservations({
     startTime,
     endTime,
     timeStepMin,
+    maxResTime,
     onEditReservation,
     onDeleteReservation,
     isPrivileged,
@@ -119,25 +116,8 @@ export default function ManageReservations({
 
     // End time options are constrained by the selected start time so the modal cannot build invalid ranges.
     const endTimeOptions = useMemo(() => {
-        if (!selectedStartTime) return [];
-        const startMinutes = selectedStartTime.split(":").map(Number);
-        const [startHour, startMinute] = startMinutes;
-        if (Number.isNaN(startHour) || Number.isNaN(startMinute)) {
-            return [];
-        }
-
-        const maxEndMinutes = startHour * 60 + startMinute + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
-
-        return startTimeOptions.filter((option) => {
-            const [hour, minute] = option.value.split(":").map(Number);
-            if (Number.isNaN(hour) || Number.isNaN(minute)) {
-                return false;
-            }
-
-            const optionMinutes = hour * 60 + minute;
-            return optionMinutes > startHour * 60 + startMinute && optionMinutes <= maxEndMinutes;
-        });
-    }, [selectedStartTime, startTimeOptions]);
+        return filterEndTimesByMaxDuration(startTimeOptions, selectedStartTime, maxResTime);
+    }, [maxResTime, selectedStartTime, startTimeOptions]);
 
     /**
      * Runs the parent delete callback after confirmation and keeps the modal busy until it finishes.
@@ -178,17 +158,11 @@ export default function ManageReservations({
             ? reservationStart
             : (availableStartTimeOptions[0]?.value ?? "");
 
-        const [boundedStartHour, boundedStartMinute] = boundedStartTime.split(":").map(Number);
-        const boundedStartMinutes = boundedStartHour * 60 + boundedStartMinute;
-        const boundedEndTimeOptions = availableStartTimeOptions.filter((option) => {
-            const [hour, minute] = option.value.split(":").map(Number);
-            if (Number.isNaN(hour) || Number.isNaN(minute)) {
-                return false;
-            }
-
-            const optionMinutes = hour * 60 + minute;
-            return optionMinutes > boundedStartMinutes && optionMinutes <= boundedStartMinutes + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
-        });
+        const boundedEndTimeOptions = filterEndTimesByMaxDuration(
+            availableStartTimeOptions,
+            boundedStartTime,
+            maxResTime
+        );
         const boundedEndTime = boundedEndTimeOptions.some((option) => option.value === reservationEnd)
             ? reservationEnd
             : (boundedEndTimeOptions[0]?.value ?? "");

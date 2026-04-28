@@ -39,6 +39,7 @@ function buildProps(overrides: Partial<ComponentProps<typeof CalendarContent>> =
         startTime: dayjs("2026-04-13T08:00:00"),
         endTime: dayjs("2026-04-13T09:30:00"),
         timeStepMin: 30,
+        maxResTime: 120,
         top: 40,
         left: 90,
         height: 120,

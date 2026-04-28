@@ -45,6 +45,7 @@ function buildProps(overrides: Partial<ComponentProps<typeof Calendar>> = {}) {
         startTime: dayjs("2026-04-13T08:00:00"),
         endTime: dayjs("2026-04-13T09:00:00"),
         timeStepMin: 30,
+        maxResTime: 120,
         variant: "equip" as const,
         reservations: [],
         loading: false,

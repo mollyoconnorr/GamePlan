@@ -236,6 +236,7 @@ export default function Calendar(props: CalendarProps) {
                     startTime={props.startTime}
                     endTime={props.endTime}
                     timeStepMin={props.timeStepMin}
+                    maxResTime={props.maxResTime}
                     top={CELL_H}
                     left={TIME_W}
                     height={CELL_H * (numRows + 1)}

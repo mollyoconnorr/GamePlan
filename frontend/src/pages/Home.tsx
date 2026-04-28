@@ -572,6 +572,7 @@ export default function Home(
                     startTime={startTime}
                     endTime={endTime}
                     timeStepMin={timeStep}
+                    maxResTime={maxResTime}
                     variant={"user"}
                     reservations={calendarEvents}
                     loading={loading}
@@ -585,6 +586,7 @@ export default function Home(
                     startTime={startTime}
                     endTime={endTime}
                     timeStepMin={timeStep}
+                    maxResTime={maxResTime}
                     onEditReservation={handleEditReservation}
                     onDeleteReservation={handleDeleteReservation}
                     isPrivileged={isPrivileged}

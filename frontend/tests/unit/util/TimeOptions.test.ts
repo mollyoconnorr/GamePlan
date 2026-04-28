@@ -1,6 +1,10 @@
 import dayjs from "dayjs";
 import { describe, expect, it } from "vitest";
-import { buildTimeOptions, filterPastTimesForDate } from "../../../src/util/TimeOptions.ts";
+import {
+    buildTimeOptions,
+    filterEndTimesByMaxDuration,
+    filterPastTimesForDate
+} from "../../../src/util/TimeOptions.ts";
 
 describe("TimeOptions utilities", () => {
     it("builds time options across a valid time window", () => {
@@ -56,6 +60,26 @@ describe("TimeOptions utilities", () => {
         expect(filterPastTimesForDate(options, selectedDate, now)).toEqual([
             { value: "10:00", label: "10:00 AM" },
             { value: "10:30", label: "10:30 AM" },
+        ]);
+    });
+
+    it("limits end time options by the configured max reservation duration", () => {
+        const options = [
+            { value: "09:00", label: "9:00 AM" },
+            { value: "09:30", label: "9:30 AM" },
+            { value: "10:00", label: "10:00 AM" },
+            { value: "10:30", label: "10:30 AM" },
+            { value: "11:00", label: "11:00 AM" },
+        ];
+
+        expect(filterEndTimesByMaxDuration(options, "09:00", 120)).toEqual([
+            { value: "09:30", label: "9:30 AM" },
+            { value: "10:00", label: "10:00 AM" },
+            { value: "10:30", label: "10:30 AM" },
+            { value: "11:00", label: "11:00 AM" },
+        ]);
+        expect(filterEndTimesByMaxDuration(options, "09:00", 30)).toEqual([
+            { value: "09:30", label: "9:30 AM" },
         ]);
     });
 });
