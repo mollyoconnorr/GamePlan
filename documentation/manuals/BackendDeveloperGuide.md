@@ -23,7 +23,7 @@ This guide documents the GamePlan backend: how it is structured, how it runs, ho
 
 The backend is a Spring Boot application in `backend/` that exposes the GamePlan API, handles Okta OIDC authentication, persists application data, enforces role-based access, and serves the built frontend in production.
 
-In local development, the backend runs on port `8080` and typically uses the H2 in-memory database. In production, the backend is packaged together with the frontend into one Spring Boot JAR.
+In local development, the backend runs on port `8080` and uses the MySQL datasource from `application.yaml` with the dev profile's schema recreation setting. In production, the backend is packaged together with the frontend into one Spring Boot JAR.
 
 ## Technology Stack
 
@@ -32,9 +32,8 @@ In local development, the backend runs on port `8080` and typically uses the H2 
 - Spring Security with OAuth2 / OIDC
 - Spring Data JPA
 - Spring Web
-- Spring Mail
-- H2 for local/dev and tests
-- MySQL for production-style deployments
+- H2 for tests
+- MySQL for local/dev and production-style deployments
 - Gradle with the Spring Boot and dependency-management plugins
 
 ## Directory Layout
@@ -91,13 +90,15 @@ In normal local development, the backend and frontend run separately:
 
 ### Local Properties
 
-`bootRun` reads optional values from `backend/local.properties` and passes through selected environment variables for OAuth and mail settings.
+`bootRun` reads optional values from `backend/local.properties` and passes `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET`, and `OKTA_ISSUER` into the Java process environment.
 
 Typical use:
 
 - keep local secrets out of git
-- store temporary Okta values in `local.properties`
-- override mail settings with environment variables when needed
+- store temporary Okta values outside tracked YAML files
+- test an alternate Okta app without committing credentials
+
+The checked-in profile YAML files currently contain explicit Okta values. To make `local.properties` drive local Okta configuration, update the active YAML profile to reference the environment variables, for example `${OKTA_CLIENT_ID}`, `${OKTA_CLIENT_SECRET}`, and `${OKTA_ISSUER}`.
 
 ## Running Tests
 
@@ -129,10 +130,13 @@ Shared defaults and base security/OIDC settings.
 
 Local development settings:
 
-- H2 in-memory database
+- inherits the local MySQL datasource from `application.yaml`
+- recreates the schema on startup with `spring.jpa.hibernate.ddl-auto: create`
 - verbose logging
 - localhost success/logout URLs
 - localhost CORS origins
+- Okta issuer `https://integrator-4407916.okta.com/oauth2/default`
+- callback path `/login/oauth2/code/okta`
 
 ### `application-prod.yaml`
 
@@ -156,6 +160,47 @@ Test-only settings:
 - The app’s public URLs and OAuth callback URLs must match the actual deployment origin exactly.
 - The backend uses forwarded headers in production so Spring can generate the correct public callback URL behind a reverse proxy.
 - CORS is strict on purpose. The frontend origin must be listed in the active profile’s allowed origins.
+
+## Seeded Users And Data
+
+`DataSeeder` is active for every non-test profile. That means the baseline seed runs in both local development and production unless the `test` profile is active. The seed methods are written to look up existing rows first, so restarting the app should not duplicate the baseline records.
+
+Baseline data:
+
+- app settings row with week-based calendar display, 15-minute time steps, 30-minute max reservation time, 7 visible days, 8:00 AM to 5:00 PM hours, and weekend auto-blocking disabled
+- equipment types for `Wired Boots`, `Wireless Boots`, and `Bath`
+- equipment rows for three cold baths, one hot bath, two large wired boots, two small wireless boots, and two medium wireless boots
+- admin user `kward@carroll.edu` with role `ADMIN`
+
+The dev profile also seeds example users and calendar data so the app has realistic screens immediately after startup:
+
+- `testuser@carroll.edu` with role `ATHLETE`
+- `admin@carroll.edu` with role `ADMIN`
+- `trainer@carroll.edu` with role `AT`
+- `athlete@carroll.edu` with role `ATHLETE`
+- sample reservations for the test user on seeded bath equipment
+- sample schedule blocks named `Team lift block`, `Facility event`, and `Coach-only window`
+
+These seeded users have `oidcUserId` set to `NULL`. On first login, `CustomOidcUserService` matches the Okta email to the local user and stores the Okta subject. If Okta sends a different email or alias, GamePlan may create a new pending user instead of using the seeded account.
+
+## Okta Configuration
+
+The dev profile uses the Integrator Free Plan Okta tenant:
+
+- issuer: `https://integrator-4407916.okta.com/oauth2/default`
+- redirect URI pattern: `{baseUrl}/login/oauth2/code/{registrationId}`
+- app callback path: `/login/oauth2/code/okta`
+- local frontend success URL: `http://localhost:5173/app/home`
+
+To point development at a different Okta app, update `backend/src/main/resources/application-dev.yaml` or switch that file to read values from environment variables provided by `backend/local.properties`. Keep the Okta app's allowed sign-in redirect URI aligned with the backend callback URL that Spring generates. For local development, that is normally `http://localhost:8080/login/oauth2/code/okta`.
+
+The prod profile is configured for Carroll Okta:
+
+- issuer: `https://carroll.okta.com`
+- redirect URI pattern: `{baseUrl}/authorization-code/callback`
+- app callback path: `/authorization-code/callback`
+
+Production deployments should put the real client ID and secret in `/etc/gameplan/application-prod.yaml` as described in the IT manual, not in tracked repository files.
 
 ## Production Packaging
 

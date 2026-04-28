@@ -203,6 +203,50 @@ sudo chmod 750 /etc/gameplan
 sudo chmod 640 /etc/gameplan/application.yaml /etc/gameplan/application-prod.yaml
 ```
 
+# Okta Configuration
+
+Production uses Carroll Okta through the `okta` OAuth client in `/etc/gameplan/application-prod.yaml`.
+
+The values that must match the Okta application are:
+
+- `spring.security.oauth2.client.registration.okta.client-id`
+- `spring.security.oauth2.client.registration.okta.client-secret`
+- `spring.security.oauth2.client.provider.okta.issuer-uri`
+- `spring.security.oauth2.client.registration.okta.redirect-uri`
+- `app.security.base-uri`
+
+For the standard production deployment, the issuer is `https://carroll.okta.com`, the redirect URI pattern is `{baseUrl}/authorization-code/callback`, and `app.security.base-uri` is `/authorization-code/callback`. With the nginx config in this manual, Okta should allow the sign-in redirect URI `http://gameplan.carroll.edu/authorization-code/callback`.
+
+If the site moves to HTTPS or a different hostname, update these places together:
+
+- the Okta app's allowed sign-in redirect URI
+- `app.security.success-url`
+- `app.security.logout-url`
+- `app.security.allowed-origins`
+- the nginx `server_name`
+
+After changing Okta settings, restart the service:
+
+```bash
+sudo systemctl restart gameplan
+sudo systemctl status gameplan
+```
+
+# Seeded Accounts and Data
+
+GamePlan seeds baseline data at startup for every non-test profile, including production. The production seed is idempotent: it checks for existing records before creating the baseline rows, so normal restarts should not duplicate the seeded data.
+
+Production baseline seed:
+
+- app settings: week-based calendar display, 15-minute time steps, 30-minute max reservation time, 7 visible days, 8:00 AM to 5:00 PM hours, and weekend auto-blocking disabled
+- equipment types: `Wired Boots`, `Wireless Boots`, and `Bath`
+- equipment: `Ice Bath #1`, `Ice Bath #2`, `Ice Bath #3`, `Hot Bath`, `Large Wired Boots`, `Small Wireless Boots`, and `Medium Wireless Boots`
+- admin user: `kward@carroll.edu` with role `ADMIN`
+
+The seeded admin has no Okta subject stored at first. When that user logs in, GamePlan matches the Okta email address to `kward@carroll.edu`, stores the Okta subject, and keeps the `ADMIN` role. If Okta sends a different email or alias, GamePlan may create a separate pending user instead.
+
+Development mode also seeds extra test data, but that data is only created when the `dev` profile is active. Dev-only data includes `testuser@carroll.edu`, `admin@carroll.edu`, `trainer@carroll.edu`, `athlete@carroll.edu`, several example bath reservations, and example schedule blocks named `Team lift block`, `Facility event`, and `Coach-only window`.
+
 # Build the Project
 
 Clone the repository into the `csadmin` home directory. This is where systemd will run the app from, and keeping the checkout under `csadmin` lets normal deploy commands run without changing file ownership.
@@ -423,3 +467,5 @@ Replace the email, first name, and last name with the real admin's information.
 The OIDC ID can stay `NULL`. When the admin logs in, GamePlan matches the Okta email, fills in the OIDC ID automatically, and keeps the seeded role.
 
 Make sure the seeded email exactly matches the email Okta sends, ignoring case. If Okta sends a different alias, GamePlan may create a separate pending student account.
+
+The application already seeds `kward@carroll.edu` as an admin on startup. Use the manual insert only when adding another initial admin or repairing a production database where the seeded admin row is missing.
