@@ -59,6 +59,7 @@ describe("ManageReservations", () => {
         const { props, reservation } = renderManageReservations();
 
         fireEvent.click(screen.getByTitle("Edit Reservation"));
+        fireEvent.change(await screen.findByLabelText("End time"), { target: { value: "10:00" } });
         fireEvent.click(await screen.findByRole("button", { name: "Save" }));
 
         await waitFor(() => {

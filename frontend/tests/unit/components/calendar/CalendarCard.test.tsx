@@ -114,6 +114,7 @@ describe("CalendarCard", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Power Rack" }));
         fireEvent.click(screen.getByTitle("Edit Reservation"));
+        fireEvent.change(await screen.findByLabelText("End time"), { target: { value: "10:00" } });
         fireEvent.click(await screen.findByRole("button", { name: "Save" }));
 
         await waitFor(() => {

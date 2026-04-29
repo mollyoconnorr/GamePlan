@@ -113,7 +113,7 @@ export default function CalendarCard({
         }
 
         const eventStart = startTimeOptions.find((option) => option.label === event.startTime)?.value ?? "";
-        const eventEnd = startTimeOptions.find((option) => option.label === event.endTime)?.value ?? "";
+        const eventEnd = timeOptions.find((option) => option.label === event.endTime)?.value ?? "";
 
         const boundedStartTime = eventStart || (startTimeOptions[0]?.value ?? "");
         const boundedEndTimeOptions = filterEndTimesByMaxDuration(
