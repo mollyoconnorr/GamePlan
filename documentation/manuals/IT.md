@@ -91,7 +91,9 @@ sudo chown -R csadmin:csadmin /var/log/gameplan
 
 # Configuration YAML Files
 
-For production, keep VM-specific configuration outside the Git checkout. Put the config files in:
+The repository tracks the test YAML file only. The main app YAML files under `backend/src/main/resources` are ignored local files, and the backend developer guide documents what those local files should look like when a developer creates them.
+
+For the deployed VM, keep VM-specific configuration outside the Git checkout. Put production overrides in:
 
 ```text
 /etc/gameplan/application.yaml
@@ -120,7 +122,7 @@ sudo install -o root -g csadmin -m 640 /dev/null /etc/gameplan/application-prod.
 
 ## `/etc/gameplan/application.yaml`
 
-This file contains settings shared by all profiles. Production database credentials can live here because the systemd service loads this external config directory.
+This file contains production shared defaults. Production database credentials can live here because the systemd service loads this external config directory and the file is permission-restricted.
 
 ```yaml
 server:
@@ -135,9 +137,11 @@ spring:
     password: Your_password_here
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     show-sql: false
 ```
+
+This external file intentionally uses `spring.profiles.default: prod`. A developer's local `backend/src/main/resources/application.yaml` should use `dev` so local development remains the default when running from a checkout.
 
 ## `/etc/gameplan/application-prod.yaml`
 
@@ -152,7 +156,7 @@ server:
 spring:
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
   security:
     oauth2:
       client:
@@ -193,7 +197,13 @@ app:
     base-uri: "/authorization-code/callback"
 ```
 
-Replace `Your_password_here`, `Your_okta_client_id`, and `Your_okta_client_secret` with production values. Keep secrets out of the repository.
+Replace `Your_password_here`, `Your_okta_client_id`, and `Your_okta_client_secret` with production values. Keep secrets out of the repository. The production deployment currently uses `spring.jpa.hibernate.ddl-auto: update`, so Hibernate updates the schema at startup from the entity model.
+
+The two production files should agree on the database and schema behavior:
+
+- `/etc/gameplan/application.yaml` selects the `prod` profile and provides the MySQL datasource.
+- `/etc/gameplan/application-prod.yaml` provides production web, Okta, logging, and app security overrides.
+- Both files should leave production schema management at `spring.jpa.hibernate.ddl-auto: update` unless the deployment process changes to explicit migrations.
 
 Lock down the config files so `root` owns them, `csadmin` can read them, and other users cannot read production secrets.
 

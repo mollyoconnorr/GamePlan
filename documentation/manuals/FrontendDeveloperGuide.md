@@ -253,6 +253,7 @@ Unsafe methods are any methods outside `GET`, `HEAD`, `OPTIONS`, and `TRACE`.
 - Shared app-level calendar state and reservation refresh logic live in `AppShell` inside `src/App.tsx`.
 - Reservation data refreshes on initial load, relevant custom app events, focus/visibility changes, and a 30-second visible-tab interval.
 - App settings from `/api/admin/settings` drive calendar window, time step, maximum reservation time, and weekend blocking behavior.
+- Reservation create and edit controls must use the configured maximum reservation time when building end-time choices. Do not hardcode a 30-minute edit limit; use the same `maxResTime` setting that the booking flow uses.
 - Athlete home notifications use `src/api/Notifications.ts` and poll unread notification state while the user is active in the app.
 
 ## Adding New Frontend Features

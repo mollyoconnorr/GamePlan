@@ -4,20 +4,51 @@ This guide documents the GamePlan backend: how it is structured, how it runs, ho
 
 ## Table Of Contents
 
-- [Overview](#overview)
-- [Technology Stack](#technology-stack)
-- [Directory Layout](#directory-layout)
-- [Prerequisites](#prerequisites)
-- [Install And Run](#install-and-run)
-- [Running Tests](#running-tests)
-- [Configuration And Profiles](#configuration-and-profiles)
-- [Production Packaging](#production-packaging)
-- [Authentication And Security](#authentication-and-security)
-- [Data Model And Business Rules](#data-model-and-business-rules)
-- [Database Schema](#database-schema)
-- [Adding New Backend Features](#adding-new-backend-features)
-- [Logging And Observability](#logging-and-observability)
-- [Verification Checklist](#verification-checklist)
+- [GamePlan Backend Developer Guide](#gameplan-backend-developer-guide)
+  - [Table Of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Technology Stack](#technology-stack)
+  - [Directory Layout](#directory-layout)
+  - [Prerequisites](#prerequisites)
+  - [Install And Run](#install-and-run)
+    - [Local Database Setup](#local-database-setup)
+    - [Run In Development](#run-in-development)
+    - [Local Properties](#local-properties)
+  - [Running Tests](#running-tests)
+  - [Configuration And Profiles](#configuration-and-profiles)
+    - [`application.yaml`](#applicationyaml)
+    - [`application-dev.yaml`](#application-devyaml)
+    - [`application-prod.yaml`](#application-prodyaml)
+    - [`application-test.yaml`](#application-testyaml)
+    - [Important Notes](#important-notes)
+  - [Seeded Users And Data](#seeded-users-and-data)
+  - [Okta Configuration](#okta-configuration)
+  - [Production Packaging](#production-packaging)
+  - [Authentication And Security](#authentication-and-security)
+  - [Data Model And Business Rules](#data-model-and-business-rules)
+    - [Core Entities](#core-entities)
+    - [Key Rules](#key-rules)
+    - [Time And Zone Handling](#time-and-zone-handling)
+  - [Role And Permission Matrix](#role-and-permission-matrix)
+  - [API Route Reference](#api-route-reference)
+  - [Database Schema](#database-schema)
+    - [Core Tables](#core-tables)
+    - [Relationships](#relationships)
+    - [Entity Notes](#entity-notes)
+    - [Practical Constraints](#practical-constraints)
+  - [Adding New Backend Features](#adding-new-backend-features)
+    - [1. Decide the layer](#1-decide-the-layer)
+    - [2. Keep business rules in services](#2-keep-business-rules-in-services)
+    - [3. Add DTOs for API boundaries](#3-add-dtos-for-api-boundaries)
+    - [4. Update tests alongside code](#4-update-tests-alongside-code)
+    - [5. Check the frontend impact](#5-check-the-frontend-impact)
+  - [Logging And Observability](#logging-and-observability)
+  - [Troubleshooting](#troubleshooting)
+    - [Okta login redirects fail](#okta-login-redirects-fail)
+    - [A user logs in with the wrong access](#a-user-logs-in-with-the-wrong-access)
+    - [Reservations are rejected unexpectedly](#reservations-are-rejected-unexpectedly)
+    - [The backend fails to start locally](#the-backend-fails-to-start-locally)
+  - [Verification Checklist](#verification-checklist)
 
 ## Overview
 
@@ -68,10 +99,31 @@ backend/
 
 - Java 21
 - Node.js and npm if you plan to run `bootJar`, because the backend build also compiles the frontend
+- MySQL for local development and production-style profiles
 - Access to the appropriate Okta tenant or test identity provider
-- A database choice if you are running outside the dev profile
 
 ## Install And Run
+
+### Local Database Setup
+
+The default Spring profile is `dev`. It inherits the MySQL datasource from `application.yaml` and uses `spring.jpa.hibernate.ddl-auto: create`, so the local schema is recreated each time the dev backend starts.
+
+Create a local MySQL database and user that match `backend/src/main/resources/application.yaml`:
+
+```sql
+CREATE DATABASE gameplan_db;
+CREATE USER 'gameplan_user'@'localhost' IDENTIFIED BY 'GamePlan123!';
+GRANT ALL PRIVILEGES ON gameplan_db.* TO 'gameplan_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+If the user already exists, update its password and grants instead:
+
+```sql
+ALTER USER 'gameplan_user'@'localhost' IDENTIFIED BY 'GamePlan123!';
+GRANT ALL PRIVILEGES ON gameplan_db.* TO 'gameplan_user'@'localhost';
+FLUSH PRIVILEGES;
+```
 
 ### Run In Development
 
@@ -120,15 +172,97 @@ The test suite includes:
 
 ## Configuration And Profiles
 
-GamePlan uses Spring profiles and YAML files to separate environments.
+GamePlan uses Spring profiles and YAML files to separate environments. Keep shared defaults in `application.yaml`, then override only the environment-specific values in the active profile file.
+
+Only `backend/src/test/resources/application-test.yaml` is tracked by Git. The main-resource YAML files under `backend/src/main/resources` are ignored local files because they can contain environment-specific values and secrets. Create them locally from the templates below.
+
+Do not commit real production secrets. Use placeholders in local examples and put deployed secrets in `/etc/gameplan` as described in the IT manual.
 
 ### `application.yaml`
 
-Shared defaults and base security/OIDC settings.
+Location: `backend/src/main/resources/application.yaml`
+
+This ignored local file contains shared defaults used by the main app. Set the default profile to `dev` so a plain `./gradlew bootRun` starts local development unless another profile is supplied.
+
+Expected shape:
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  profiles:
+    default: dev
+  datasource:
+    url: jdbc:mysql://localhost:3306/gameplan_db
+    username: gameplan_user
+    password: GamePlan123!
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+```
+
+Notes:
+
+- `ddl-auto: none` is the shared baseline. Profile files override it.
+- The dev profile changes this to `create`.
+- The prod profile changes this to `update`.
+- If the file is missing, create it from this template before running the backend locally.
+- Replace local-only passwords with machine-specific overrides if needed.
 
 ### `application-dev.yaml`
 
-Local development settings:
+Location: `backend/src/main/resources/application-dev.yaml`
+
+This ignored local file contains local development overrides.
+
+Expected shape:
+
+```yaml
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            client-id: Your_dev_okta_client_id
+            client-secret: Your_dev_okta_client_secret
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            authorization-grant-type: authorization_code
+        provider:
+          okta:
+            issuer-uri: https://your-dev-okta-domain/oauth2/default
+
+logging:
+  level:
+    root: INFO
+    edu.carroll.gameplan: DEBUG
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [req:%X{requestId:-}] [user:%X{principal:-}] %logger{36} - %msg%n"
+
+app:
+  security:
+    success-url: "http://localhost:5173/app/home"
+    logout-url: "http://localhost:5173/"
+    allowed-origins:
+      - "https://gameplan.carroll.edu"
+      - "http://localhost:5173"
+      - "https://localhost:5173"
+    base-uri: "/login/oauth2/code/okta"
+```
+
+Behavior:
 
 - inherits the local MySQL datasource from `application.yaml`
 - recreates the schema on startup with `spring.jpa.hibernate.ddl-auto: create`
@@ -140,16 +274,124 @@ Local development settings:
 
 ### `application-prod.yaml`
 
-Production-style settings:
+Location: `backend/src/main/resources/application-prod.yaml`
 
-- MySQL datasource
+This ignored local file contains production-style overrides for local packaging or smoke checks. In a real deployment, `/etc/gameplan/application-prod.yaml` should provide VM-specific values and secrets.
+
+Expected shape:
+
+```yaml
+server:
+  port: 8080
+  address: 127.0.0.1
+  forward-headers-strategy: framework
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            redirect-uri: "{baseUrl}/authorization-code/callback"
+            client-id: Your_prod_okta_client_id
+            client-secret: Your_prod_okta_client_secret
+            scope:
+              - openid
+              - profile
+              - email
+            authorization-grant-type: authorization_code
+        provider:
+          okta:
+            issuer-uri: https://carroll.okta.com
+
+logging:
+  level:
+    root: INFO
+    edu.carroll.gameplan: INFO
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [req:%X{requestId:-}] [user:%X{principal:-}] %logger{36} - %msg%n"
+
+gameplan:
+  logging:
+    dir: /var/log/gameplan
+
+app:
+  security:
+    success-url: "http://gameplan.carroll.edu/app/home"
+    logout-url: "http://gameplan.carroll.edu/"
+    allowed-origins:
+      - "http://gameplan.carroll.edu"
+    base-uri: "/authorization-code/callback"
+```
+
+Behavior:
+
+- inherits the MySQL datasource from `application.yaml` or `/etc/gameplan/application.yaml`
+- schema updates with `spring.jpa.hibernate.ddl-auto: update`
 - production Okta issuer and callback paths
 - production success/logout URLs
 - production CORS origins
 
 ### `application-test.yaml`
 
-Test-only settings:
+Location: `backend/src/test/resources/application-test.yaml`
+
+This file contains test-only settings.
+
+Expected shape:
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: false
+
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/authorization-code/callback"
+            scope:
+              - openid
+              - profile
+              - email
+        provider:
+          okta:
+            authorization-uri: https://example.test/oauth2/v1/authorize
+            token-uri: https://example.test/oauth2/v1/token
+            jwk-set-uri: https://example.test/oauth2/v1/keys
+            user-info-uri: https://example.test/oauth2/v1/userinfo
+            user-name-attribute: sub
+
+app:
+  security:
+    base-uri: "/authorization-code/callback"
+    success-url: "http://localhost:5173/app/home"
+    logout-url: "http://localhost:5173/"
+    allowed-origins:
+      - "https://gameplan.carroll.edu"
+      - "http://localhost:5173"
+```
+
+Behavior:
 
 - H2 datasource
 - stubbed OAuth2 client/provider values
@@ -160,6 +402,7 @@ Test-only settings:
 - The app’s public URLs and OAuth callback URLs must match the actual deployment origin exactly.
 - The backend uses forwarded headers in production so Spring can generate the correct public callback URL behind a reverse proxy.
 - CORS is strict on purpose. The frontend origin must be listed in the active profile’s allowed origins.
+- `app.security.base-uri` must match the path portion of the Okta redirect callback.
 
 ## Seeded Users And Data
 
@@ -253,11 +496,17 @@ Security behavior to know:
 
 ### Key Rules
 
-- reservation windows cannot overlap for the same equipment
-- users cannot reserve outside configured time bounds
-- weekend blocks and open windows alter the available calendar windows
-- maintenance can cancel reservations and notify affected users
-- admin and trainer routes require elevated roles
+- reservation windows must end after they start
+- reservations cannot start in the past
+- active reservations cannot overlap for the same equipment
+- a user cannot hold overlapping active reservations
+- athletes cannot reserve weekend time when weekend auto-blocking is enabled
+- active hard blocks prevent new reservations and cancel conflicting reservations when created or updated
+- open-window blocks mark staffed availability but do not cancel reservations
+- the frontend uses app settings `startTime`, `endTime`, `timeStep`, and `maxReservationTime` to build reservation and edit-time choices
+- app settings changes cancel active reservations that no longer fit inside the configured daily time window
+- maintenance can cancel reservations and notify affected users through in-app notifications
+- admin and trainer routes require elevated roles, while admin-only routes call `UserService.requireAdmin`
 - `authVersion` changes force re-authentication when roles or approval state change
 
 ### Time And Zone Handling
@@ -265,11 +514,59 @@ Security behavior to know:
 - The application uses `America/Denver` for reservation and block conversions in the main APIs.
 - Calendar and reservation UI calculations are aligned to the configured app settings.
 
+## Role And Permission Matrix
+
+| Capability | Student | Athlete | Athletic Trainer | Admin |
+| --- | --- | --- | --- | --- |
+| Sign in and view profile | Yes | Yes | Yes | Yes |
+| Create reservations | No | Yes | Yes | Yes |
+| Edit or cancel own reservations | No | Yes | Yes | Yes |
+| View schedule blocks | No | Yes | Yes | Yes |
+| Manage schedule blocks | No | No | Yes | Yes |
+| View all active athlete reservations | No | No | Yes | Yes |
+| Manage equipment and equipment types | No | No | Yes | Yes |
+| Manage users and roles | No | No | No | Yes |
+| Update app settings | No | No | No | Yes |
+
+The backend enforces these permissions in service methods such as `requireTrainer`, `requireAdmin`, and reservation owner checks. Frontend route gating is useful for navigation, but backend authorization is the source of truth.
+
+## API Route Reference
+
+| Route | Methods | Access | Purpose |
+| --- | --- | --- | --- |
+| `/api/csrf` | `GET` | Public | Creates/exposes the CSRF token cookie for the SPA. |
+| `/api/health` | `GET` | Authenticated | Basic application health check. |
+| `/api/user` | `GET` | Authenticated | Current user profile, role, and pending status. |
+| `/api/reservations` | `GET`, `POST` | Authenticated users; UI exposes creation to approved roles | Current user's reservations and reservation creation. |
+| `/api/reservations/{id}` | `PUT`, `DELETE` | Owner, trainer, or admin | Edit or cancel a reservation. |
+| `/api/reservations/{equipmentId}` | `GET` | Authenticated | Future active reservations for one equipment item. |
+| `/api/reservations/admin` | `GET` | Trainer or admin | All active athlete reservations for staff review. |
+| `/api/blocks` | `GET` | Authenticated | Active schedule blocks for the calendar. |
+| `/api/blocks` | `POST` | Trainer or admin | Create a block or open window. |
+| `/api/blocks/{id}` | `PUT`, `DELETE` | Trainer or admin | Update or cancel a schedule block. |
+| `/api/admin/users` | `GET`, `POST` | Admin | List users or create a pending student. |
+| `/api/admin/users/{userId}/role` | `POST` | Admin | Change a user's role and increment auth version. |
+| `/api/admin/users/pending-count` | `GET` | Admin | Count pending student accounts. |
+| `/api/admin/settings` | `GET` | Authenticated | Current calendar and reservation settings. |
+| `/api/admin/settings` | `PUT` | Admin | Update global app settings. |
+| `/api/equipment` | `GET`, `POST` | Trainer or admin | List or create equipment. |
+| `/api/equipment/{id}` | `GET`, `PUT`, `DELETE` | Trainer or admin | View, update, or delete equipment. |
+| `/api/equipment/{id}/status` | `PUT` | Trainer or admin | Change equipment status. |
+| `/api/equipment-types` | `GET` | Authenticated | List equipment types. |
+| `/api/equipment-types` | `POST` | Trainer or admin | Create equipment types. |
+| `/api/equipment-types/{id}` | `PUT`, `DELETE` | Trainer or admin | Update or delete equipment types. |
+| `/api/equipment-types/{id}/attributes` | `GET` | Authenticated | Read unique stored attributes for a type. |
+| `/api/equipment-types/{id}/attributes-all` | `GET` | Authenticated | Read schema-defined attributes for a type. |
+| `/api/equipment-types/{typeId}/equipment` | `GET` | Authenticated | Find equipment and reservations by type/attribute. |
+| `/api/notifications` | `GET` | Authenticated | Current user's unread in-app notifications. |
+| `/api/notifications/unread-count` | `GET` | Authenticated | Current user's unread notification count. |
+| `/api/notifications/{id}/read` | `PATCH` | Notification owner | Mark one notification as read. |
+
 ## Database Schema
 
 GamePlan’s schema is centered on a small set of relational tables with a few service-managed singleton and JSON-backed fields. If you want the visual version, see the ERD here:
 
-- [GamePlan ERD](../database/gameplan-erd.png)
+- [GamePlan ERD](../database/gameplan_ERD.png)
 
 ### Core Tables
 
@@ -367,6 +664,34 @@ Helpful places to inspect during debugging:
 - `backend/src/main/resources/logback-spring.xml`
 - `backend/src/main/java/edu/carroll/gameplan/config/RequestLoggingFilter.java`
 - `backend/src/main/java/edu/carroll/gameplan/controller/GlobalExceptionHandler.java`
+
+## Troubleshooting
+
+### Okta login redirects fail
+
+- Confirm the Okta app has the same sign-in redirect URI as the active Spring profile.
+- Local dev normally expects `http://localhost:8080/login/oauth2/code/okta`.
+- Production normally expects `http://gameplan.carroll.edu/authorization-code/callback`.
+- Confirm `issuer-uri`, `client-id`, `client-secret`, `app.security.success-url`, `app.security.logout-url`, `app.security.allowed-origins`, and `app.security.base-uri` all belong to the same environment.
+
+### A user logs in with the wrong access
+
+- Check the local `users` row for role and `pending_approval`.
+- Confirm Okta sends the same email address as the seeded or precreated local user.
+- If a role changed recently, have the user sign out and back in so the new `authVersion` is loaded.
+
+### Reservations are rejected unexpectedly
+
+- Check for active schedule blocks overlapping the requested time.
+- Check equipment status and active reservations for the same equipment.
+- Check whether the user already has a reservation in the same time window.
+- Check app settings for weekend auto-blocking, configured hours, time step, and maximum reservation time.
+
+### The backend fails to start locally
+
+- Confirm MySQL is running and `gameplan_db` exists.
+- Confirm `gameplan_user` has the password from `application.yaml` and privileges on `gameplan_db`.
+- Confirm the active profile is the one you expect. The shared config defaults to `dev`.
 
 ## Verification Checklist
 
