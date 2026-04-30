@@ -140,13 +140,13 @@ GamePlan/
 
 - Java 21
 - Node.js and npm
-- MySQL running locally for the default dev profile
+- MySQL running locally for the explicit dev profile
 - Access to an Okta tenant or a local development authentication setup
 - A database choice for any custom Spring profile
 
 ### 1. Create the local dev database
 
-The default Spring profile is `dev`. It uses the MySQL connection in `backend/src/main/resources/application.yaml` and recreates the schema on startup.
+The default Spring profile is `prod`. For local development, run the backend with the explicit `dev` profile. The dev profile uses the MySQL connection in `backend/src/main/resources/application-dev.yaml` and recreates the schema on startup.
 
 ```sql
 CREATE DATABASE gameplan_db;
@@ -160,10 +160,10 @@ FLUSH PRIVILEGES;
 From `backend/`:
 
 ```bash
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
-The dev profile starts the app on port `8080`, recreates the local schema with `ddl-auto: create`, and seeds baseline plus dev-only sample data.
+The explicit dev profile starts the app on port `8080`, recreates the local schema with `ddl-auto: create`, and seeds baseline plus dev-only sample data.
 
 ### 3. Start the frontend
 
@@ -201,11 +201,13 @@ Production settings live in `/etc/gameplan/` on the deployed VM. Local profile Y
 ## Configuration Notes
 
 - The expected YAML shapes for every Spring profile are documented in [BackendDeveloperGuide.md](documentation/manuals/BackendDeveloperGuide.md).
-- `backend/src/main/resources/application.yaml` holds shared local defaults and should set the default profile to `dev`.
-- `backend/src/main/resources/application-dev.yaml` overrides local development settings and uses `spring.jpa.hibernate.ddl-auto: create`.
+- `backend/src/main/resources/application-example.yaml` is a tracked placeholder template for local and production-style settings.
+- There is no main-resource `application.yaml`; `prod` is the application fallback profile.
+- `backend/src/main/resources/application-dev.yaml` is selected explicitly for local development and uses `spring.jpa.hibernate.ddl-auto: create`.
 - `backend/src/main/resources/application-prod.yaml` is production-style config for local packaging checks only; deployed production values belong in `/etc/gameplan/`.
-- `backend/src/test/resources/application-test.yaml` is the only tracked YAML profile file and uses an in-memory H2 database with `create-drop`.
+- `backend/src/test/resources/application.yaml` uses an in-memory H2 database with `create-drop` for tests.
 - Deployed production settings should be supplied from `/etc/gameplan/` so VM-specific values and secrets are not tied to the Git checkout.
+- Logging levels, patterns, and appenders are configured in `backend/src/main/resources/logback-spring.xml`.
 - Notifications are stored in the database and shown in the app. There is no email notification subsystem.
 
 ## Scripts
@@ -213,7 +215,7 @@ Production settings live in `/etc/gameplan/` on the deployed VM. Local profile Y
 ### Backend
 
 ```bash
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=dev'
 ./gradlew test
 ./gradlew bootJar
 ```

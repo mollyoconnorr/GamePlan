@@ -92,7 +92,7 @@ Use `npm ci` for reproducible installs from `package-lock.json`. Use `npm instal
 Start the backend first from `backend/`:
 
 ```bash
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
 Then start the frontend from `frontend/`:

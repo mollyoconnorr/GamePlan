@@ -1,0 +1,84 @@
+server:
+  port: 8080
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:mysql://localhost:3306/gameplan_db
+    username: gameplan_user
+    password: GamePlan123!
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: false
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            client-id: Your_dev_okta_client_id
+            client-secret: Your_dev_okta_client_secret
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            authorization-grant-type: authorization_code
+        provider:
+          okta:
+            issuer-uri: https://your-dev-okta-domain/oauth2/default
+
+app:
+  security:
+    success-url: "http://localhost:5173/app/home"
+    logout-url: "http://localhost:5173/"
+    allowed-origins:
+      - "https://gameplan.carroll.edu"
+      - "http://localhost:5173"
+      - "https://localhost:5173"
+    base-uri: "/login/oauth2/code/okta"
+
+---
+server:
+  port: 8080
+  address: 127.0.0.1
+  forward-headers-strategy: framework
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:mysql://localhost:3306/gameplan_db
+    username: gameplan_user
+    password: Your_database_password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  security:
+    oauth2:
+      client:
+        registration:
+          okta:
+            redirect-uri: "{baseUrl}/authorization-code/callback"
+            client-id: Your_prod_okta_client_id
+            client-secret: Your_prod_okta_client_secret
+            scope:
+              - openid
+              - profile
+              - email
+            authorization-grant-type: authorization_code
+        provider:
+          okta:
+            issuer-uri: https://carroll.okta.com
+
+app:
+  security:
+    success-url: "http://gameplan.carroll.edu/app/home"
+    logout-url: "http://gameplan.carroll.edu/"
+    allowed-origins:
+      - "http://gameplan.carroll.edu"
+    base-uri: "/authorization-code/callback"

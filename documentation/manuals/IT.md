@@ -91,12 +91,11 @@ sudo chown -R csadmin:csadmin /var/log/gameplan
 
 # Configuration YAML Files
 
-The repository tracks the test YAML file only. The main app YAML files under `backend/src/main/resources` are ignored local files, and the backend developer guide documents what those local files should look like when a developer creates them.
+The repository tracks a main-resource example YAML and the test YAML. The active main app YAML files under `backend/src/main/resources` are ignored local files, and the backend developer guide documents what those local files should look like when a developer creates them.
 
 For the deployed VM, keep VM-specific configuration outside the Git checkout. Put production overrides in:
 
 ```text
-/etc/gameplan/application.yaml
 /etc/gameplan/application-prod.yaml
 ```
 
@@ -106,46 +105,21 @@ Create `/etc/gameplan` to hold production config outside the Git checkout. This 
 sudo mkdir -p /etc/gameplan
 ```
 
-Because `/etc/gameplan` is owned by `root`, create and edit these files with `sudo`:
+Because `/etc/gameplan` is owned by `root`, create and edit this file with `sudo`:
 
 ```bash
-sudo nano /etc/gameplan/application.yaml
 sudo nano /etc/gameplan/application-prod.yaml
 ```
 
 If the files do not exist yet and you want to create them before editing, run:
 
 ```bash
-sudo install -o root -g csadmin -m 640 /dev/null /etc/gameplan/application.yaml
 sudo install -o root -g csadmin -m 640 /dev/null /etc/gameplan/application-prod.yaml
 ```
 
-## `/etc/gameplan/application.yaml`
-
-This file contains production shared defaults. Production database credentials can live here because the systemd service loads this external config directory and the file is permission-restricted.
-
-```yaml
-server:
-  port: 8080
-
-spring:
-  profiles:
-    default: prod
-  datasource:
-    url: jdbc:mysql://localhost:3306/gameplan_db
-    username: gameplan_user
-    password: Your_password_here
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-```
-
-This external file intentionally uses `spring.profiles.default: prod`. A developer's local `backend/src/main/resources/application.yaml` should use `dev` so local development remains the default when running from a checkout.
-
 ## `/etc/gameplan/application-prod.yaml`
 
-This file contains production-only settings. The app binds to `127.0.0.1` so nginx can expose it publicly while port `8080` stays local to the VM.
+This file contains production settings. The app binds to `127.0.0.1` so nginx can expose it publicly while port `8080` stays local to the VM. Production database credentials can live here because the systemd service loads this external config directory and the file is permission-restricted.
 
 ```yaml
 server:
@@ -154,9 +128,14 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/gameplan_db
+    username: gameplan_user
+    password: Your_password_here
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: false
   security:
     oauth2:
       client:
@@ -174,20 +153,6 @@ spring:
           okta:
             issuer-uri: https://carroll.okta.com
 
-logging:
-  level:
-    root: INFO
-    edu.carroll.gameplan: INFO
-    org.springframework.security: INFO
-    org.springframework.security.oauth2: INFO
-    org.springframework.web: INFO
-  pattern:
-    console: "%d{HH:mm:ss.SSS} %-5level [req:%X{requestId:-}] [user:%X{principal:-}] %logger{36} - %msg%n"
-
-gameplan:
-  logging:
-    dir: /var/log/gameplan
-
 app:
   security:
     success-url: "http://gameplan.carroll.edu/app/home"
@@ -199,18 +164,14 @@ app:
 
 Replace `Your_password_here`, `Your_okta_client_id`, and `Your_okta_client_secret` with production values. Keep secrets out of the repository. The production deployment currently uses `spring.jpa.hibernate.ddl-auto: update`, so Hibernate updates the schema at startup from the entity model.
 
-The two production files should agree on the database and schema behavior:
-
-- `/etc/gameplan/application.yaml` selects the `prod` profile and provides the MySQL datasource.
-- `/etc/gameplan/application-prod.yaml` provides production web, Okta, logging, and app security overrides.
-- Both files should leave production schema management at `spring.jpa.hibernate.ddl-auto: update` unless the deployment process changes to explicit migrations.
+The application fallback profile is `prod`, so production starts with `application-prod.yaml` unless another active profile is supplied. Leave production schema management at `spring.jpa.hibernate.ddl-auto: update` unless the deployment process changes to explicit migrations.
 
 Lock down the config files so `root` owns them, `csadmin` can read them, and other users cannot read production secrets.
 
 ```bash
 sudo chown -R root:csadmin /etc/gameplan
 sudo chmod 750 /etc/gameplan
-sudo chmod 640 /etc/gameplan/application.yaml /etc/gameplan/application-prod.yaml
+sudo chmod 640 /etc/gameplan/application-prod.yaml
 ```
 
 # Okta Configuration
@@ -316,7 +277,7 @@ Wants=network-online.target
 User=csadmin
 Group=csadmin
 WorkingDirectory=/home/csadmin/GamePlan
-ExecStart=/usr/bin/java -jar /home/csadmin/GamePlan/backend/build/libs/GamePlan-0.0.1.jar --spring.profiles.active=prod --spring.config.additional-location=file:/etc/gameplan/
+ExecStart=/usr/bin/java -jar /home/csadmin/GamePlan/backend/build/libs/GamePlan-0.0.1.jar --spring.config.additional-location=file:/etc/gameplan/ --gameplan.logging.dir=/var/log/gameplan
 SuccessExitStatus=143
 Restart=always
 RestartSec=5
@@ -361,7 +322,7 @@ sudo systemctl disable gameplan
 
 # Logging
 
-Application logs are written to `/var/log/gameplan/gameplan.log` when `gameplan.logging.dir` is set as shown in `application-prod.yaml`.
+Application logs are written to `/var/log/gameplan/gameplan.log` when the service starts with `--gameplan.logging.dir=/var/log/gameplan`.
 
 View service logs from systemd:
 

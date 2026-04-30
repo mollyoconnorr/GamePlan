@@ -16,10 +16,10 @@ This guide documents the GamePlan backend: how it is structured, how it runs, ho
     - [Local Properties](#local-properties)
   - [Running Tests](#running-tests)
   - [Configuration And Profiles](#configuration-and-profiles)
-    - [`application.yaml`](#applicationyaml)
     - [`application-dev.yaml`](#application-devyaml)
     - [`application-prod.yaml`](#application-prodyaml)
-    - [`application-test.yaml`](#application-testyaml)
+    - [`application-example.yaml`](#application-exampleyaml)
+    - [Test `application.yaml`](#test-applicationyaml)
     - [Important Notes](#important-notes)
   - [Seeded Users And Data](#seeded-users-and-data)
   - [Okta Configuration](#okta-configuration)
@@ -54,7 +54,7 @@ This guide documents the GamePlan backend: how it is structured, how it runs, ho
 
 The backend is a Spring Boot application in `backend/` that exposes the GamePlan API, handles Okta OIDC authentication, persists application data, enforces role-based access, and serves the built frontend in production.
 
-In local development, the backend runs on port `8080` and uses the MySQL datasource from `application.yaml` with the dev profile's schema recreation setting. In production, the backend is packaged together with the frontend into one Spring Boot JAR.
+In local development, the backend runs on port `8080` with the explicit `dev` profile and uses the MySQL datasource from `application-dev.yaml`. In production, the backend is packaged together with the frontend into one Spring Boot JAR.
 
 ## Technology Stack
 
@@ -81,15 +81,15 @@ backend/
         repository/    Spring Data repository interfaces
         service/       Business logic for users, reservations, blocks, equipment, and settings
       resources/
-        application.yaml
         application-dev.yaml
         application-prod.yaml
+        application-example.yaml
         logback-spring.xml
         templates/     Server-side HTML templates used by a few routes
     test/
       java/            Unit and integration tests
       resources/
-        application-test.yaml
+        application.yaml
   build.gradle         Build and packaging configuration
   settings.gradle      Gradle project settings
   gradlew              Gradle wrapper script
@@ -106,9 +106,9 @@ backend/
 
 ### Local Database Setup
 
-The default Spring profile is `dev`. It inherits the MySQL datasource from `application.yaml` and uses `spring.jpa.hibernate.ddl-auto: create`, so the local schema is recreated each time the dev backend starts.
+The default Spring profile is `prod`. For local development, run the backend with the explicit `dev` profile. The dev profile uses `spring.jpa.hibernate.ddl-auto: create`, so the local schema is recreated each time the dev backend starts.
 
-Create a local MySQL database and user that match `backend/src/main/resources/application.yaml`:
+Create a local MySQL database and user that match `backend/src/main/resources/application-dev.yaml`:
 
 ```sql
 CREATE DATABASE gameplan_db;
@@ -130,7 +130,7 @@ FLUSH PRIVILEGES;
 From `backend/`:
 
 ```bash
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
 The backend uses the active Spring profile and starts on port `8080`.
@@ -150,7 +150,7 @@ Typical use:
 - store temporary Okta values outside tracked YAML files
 - test an alternate Okta app without committing credentials
 
-The checked-in profile YAML files currently contain explicit Okta values. To make `local.properties` drive local Okta configuration, update the active YAML profile to reference the environment variables, for example `${OKTA_CLIENT_ID}`, `${OKTA_CLIENT_SECRET}`, and `${OKTA_ISSUER}`.
+To make `local.properties` drive local Okta configuration, update the active YAML profile to reference the environment variables, for example `${OKTA_CLIENT_ID}`, `${OKTA_CLIENT_SECRET}`, and `${OKTA_ISSUER}`.
 
 ## Running Tests
 
@@ -160,7 +160,7 @@ From `backend/`:
 ./gradlew test
 ```
 
-The backend test profile uses H2 and test-specific OAuth values from `src/test/resources/application-test.yaml`.
+The backend test profile uses H2 and test-specific OAuth values from `src/test/resources/application.yaml`.
 
 The test suite includes:
 
@@ -172,44 +172,11 @@ The test suite includes:
 
 ## Configuration And Profiles
 
-GamePlan uses Spring profiles and YAML files to separate environments. Keep shared defaults in `application.yaml`, then override only the environment-specific values in the active profile file.
+GamePlan uses Spring profiles and YAML files to separate environments. There is no main-resource `application.yaml`; each profile file carries the settings it needs. The application fallback profile is `prod`, and `dev` must be selected explicitly.
 
-Only `backend/src/test/resources/application-test.yaml` is tracked by Git. The main-resource YAML files under `backend/src/main/resources` are ignored local files because they can contain environment-specific values and secrets. Create them locally from the templates below.
+`backend/src/main/resources/application-example.yaml` is tracked as a placeholder template. The active main-resource YAML files under `backend/src/main/resources` are ignored local files because they can contain environment-specific values and secrets. Create them locally from the example file or the templates below.
 
 Do not commit real production secrets. Use placeholders in local examples and put deployed secrets in `/etc/gameplan` as described in the IT manual.
-
-### `application.yaml`
-
-Location: `backend/src/main/resources/application.yaml`
-
-This ignored local file contains shared defaults used by the main app. Set the default profile to `dev` so a plain `./gradlew bootRun` starts local development unless another profile is supplied.
-
-Expected shape:
-
-```yaml
-server:
-  port: 8080
-
-spring:
-  profiles:
-    default: dev
-  datasource:
-    url: jdbc:mysql://localhost:3306/gameplan_db
-    username: gameplan_user
-    password: GamePlan123!
-  jpa:
-    hibernate:
-      ddl-auto: none
-    show-sql: false
-```
-
-Notes:
-
-- `ddl-auto: none` is the shared baseline. Profile files override it.
-- The dev profile changes this to `create`.
-- The prod profile changes this to `update`.
-- If the file is missing, create it from this template before running the backend locally.
-- Replace local-only passwords with machine-specific overrides if needed.
 
 ### `application-dev.yaml`
 
@@ -221,9 +188,14 @@ Expected shape:
 
 ```yaml
 spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/gameplan_db
+    username: gameplan_user
+    password: GamePlan123!
   jpa:
     hibernate:
       ddl-auto: create
+    show-sql: false
   security:
     oauth2:
       client:
@@ -241,16 +213,6 @@ spring:
           okta:
             issuer-uri: https://your-dev-okta-domain/oauth2/default
 
-logging:
-  level:
-    root: INFO
-    edu.carroll.gameplan: DEBUG
-    org.springframework.security: INFO
-    org.springframework.security.oauth2: INFO
-    org.springframework.web: INFO
-  pattern:
-    console: "%d{HH:mm:ss.SSS} %-5level [req:%X{requestId:-}] [user:%X{principal:-}] %logger{36} - %msg%n"
-
 app:
   security:
     success-url: "http://localhost:5173/app/home"
@@ -264,13 +226,13 @@ app:
 
 Behavior:
 
-- inherits the local MySQL datasource from `application.yaml`
+- uses the local MySQL datasource in `application-dev.yaml`
 - recreates the schema on startup with `spring.jpa.hibernate.ddl-auto: create`
-- verbose logging
 - localhost success/logout URLs
 - localhost CORS origins
 - Okta issuer `https://integrator-4407916.okta.com/oauth2/default`
 - callback path `/login/oauth2/code/okta`
+- logging is controlled by `logback-spring.xml`
 
 ### `application-prod.yaml`
 
@@ -287,9 +249,14 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/gameplan_db
+    username: gameplan_user
+    password: Your_prod_database_password
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: false
   security:
     oauth2:
       client:
@@ -307,20 +274,6 @@ spring:
           okta:
             issuer-uri: https://carroll.okta.com
 
-logging:
-  level:
-    root: INFO
-    edu.carroll.gameplan: INFO
-    org.springframework.security: INFO
-    org.springframework.security.oauth2: INFO
-    org.springframework.web: INFO
-  pattern:
-    console: "%d{HH:mm:ss.SSS} %-5level [req:%X{requestId:-}] [user:%X{principal:-}] %logger{36} - %msg%n"
-
-gameplan:
-  logging:
-    dir: /var/log/gameplan
-
 app:
   security:
     success-url: "http://gameplan.carroll.edu/app/home"
@@ -332,15 +285,22 @@ app:
 
 Behavior:
 
-- inherits the MySQL datasource from `application.yaml` or `/etc/gameplan/application.yaml`
+- uses the MySQL datasource in `application-prod.yaml` or `/etc/gameplan/application-prod.yaml`
 - schema updates with `spring.jpa.hibernate.ddl-auto: update`
 - production Okta issuer and callback paths
 - production success/logout URLs
 - production CORS origins
+- logging is controlled by `logback-spring.xml`
 
-### `application-test.yaml`
+### `application-example.yaml`
 
-Location: `backend/src/test/resources/application-test.yaml`
+Location: `backend/src/main/resources/application-example.yaml`
+
+This tracked file contains placeholder values for dev and production-style profile settings. Copy the relevant values into the ignored local profile files and replace the placeholder secrets.
+
+### Test `application.yaml`
+
+Location: `backend/src/test/resources/application.yaml`
 
 This file contains test-only settings.
 
@@ -690,8 +650,8 @@ Helpful places to inspect during debugging:
 ### The backend fails to start locally
 
 - Confirm MySQL is running and `gameplan_db` exists.
-- Confirm `gameplan_user` has the password from `application.yaml` and privileges on `gameplan_db`.
-- Confirm the active profile is the one you expect. The shared config defaults to `dev`.
+- Confirm `gameplan_user` has the password from `application-dev.yaml` and privileges on `gameplan_db`.
+- Confirm the active profile is the one you expect. The application fallback profile is `prod`; local development should pass `--spring.profiles.active=dev`.
 
 ## Verification Checklist
 

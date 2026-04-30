@@ -1,5 +1,7 @@
 package edu.carroll.gameplan;
 
+import java.util.Map;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -15,7 +17,8 @@ public class GamePlanApplication {
      * @param args command-line arguments
      */
     public static void main(String[] args) {
-        SpringApplication.run(GamePlanApplication.class, args);
+        SpringApplication application = new SpringApplication(GamePlanApplication.class);
+        application.setDefaultProperties(Map.of("spring.profiles.default", "prod"));
+        application.run(args);
     }
 }
-
