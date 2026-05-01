@@ -18,6 +18,8 @@ import java.util.UUID;
 
 /**
  * Logs API request lifecycle events and attaches correlation metadata to MDC.
+ * The filter is limited to API and health requests so static frontend routes do
+ * not produce noisy request logs.
  */
 @Component
 public class RequestLoggingFilter extends OncePerRequestFilter {

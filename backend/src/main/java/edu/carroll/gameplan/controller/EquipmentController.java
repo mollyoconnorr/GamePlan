@@ -15,11 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * REST controller for managing Equipment.
- * <p>
- * Provides endpoints for listing all equipment, creating new equipment,
- * and deleting equipment by ID.
- * </p>
+ * Trainer/admin equipment endpoints for listing, creating, updating, and
+ * deleting equipment records.
  */
 @RestController
 @RequestMapping("/api/equipment")
@@ -41,12 +38,7 @@ public class EquipmentController {
     }
 
     /**
-     * GET /api/equipment
-     * <p>
-     * Returns all equipment as a list of EquipmentDTOs.
-     * Includes attributes and type information.
-     *
-     * @return List of EquipmentDTO objects
+     * Returns all equipment visible to trainers and admins.
      */
     @GetMapping
     public List<EquipmentDTO> getAllEquipment(OAuth2AuthenticationToken authentication) {
@@ -57,13 +49,8 @@ public class EquipmentController {
     }
 
     /**
-     * POST /api/equipment
-     * <p>
-     * Creates a new equipment entity with the specified name, type, and attributes.
-     * Sets the default status to AVAILABLE.
-     *
-     * @param request CreateEquipmentRequest containing name, typeId, and attributes
-     * @return The saved Equipment entity
+     * Creates a new equipment record with the supplied metadata and
+     * attributes.
      */
     @PostMapping
     public EquipmentDTO createEquipment(OAuth2AuthenticationToken authentication,
@@ -75,7 +62,7 @@ public class EquipmentController {
     }
 
     /**
-     * Returns a single {@link EquipmentDTO} for the given ID after validating trainer access.
+     * Returns a single equipment record after validating trainer access.
      */
     @GetMapping("/{id}")
     public EquipmentDTO getEquipment(@PathVariable Long id,
@@ -87,7 +74,7 @@ public class EquipmentController {
     }
 
     /**
-     * Updates metadata (name, type, attributes) of an equipment instance.
+     * Updates equipment metadata such as name, type, and attributes.
      */
     @PutMapping("/{id}")
     public EquipmentDTO updateEquipment(@PathVariable Long id,
@@ -100,7 +87,7 @@ public class EquipmentController {
     }
 
     /**
-     * Updates the persisted status (AVAILABLE, MAINTENANCE, etc.) of the equipment.
+     * Updates the persisted status of an equipment item.
      */
     @PutMapping("/{id}/status")
     public EquipmentStatusUpdateResponse updateEquipmentStatus(@PathVariable Long id,
@@ -113,12 +100,7 @@ public class EquipmentController {
     }
 
     /**
-     * DELETE /api/equipment/{id}
-     * <p>
-     * Deletes an equipment entity by its ID.
-     *
-     * @param id ID of the Equipment to delete
-     * @return ResponseEntity with 204 if deleted, 404 if not found
+     * Deletes an equipment item and cancels any active reservations tied to it.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteEquipment(@PathVariable Long id,

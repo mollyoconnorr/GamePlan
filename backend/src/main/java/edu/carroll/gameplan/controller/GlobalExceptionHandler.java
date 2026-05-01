@@ -19,6 +19,9 @@ import java.time.Instant;
 
 /**
  * Centralized API exception mapping and error logging.
+ *
+ * <p>This advice keeps controller code focused on business logic while
+ * converting common failures into consistent JSON error responses.</p>
  */
 @RestControllerAdvice(annotations = RestController.class)
 public class GlobalExceptionHandler {
@@ -119,7 +122,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Chooses the human-readable status phrase used in API error responses.
+     * Chooses a human-readable reason phrase for the supplied HTTP status.
      */
     private String resolveReasonPhrase(HttpStatusCode status) {
         if (status instanceof HttpStatus httpStatus) {
@@ -130,7 +133,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Selects the safest client-facing message for an exception response.
+     * Picks the best available message for the API error response body.
      */
     private String resolveErrorMessage(HttpStatusCode status, Exception ex, String fallback) {
         if (ex instanceof ResponseStatusException responseStatusException
@@ -147,7 +150,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Uses an inbound request id when available or creates one for log correlation.
+     * Resolves the request identifier from MDC or the incoming request header.
      */
     private String resolveRequestId(HttpServletRequest request) {
         final String mdcRequestId = MDC.get(RequestLoggingFilter.REQUEST_ID_MDC_KEY);
@@ -162,7 +165,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Immutable data transfer object for ApiErrorResponse.
+     * Standard API error payload returned by this advice.
      */
     private record ApiErrorResponse(
             Instant timestamp,

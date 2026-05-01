@@ -17,7 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Provides the logged-in user with stored notifications such as reservation cancellations.
+ * Notification endpoints for the authenticated user.
+ *
+ * <p>These routes expose unread notification counts, unread notification
+ * details, and a way to mark a notification as read.</p>
  */
 @RestController
 @RequestMapping("/api/notifications")

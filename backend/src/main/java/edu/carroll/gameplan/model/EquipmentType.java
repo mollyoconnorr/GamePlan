@@ -6,6 +6,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Entity representing a type or category of equipment.
@@ -213,5 +214,25 @@ public class EquipmentType {
      */
     public void setColor(String color) {
         this.color = color;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof EquipmentType that)) {
+            return false;
+        }
+        return Objects.equals(normalizeName(name), normalizeName(that.name));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(normalizeName(name));
+    }
+
+    private String normalizeName(String value) {
+        return value == null ? null : value.trim();
     }
 }

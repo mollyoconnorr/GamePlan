@@ -6,16 +6,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
- * Redirects auth-related framework paths to frontend routes.
+ * Redirects framework login-error callbacks to the configured frontend URL so
+ * the SPA can show the appropriate error state.
  */
 @Controller
 public class AuthRedirectController {
 
     private final SecurityProps securityProps;
 
-    /**
-     * Provides OAuth error redirect endpoints that return users to the frontend with a readable reason.
-     */
     public AuthRedirectController(
             @Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps securityProps
     ) {
@@ -31,7 +29,8 @@ public class AuthRedirectController {
     }
 
     /**
-     * Builds a frontend-safe login failure URL with the encoded OAuth error reason.
+     * Reuses the configured logout URL when present and appends a login error
+     * flag so the frontend can explain what happened.
      */
     private String buildLoginFailureRedirectUrl(String logoutUrl) {
         if (logoutUrl == null || logoutUrl.isBlank()) {

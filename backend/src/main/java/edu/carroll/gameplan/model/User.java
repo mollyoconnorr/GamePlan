@@ -3,6 +3,7 @@ package edu.carroll.gameplan.model;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Represents a user of the GamePlan system.
@@ -229,5 +230,33 @@ public class User {
      */
     public void setAuthVersion(long authVersion) {
         this.authVersion = authVersion;
+    }
+
+    private String stableIdentity() {
+        if (oidcUserId != null && !oidcUserId.isBlank()) {
+            return oidcUserId.trim();
+        }
+        if (email != null && !email.isBlank()) {
+            return email.trim().toLowerCase();
+        }
+        return null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof User user)) {
+            return false;
+        }
+        String left = stableIdentity();
+        String right = user.stableIdentity();
+        return left != null && right != null && Objects.equals(left, right);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(stableIdentity());
     }
 }

@@ -3,11 +3,10 @@ package edu.carroll.gameplan.dto.response;
 import java.util.List;
 
 /**
- * Data Transfer Object representing a piece of equipment.
- * <p>
- * Contains basic information about the equipment, including its ID, name,
- * status, type name, and a list of attributes.
- * </p>
+ * Equipment summary returned to the frontend.
+ *
+ * <p>This DTO includes the equipment identity, human-readable type details,
+ * current status, and the dynamic attribute list used by the UI.</p>
  */
 public class EquipmentDTO {
 
@@ -17,17 +16,17 @@ public class EquipmentDTO {
     private Long id;
 
     /**
-     * Name of the equipment.
+     * Equipment display name.
      */
     private String name;
 
     /**
-     * Status of the equipment (e.g., AVAILABLE, RESERVED).
+     * Current status label for the equipment (AVAILABLE, etc.).
      */
     private String status;
 
     /**
-     * Name of the equipment type this equipment belongs to.
+     * Human-readable name of the equipment type.
      */
     private String typeName;
 
@@ -37,7 +36,7 @@ public class EquipmentDTO {
     private Long typeId;
 
     /**
-     * List of attribute DTOs describing additional properties of the equipment.
+     * Attribute list describing equipment properties.
      */
     private List<AttributeDTO> attributes;
 

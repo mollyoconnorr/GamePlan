@@ -1,54 +1,33 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
 # GamePlan Backend Developer Guide
 
 This guide documents the GamePlan backend: how it is structured, how it runs, how it is configured, and how to extend it safely.
 
 ## Table Of Contents
 
-- [GamePlan Backend Developer Guide](#gameplan-backend-developer-guide)
-  - [Table Of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Technology Stack](#technology-stack)
-  - [Directory Layout](#directory-layout)
-  - [Prerequisites](#prerequisites)
-  - [Install And Run](#install-and-run)
-    - [Local Database Setup](#local-database-setup)
-    - [Run In Development](#run-in-development)
-    - [Local Properties](#local-properties)
-  - [Running Tests](#running-tests)
-  - [Configuration And Profiles](#configuration-and-profiles)
-    - [`application-dev.yaml`](#application-devyaml)
-    - [`application-prod.yaml`](#application-prodyaml)
-    - [`application-example.yaml`](#application-exampleyaml)
-    - [Test `application.yaml`](#test-applicationyaml)
-    - [Important Notes](#important-notes)
-  - [Seeded Users And Data](#seeded-users-and-data)
-  - [Okta Configuration](#okta-configuration)
-  - [Production Packaging](#production-packaging)
-  - [Authentication And Security](#authentication-and-security)
-  - [Data Model And Business Rules](#data-model-and-business-rules)
-    - [Core Entities](#core-entities)
-    - [Key Rules](#key-rules)
-    - [Time And Zone Handling](#time-and-zone-handling)
-  - [Role And Permission Matrix](#role-and-permission-matrix)
-  - [API Route Reference](#api-route-reference)
-  - [Database Schema](#database-schema)
-    - [Core Tables](#core-tables)
-    - [Relationships](#relationships)
-    - [Entity Notes](#entity-notes)
-    - [Practical Constraints](#practical-constraints)
-  - [Adding New Backend Features](#adding-new-backend-features)
-    - [1. Decide the layer](#1-decide-the-layer)
-    - [2. Keep business rules in services](#2-keep-business-rules-in-services)
-    - [3. Add DTOs for API boundaries](#3-add-dtos-for-api-boundaries)
-    - [4. Update tests alongside code](#4-update-tests-alongside-code)
-    - [5. Check the frontend impact](#5-check-the-frontend-impact)
-  - [Logging And Observability](#logging-and-observability)
-  - [Troubleshooting](#troubleshooting)
-    - [Okta login redirects fail](#okta-login-redirects-fail)
-    - [A user logs in with the wrong access](#a-user-logs-in-with-the-wrong-access)
-    - [Reservations are rejected unexpectedly](#reservations-are-rejected-unexpectedly)
-    - [The backend fails to start locally](#the-backend-fails-to-start-locally)
-  - [Verification Checklist](#verification-checklist)
+- [Overview](#overview)
+- [Technology Stack](#technology-stack)
+- [Directory Layout](#directory-layout)
+- [Prerequisites](#prerequisites)
+- [Install And Run](#install-and-run)
+- [Running Tests](#running-tests)
+- [Configuration And Profiles](#configuration-and-profiles)
+- [Seeded Users And Data](#seeded-users-and-data)
+- [Okta Configuration](#okta-configuration)
+- [Production Packaging](#production-packaging)
+- [Authentication And Security](#authentication-and-security)
+- [Okta Setup For Development](#okta-setup-for-development)
+- [Data Model And Business Rules](#data-model-and-business-rules)
+- [Database Schema](#database-schema)
+- [Adding New Backend Features](#adding-new-backend-features)
+- [Logging And Observability](#logging-and-observability)
+- [Troubleshooting](#troubleshooting)
+- [Verification Checklist](#verification-checklist)
+- [Logging In Through Okta](#logging-in-through-okta)
 
 ## Overview
 
@@ -66,6 +45,24 @@ In local development, the backend runs on port `8080` with the explicit `dev` pr
 - H2 for tests
 - MySQL for local/dev and production-style deployments
 - Gradle with the Spring Boot and dependency-management plugins
+
+### Pinned Versions
+
+These are the versions explicitly pinned in this repository:
+
+- Java 21
+- Spring Boot `4.0.2`
+- Spring Dependency Management `1.1.7`
+- React `19.2.0`
+- React DOM `19.2.0`
+- React Router DOM `7.13.0`
+- Vite `7.2.4`
+- TypeScript `5.9.3`
+- Tailwind CSS `4.1.18`
+- Day.js `1.11.19`
+- Lucide React `0.563.0`
+
+Backend dependencies managed by Spring Boot include Spring Security, Spring Web, Spring Data JPA, Spring Mail, H2, and the MySQL connector, but those versions are resolved by the Spring Boot dependency set rather than pinned directly in the build file.
 
 ## Directory Layout
 
@@ -441,6 +438,185 @@ Security behavior to know:
 - `/api/logout` uses OIDC logout support
 - session versioning is used to invalidate stale roles after changes
 
+## Okta Setup For Development
+
+This section walks through the full Okta setup for GamePlan local development and testing.
+
+Important note:
+
+- In Okta, the value that many people call the "client key" is the `client-id`.
+- The `client-secret` must stay private. Do not commit a real secret to git.
+- GamePlan uses Okta for authentication, but the application role is stored locally in GamePlan as `User.role`.
+- If you want Okta to carry role-like membership data into the token, use Okta groups and a `groups` claim.
+
+### 1. Create a free Okta developer org
+
+1. Go to the Okta developer signup page at [developer.okta.com](https://developer.okta.com/).
+2. Choose the Integrator Free Plan option.
+3. Enter your first name, last name, work email, and country or region.
+4. Open the verification email from Okta.
+5. Activate your account and finish setting up your password and other authenticator options.
+6. Sign in to the Admin Console for your new org.
+7. Copy your Okta domain. It usually looks like `your-name.okta.com` or `integrator-123456.okta.com`.
+
+Use that domain whenever the manual refers to `{yourOktaDomain}`.
+
+### 2. Create the Okta app integration
+
+GamePlan uses a web application integration with the OpenID Connect redirect flow.
+
+1. In the Okta Admin Console, go to `Applications` > `Applications`.
+2. Click `Create App Integration`.
+3. Select `OIDC - OpenID Connect` as the sign-in method.
+4. Select `Web Application` as the application type.
+5. Enter a name for the app, such as `GamePlan`.
+6. Configure the redirect URLs.
+7. Save the integration.
+
+For local development in this repository, the callback URL used by Spring Security is:
+
+```text
+http://localhost:8080/login/oauth2/code/okta
+```
+
+That value comes from `spring.security.oauth2.client.registration.okta.redirect-uri` in `backend/src/main/resources/application-dev.yaml` and the `app.security.base-uri` setting in the same file. The Okta callback is the backend on port `8080`, not the frontend dev server.
+
+For production-style deployments, the callback path used by this repository is:
+
+```text
+/authorization-code/callback
+```
+
+So the full public redirect URI should be the deployed backend origin plus that path. For example, if the app is published at `https://gameplan.carroll.edu`, the redirect URI becomes:
+
+```text
+https://gameplan.carroll.edu/authorization-code/callback
+```
+
+If you are unsure which value to use, check these files:
+
+- `backend/src/main/resources/application-dev.yaml`
+- `backend/src/main/resources/application-prod.yaml`
+- `backend/src/main/java/edu/carroll/gameplan/config/SecurityConfig.java`
+
+### 3. Find the client ID and client secret
+
+After saving the app integration:
+
+1. Open the app integration in the Admin Console.
+2. Go to the `General` tab.
+3. Look in the `Client Credentials` section.
+4. Copy the `Client ID`.
+5. Copy the `Client Secret`.
+
+These are the values GamePlan needs to talk to Okta.
+
+### 4. Add the Okta values to GamePlan
+
+This repository is already wired to read Okta values from configuration files and environment variables.
+
+For local development, the recommended approach is:
+
+1. Put your local Okta values in `backend/local.properties`.
+2. Run the backend with `./gradlew bootRun`.
+3. Let Gradle pass the values through to the application at runtime.
+
+The Gradle build already reads these keys from `backend/local.properties`:
+
+```text
+OKTA_CLIENT_ID
+OKTA_CLIENT_SECRET
+OKTA_ISSUER
+```
+
+A typical local properties file looks like this:
+
+```properties
+OKTA_CLIENT_ID=your-client-id
+OKTA_CLIENT_SECRET=your-client-secret
+OKTA_ISSUER=https://your-okta-domain/oauth2/default
+```
+
+Notes:
+
+- `OKTA_ISSUER` should match the issuer shown by your Okta org.
+- The app’s development profile uses the issuer URI from `backend/src/main/resources/application-dev.yaml`.
+- Never commit real secrets to the repository.
+
+### 5. Create app roles with Okta groups
+
+GamePlan’s actual authorization roles live in the application database as `User.role`, but Okta groups are still useful for testing and for carrying identity hints in the token.
+
+If you want to model roles in Okta:
+
+1. In the Admin Console, go to `Directory` > `Groups`.
+2. Click `Add group`.
+3. Create groups that match the access levels you want to test, such as:
+   - `GamePlan-Admin`
+   - `GamePlan-AT`
+   - `GamePlan-Athlete`
+4. Save each group.
+5. Open each group and assign test users to it.
+
+If you want those groups to appear in the ID token:
+
+1. Go back to `Applications` > `Applications`.
+2. Open the GamePlan OIDC app.
+3. Go to the `Sign On` tab.
+4. Edit the ID token settings.
+5. Add a `groups` claim.
+6. Use a group filter that returns the groups you want, for example a regex that matches the GamePlan groups.
+7. Save the claim configuration.
+
+GamePlan currently does not automatically convert Okta groups into `User.role`. Instead, the backend provisions or links the local user record in `CustomOidcUserService`, and the admin screens or seed data set the application role.
+
+### 6. Understand the redirect and sign-out URIs
+
+There are two separate URL concepts to keep straight:
+
+- Sign-in redirect URI: where Okta sends the browser after login
+- Sign-out redirect URI: where the browser goes after logout
+
+For this repository:
+
+- Local sign-in redirect URI: `http://localhost:8080/login/oauth2/code/okta`
+- Local sign-out redirect URI: `http://localhost:5173/`
+- Production sign-in redirect URI: public backend origin plus `/authorization-code/callback`
+- Production sign-out redirect URI: public frontend origin
+
+How to figure them out:
+
+1. Open `backend/src/main/resources/application-dev.yaml` for local development values.
+2. Open `backend/src/main/resources/application-prod.yaml` for production values.
+3. Check `backend/src/main/java/edu/carroll/gameplan/config/SecurityConfig.java` to see the callback path that Spring Security actually expects.
+4. Match the Okta app’s redirect URLs to the exact scheme, host, port, and path that your app uses.
+
+Rules of thumb:
+
+- The backend callback must match exactly.
+- The frontend logout target should match the browser URL users should land on after sign-out.
+- If the backend is behind a reverse proxy in production, use the public URL, not the internal one.
+
+### 7. Test the login flow
+
+1. Start the backend with the dev profile.
+2. Start the frontend.
+3. Open the app in a browser.
+4. Click the sign-in button or visit a protected route.
+5. Confirm that the browser redirects to Okta.
+6. Sign in with a test user that exists in your Okta org.
+7. Confirm that Okta redirects back to GamePlan and that the local user record is created or linked.
+8. Verify that the user lands on the configured success URL.
+9. Log out and confirm that the browser returns to the configured logout URL.
+
+If login fails, check these first:
+
+- The client ID and client secret values
+- The issuer URL
+- The exact redirect URI
+- The allowed frontend origin in CORS
+- Whether the test user is assigned to the app integration
+
 ## Data Model And Business Rules
 
 ### Core Entities
@@ -664,3 +840,75 @@ Before merging backend changes, verify the following:
 - role-protected routes still behave correctly
 - CORS still matches the real browser origin
 - CSRF still works for unsafe API calls
+
+## Logging In Through Okta
+
+Use this checklist when you want to verify the real login flow from the browser.
+
+1. Start the backend from `backend/` with the dev profile.
+
+```bash
+./gradlew bootRun
+```
+
+2. Start the frontend from `frontend/`.
+
+```bash
+npm run dev
+```
+
+3. Open the frontend in your browser at:
+
+```text
+http://localhost:5173
+```
+
+4. Click the app’s sign-in button, or go directly to the frontend login route:
+
+```text
+http://localhost:5173/login
+```
+
+5. The frontend login page will redirect the browser to Okta by sending it to:
+
+```text
+/oauth2/authorization/okta
+```
+
+6. Sign in with the test user you created in your Okta developer org.
+
+7. After Okta authenticates the user, it sends the browser back to the backend callback on port `8080`.
+
+For this repository, the local callback is:
+
+```text
+http://localhost:8080/login/oauth2/code/okta
+```
+
+8. The backend links the Okta identity to a local `User` record, then redirects the browser to the configured success URL.
+
+For local development, that landing page is:
+
+```text
+http://localhost:5173/app/home
+```
+
+9. Confirm that you are signed in and can see the authenticated app shell, including your username and navigation.
+
+10. Open a protected route, such as reservations or admin pages, to confirm the session is working.
+
+11. Log out using the app’s logout control.
+
+12. Confirm that logout returns you to the configured frontend logout page:
+
+```text
+http://localhost:5173/
+```
+
+If login does not work, check these first:
+
+- the Okta app is assigned to the test user
+- the client ID and client secret are correct
+- the issuer URL matches the Okta org
+- the redirect URI matches the backend callback exactly
+- the frontend and backend are both running

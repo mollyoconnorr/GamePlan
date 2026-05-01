@@ -6,17 +6,30 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
- * Binds frontend and OAuth security URLs from configuration for environment-specific deployments.
+ * Binds the application-level security settings used by CORS, login success,
+ * logout, and OAuth callback handling.
  */
 @Configuration
 @ConfigurationProperties(prefix = "app.security")
 public class SecurityProps {
+    /**
+     * Frontend URL to send the user to after a successful login.
+     */
     private String successUrl;
 
+    /**
+     * Browser origins allowed to make authenticated cross-origin requests.
+     */
     private List<String> allowedOrigins;
 
+    /**
+     * Frontend URL to send the user to after logout.
+     */
     private String logoutUrl;
 
+    /**
+     * OAuth2 redirection endpoint path used by Spring Security.
+     */
     private String baseUri;
 
     /**

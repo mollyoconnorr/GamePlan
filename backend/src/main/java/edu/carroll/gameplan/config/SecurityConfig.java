@@ -21,7 +21,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -38,7 +37,8 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Configures Spring Security for OIDC login, CSRF protection, CORS, logout, and API authorization rules.
+ * Defines the backend security posture: OAuth2/OIDC login, logout, CSRF, and
+ * CORS rules for the SPA and API.
  */
 @Configuration
 @EnableWebSecurity
@@ -46,7 +46,11 @@ import java.util.function.Supplier;
 public class SecurityConfig {
 
     /**
-     * Defines the application security rules, login flow, logout behavior, and CSRF integration.
+     * Builds the Spring Security filter chain used by the application.
+     *
+     * <p>The backend permits the SPA shell and OAuth endpoints, requires
+     * authentication for API routes, stores CSRF tokens in cookies for the
+     * frontend, and uses Okta for login and logout.</p>
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -101,7 +105,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Builds CORS settings from configured frontend origins so local and deployed clients can call the API.
+     * Registers the allowed browser origins and headers for authenticated SPA requests.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(@Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps props) {
@@ -120,7 +124,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Creates the logout handler that signs users out locally and redirects them back to the configured frontend URL.
+     * Creates the Okta logout handler that sends the browser back to the app
+     * after the OIDC session ends.
      */
     @Bean
     public LogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository,
@@ -133,7 +138,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Builds a frontend-safe login failure URL with the encoded OAuth error reason.
+     * Falls back to the frontend logout page and adds a login error flag when
+     * Okta login fails.
      */
     private String buildLoginFailureRedirectUrl(String logoutUrl) {
         if (logoutUrl == null || logoutUrl.isBlank()) {
@@ -144,10 +150,10 @@ public class SecurityConfig {
         return logoutUrl + separator + "loginError=true";
     }
 
+    /**
+     * Forces CSRF token generation so the SPA can read the XSRF cookie.
+     */
     private static final class CsrfCookieFilter extends OncePerRequestFilter {
-        /**
-         * Forces lazy CSRF token creation so Spring writes the XSRF-TOKEN cookie for the SPA.
-         */
         @Override
         protected void doFilterInternal(HttpServletRequest request,
                                         @NonNull HttpServletResponse response,
@@ -161,13 +167,14 @@ public class SecurityConfig {
         }
     }
 
+    /**
+     * Adapts CSRF handling for the SPA so request headers and cookie-based
+     * bootstrap flows both work.
+     */
     private static final class SpaCsrfTokenRequestHandler implements CsrfTokenRequestHandler {
         private final CsrfTokenRequestHandler plain = new CsrfTokenRequestAttributeHandler();
         private final CsrfTokenRequestHandler xor = new XorCsrfTokenRequestAttributeHandler();
 
-        /**
-         * Delegates CSRF token exposure to Spring Security's XOR handler while custom resolution supports SPA headers.
-         */
         @Override
         public void handle(HttpServletRequest request,
                            HttpServletResponse response,
@@ -175,9 +182,6 @@ public class SecurityConfig {
             this.xor.handle(request, response, csrfToken);
         }
 
-        /**
-         * Reads CSRF tokens from SPA headers first and falls back to Spring Security token resolution.
-         */
         @Override
         public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
             String headerValue = request.getHeader(csrfToken.getHeaderName());

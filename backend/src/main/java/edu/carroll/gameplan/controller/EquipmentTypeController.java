@@ -17,11 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * REST controller for managing Equipment Types.
- * <p>
- * Provides endpoints for listing, creating, deleting, and retrieving attributes
- * for equipment types, as well as listing equipment of a specific type.
- * </p>
+ * Equipment type endpoints for browsing shared metadata and managing type
+ * definitions used by trainers and admins.
  */
 @RestController
 @RequestMapping("/api/equipment-types")
@@ -43,11 +40,7 @@ public class EquipmentTypeController {
     }
 
     /**
-     * GET /api/equipment-types
-     * <p>
-     * Returns a list of all equipment types.
-     *
-     * @return List of EquipmentTypeDTO objects
+     * Returns all equipment types for use in the UI.
      */
     @GetMapping
     public List<EquipmentTypeDTO> getAllTypes() {
@@ -55,13 +48,7 @@ public class EquipmentTypeController {
     }
 
     /**
-     * GET /api/equipment-types/{id}/attributes
-     * <p>
-     * Returns all unique attributes for a given equipment type by aggregating
-     * attributes from all equipment of this type.
-     *
-     * @param id ID of the EquipmentType
-     * @return List of EquipmentAttributeDTO objects
+     * Returns the unique attributes currently observed for a type.
      */
     @GetMapping("/{id}/attributes")
     public List<EquipmentAttributeDTO> getAttributesForType(@PathVariable Long id) {
@@ -69,12 +56,8 @@ public class EquipmentTypeController {
     }
 
     /**
-     * GET /api/equipment-types/{id}/attributes-all
-     * <p>
-     * Returns all attributes defined in the fieldSchema of the equipment type.
-     *
-     * @param id ID of the EquipmentType
-     * @return List of EquipmentTypeAttributeDTO objects
+     * Returns every attribute defined in the type schema, even if no equipment
+     * instance is currently using it.
      */
     @GetMapping("/{id}/attributes-all")
     public List<EquipmentTypeAttributeDTO> getAllAttributesForType(@PathVariable Long id) {
@@ -82,14 +65,8 @@ public class EquipmentTypeController {
     }
 
     /**
-     * GET /api/equipment-types/{typeId}/equipment
-     * <p>
-     * Returns all equipment of a given type, optionally filtered by attribute name and value.
-     *
-     * @param typeId    ID of the EquipmentType
-     * @param attrName  Optional attribute name to filter equipment
-     * @param attrValue Optional attribute value to filter equipment
-     * @return List of EquipmentWithReservationsDTO objects
+     * Returns equipment for a type, optionally filtered by an attribute name
+     * and value pair.
      */
     @GetMapping("/{typeId}/equipment")
     public List<EquipmentWithReservationsDTO> getEquipmentByTypeAndAttribute(
@@ -101,12 +78,7 @@ public class EquipmentTypeController {
     }
 
     /**
-     * POST /api/equipment-types
-     * <p>
-     * Creates a new equipment type.
-     *
-     * @param request Request object containing name, fieldSchema, and color
-     * @return Created EquipmentTypeDTO object
+     * Creates a new equipment type after verifying trainer access.
      */
     @PostMapping
     public EquipmentTypeDTO createEquipmentType(OAuth2AuthenticationToken authentication,
@@ -118,7 +90,7 @@ public class EquipmentTypeController {
     }
 
     /**
-     * Updates the equipment type record (name, color, schema) after validating uniqueness.
+     * Updates the equipment type record after validating trainer access.
      */
     @PutMapping("/{id}")
     public EquipmentTypeDTO updateEquipmentType(@PathVariable Long id,
@@ -131,13 +103,7 @@ public class EquipmentTypeController {
     }
 
     /**
-     * DELETE /api/equipment-types/{id}
-     * <p>
-     * Deletes an equipment type by ID. Returns 204 if successful, 409 if
-     * equipment exists for this type, or 404 if not found.
-     *
-     * @param id ID of the EquipmentType to delete
-     * @return ResponseEntity with appropriate status code
+     * Deletes an equipment type and optionally force-removes dependent records.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteEquipmentType(@PathVariable Long id,

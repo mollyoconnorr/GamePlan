@@ -1,3 +1,9 @@
+---
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
 # Frontend Developer Guide
 
 This guide documents the GamePlan frontend: how it is structured, what technology it uses, how to run it in different modes, and how to maintain it safely.

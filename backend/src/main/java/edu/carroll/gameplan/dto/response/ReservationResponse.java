@@ -1,10 +1,7 @@
 package edu.carroll.gameplan.dto.response;
 
 /**
- * Data Transfer Object (DTO) representing a reservation.
- * <p>
- * Used to transfer reservation data from the backend to the frontend.
- * </p>
+ * Reservation summary returned to the frontend calendar and reservation views.
  */
 public class ReservationResponse {
 
@@ -40,6 +37,7 @@ public class ReservationResponse {
      * @param equipmentName The name of the reserved equipment.
      * @param start         The start datetime of the reservation.
      * @param end           The end datetime of the reservation.
+     * @param color         The UI color associated with the equipment type.
      */
     public ReservationResponse(Long id, String equipmentName, String start, String end, String color) {
         this.id = id;

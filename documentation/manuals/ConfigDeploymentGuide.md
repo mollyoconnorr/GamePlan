@@ -1,3 +1,8 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
 # GamePlan IT Manual
 
 This manual documents how to set up a Ubuntu VM for GamePlan and run the app as a `systemd` service. The production deployment uses one Spring Boot JAR that contains both the backend and the built frontend.

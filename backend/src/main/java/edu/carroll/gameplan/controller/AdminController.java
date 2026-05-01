@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller used by admins to manage users and their roles.
+ * Admin-only user management endpoints for listing users, creating pending
+ * accounts, changing roles, and checking approval backlog.
  */
 @RestController
 @RequestMapping("/api/admin")

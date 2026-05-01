@@ -1,19 +1,15 @@
 package edu.carroll.gameplan.dto.response;
 
 /**
- * Data Transfer Object (DTO) representing a user.
- * <p>
- * Used to send user information between layers (e.g., from backend to frontend)
- * without exposing the entire User entity.
- * </p>
+ * User summary returned to API clients.
  *
- * @param id        The unique identifier of the user.
- * @param email     The user's email address.
- * @param username  The user's username or OIDC subject.
- * @param firstName The user's first name.
- * @param lastName  The user's last name.
- * @param role      The role of the user (e.g., ATHLETE, ADMIN).
- * @param pendingApproval Whether the user is awaiting approval.
+ * @param id the user identifier
+ * @param email the user email address
+ * @param username the OIDC subject or username
+ * @param firstName the user's first name
+ * @param lastName the user's last name
+ * @param role the application role
+ * @param pendingApproval whether the user still needs approval
  */
 public record UserDto(
         String id,

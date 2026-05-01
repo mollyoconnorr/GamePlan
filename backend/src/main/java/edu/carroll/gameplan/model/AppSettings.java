@@ -3,6 +3,7 @@ package edu.carroll.gameplan.model;
 import jakarta.persistence.*;
 
 import java.time.LocalTime;
+import java.util.Objects;
 
 /**
  * Singleton entity that stores global scheduling settings for the app.
@@ -210,5 +211,15 @@ public class AppSettings {
      */
     public void setWeekendAutoBlockEnabled(Boolean weekendAutoBlockEnabled) {
         this.weekendAutoBlockEnabled = weekendAutoBlockEnabled;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof AppSettings;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(AppSettings.class);
     }
 }
