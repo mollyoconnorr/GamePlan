@@ -23,6 +23,7 @@ This guide documents the GamePlan backend: how it is structured, how it runs, ho
     - [Important Notes](#important-notes)
   - [Seeded Users And Data](#seeded-users-and-data)
   - [Okta Configuration](#okta-configuration)
+  - [How Okta Works In GamePlan](#how-okta-works-in-gameplan)
   - [Production Packaging](#production-packaging)
   - [Authentication And Security](#authentication-and-security)
   - [Data Model And Business Rules](#data-model-and-business-rules)
@@ -49,6 +50,7 @@ This guide documents the GamePlan backend: how it is structured, how it runs, ho
     - [Reservations are rejected unexpectedly](#reservations-are-rejected-unexpectedly)
     - [The backend fails to start locally](#the-backend-fails-to-start-locally)
   - [Verification Checklist](#verification-checklist)
+  - [Logging In Through Okta](#logging-in-through-okta)
 
 ## Overview
 
@@ -405,6 +407,51 @@ The prod profile is configured for Carroll Okta:
 
 Production deployments should put the real client ID and secret in `/etc/gameplan/application-prod.yaml` as described in the IT manual, not in tracked repository files.
 
+## How Okta Works In GamePlan
+
+Okta handles external identity, but GamePlan keeps the application state locally.
+
+The login flow works like this:
+
+1. The frontend sends the browser to `/oauth2/authorization/okta`.
+2. Spring Security redirects the browser to the Okta sign-in page.
+3. Okta authenticates the user and sends the browser back to the backend callback URL.
+4. `CustomOidcUserService` loads the OIDC profile from Okta.
+5. The service links the Okta user to a local `User` row, or creates a new pending one when needed.
+6. `VersionedOidcUser` carries the local `authVersion` into the session.
+7. `UserService` resolves the authenticated local user from the Okta subject and enforces trainer/admin checks.
+8. `SecurityConfig` handles CSRF, CORS, login success, and OIDC logout.
+9. `AuthRedirectController` sends login failures back to the frontend with a `loginError` flag.
+
+Key pieces to know:
+
+- `CustomOidcUserService` is responsible for matching or creating the local user record.
+- `User.role` is the real authorization source for the app.
+- Okta groups can be added as a token claim for testing or reporting, but GamePlan does not automatically map groups into roles.
+- `authVersion` changes force the browser to sign in again after a role or approval change.
+- `app.security.base-uri` must match the backend callback path that Spring Security expects.
+
+Local development uses:
+
+- Okta issuer: `https://integrator-4407916.okta.com/oauth2/default`
+- backend callback: `http://localhost:8080/login/oauth2/code/okta`
+- frontend success URL: `http://localhost:5173/app/home`
+- frontend logout URL: `http://localhost:5173/`
+
+Production uses:
+
+- Okta issuer: `https://carroll.okta.com`
+- backend callback: `/authorization-code/callback`
+- frontend success URL: `http://gameplan.carroll.edu/app/home`
+- frontend logout URL: `http://gameplan.carroll.edu/`
+
+When you configure a new Okta app, make sure:
+
+- the client ID and secret belong to the same Okta org as the issuer
+- the sign-in redirect URI matches the backend callback exactly
+- the sign-out redirect URI matches the frontend URL that should load after logout
+- the frontend origin is listed in the active profile’s CORS allowed origins
+
 ## Production Packaging
 
 The production artifact is built from `backend/` with:
@@ -664,3 +711,68 @@ Before merging backend changes, verify the following:
 - role-protected routes still behave correctly
 - CORS still matches the real browser origin
 - CSRF still works for unsafe API calls
+
+## Logging In Through Okta
+
+Use this checklist to verify the real browser flow from end to end.
+
+1. Start the backend with the dev profile from `backend/`.
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+2. Start the frontend from `frontend/`.
+
+```bash
+npm run dev
+```
+
+3. Open the app in your browser.
+
+```text
+http://localhost:5173
+```
+
+4. Go to the login page or click the sign-in button.
+
+```text
+http://localhost:5173/login
+```
+
+5. The frontend redirects the browser to Okta through:
+
+```text
+/oauth2/authorization/okta
+```
+
+6. Sign in with a test Okta user assigned to the GamePlan app.
+
+7. Okta sends the browser back to the backend callback on port `8080`.
+
+```text
+http://localhost:8080/login/oauth2/code/okta
+```
+
+8. The backend links the Okta identity to a local `User` record and redirects to the configured success URL.
+
+```text
+http://localhost:5173/app/home
+```
+
+9. Confirm the header or navbar shows the expected user information.
+
+10. Log out and confirm the browser returns to the frontend logout URL.
+
+```text
+http://localhost:5173/
+```
+
+If login fails, check:
+
+- the app assignment in Okta
+- the client ID and client secret
+- the issuer URL
+- the redirect URI
+- the frontend origin in CORS
+- the active Spring profile
