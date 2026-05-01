@@ -3,6 +3,7 @@ package edu.carroll.gameplan.model;
 import jakarta.persistence.*;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Entity representing a piece of equipment that can be reserved by users.
@@ -182,5 +183,30 @@ public class Equipment {
      */
     public void setAttributes(List<EquipmentAttribute> attributes) {
         this.attributes = attributes;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Equipment that)) {
+            return false;
+        }
+        return Objects.equals(normalizeName(name), normalizeName(that.name))
+                && Objects.equals(typeName(equipmentType), typeName(that.equipmentType));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(normalizeName(name), typeName(equipmentType));
+    }
+
+    private String normalizeName(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private String typeName(EquipmentType type) {
+        return type == null ? null : normalizeName(type.getName());
     }
 }

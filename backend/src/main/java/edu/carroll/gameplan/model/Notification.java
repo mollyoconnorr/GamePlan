@@ -3,6 +3,7 @@ package edu.carroll.gameplan.model;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Simple notification entity sent to users when their reservation is impacted.
@@ -117,5 +118,36 @@ public class Notification {
      */
     public void setRead(boolean read) {
         this.read = read;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Notification that)) {
+            return false;
+        }
+        return Objects.equals(message, that.message)
+                && Objects.equals(createdAt, that.createdAt)
+                && Objects.equals(ownerKey(user), ownerKey(that.user));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(message, createdAt, ownerKey(user));
+    }
+
+    private String ownerKey(User value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.getOidcUserId() != null && !value.getOidcUserId().isBlank()) {
+            return value.getOidcUserId().trim();
+        }
+        if (value.getEmail() != null && !value.getEmail().isBlank()) {
+            return value.getEmail().trim().toLowerCase();
+        }
+        return null;
     }
 }

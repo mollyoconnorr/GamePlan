@@ -3,6 +3,7 @@ package edu.carroll.gameplan.model;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * A trainer/admin-managed time range that blocks reservations globally.
@@ -227,5 +228,38 @@ public class ScheduleBlock {
      */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ScheduleBlock that)) {
+            return false;
+        }
+        return Objects.equals(startDatetime, that.startDatetime)
+                && Objects.equals(endDatetime, that.endDatetime)
+                && Objects.equals(blockType, that.blockType)
+                && Objects.equals(reason, that.reason)
+                && Objects.equals(ownerKey(createdBy), ownerKey(that.createdBy));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(startDatetime, endDatetime, blockType, reason, ownerKey(createdBy));
+    }
+
+    private String ownerKey(User value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.getOidcUserId() != null && !value.getOidcUserId().isBlank()) {
+            return value.getOidcUserId().trim();
+        }
+        if (value.getEmail() != null && !value.getEmail().isBlank()) {
+            return value.getEmail().trim().toLowerCase();
+        }
+        return null;
     }
 }

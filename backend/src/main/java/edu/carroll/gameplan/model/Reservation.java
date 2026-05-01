@@ -3,6 +3,7 @@ package edu.carroll.gameplan.model;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Represents a reservation made by a user for a specific piece of equipment.
@@ -227,5 +228,53 @@ public class Reservation {
      */
     public void setEquipment(Equipment equipment) {
         this.equipment = equipment;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Reservation that)) {
+            return false;
+        }
+        return Objects.equals(startDatetime, that.startDatetime)
+                && Objects.equals(endDatetime, that.endDatetime)
+                && Objects.equals(ownerKey(user), ownerKey(that.user))
+                && Objects.equals(equipmentKey(equipment), equipmentKey(that.equipment));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(startDatetime, endDatetime, ownerKey(user), equipmentKey(equipment));
+    }
+
+    private String ownerKey(User value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.getOidcUserId() != null && !value.getOidcUserId().isBlank()) {
+            return value.getOidcUserId().trim();
+        }
+        if (value.getEmail() != null && !value.getEmail().isBlank()) {
+            return value.getEmail().trim().toLowerCase();
+        }
+        return null;
+    }
+
+    private String equipmentKey(Equipment value) {
+        if (value == null) {
+            return null;
+        }
+        String typeName = value.getEquipmentType() != null ? value.getEquipmentType().getName() : null;
+        String equipmentName = value.getName();
+        String normalizedEquipmentName = equipmentName == null ? null : equipmentName.trim();
+        String normalizedTypeName = typeName == null ? null : typeName.trim();
+        if (normalizedEquipmentName == null && normalizedTypeName == null) {
+            return null;
+        }
+        return (normalizedEquipmentName == null ? "" : normalizedEquipmentName)
+                + "|"
+                + (normalizedTypeName == null ? "" : normalizedTypeName);
     }
 }

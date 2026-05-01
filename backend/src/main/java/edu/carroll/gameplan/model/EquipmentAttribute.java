@@ -3,6 +3,8 @@ package edu.carroll.gameplan.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.Objects;
+
 /**
  * Entity representing an attribute of a piece of equipment.
  * <p>
@@ -111,5 +113,39 @@ public class EquipmentAttribute {
      */
     public void setEquipment(Equipment equipment) {
         this.equipment = equipment;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof EquipmentAttribute that)) {
+            return false;
+        }
+        return Objects.equals(name, that.name)
+                && Objects.equals(value, that.value)
+                && Objects.equals(ownerKey(equipment), ownerKey(that.equipment));
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, value, ownerKey(equipment));
+    }
+
+    private String ownerKey(Equipment value) {
+        if (value == null) {
+            return null;
+        }
+        String typeName = value.getEquipmentType() != null ? value.getEquipmentType().getName() : null;
+        String equipmentName = value.getName();
+        String normalizedEquipmentName = equipmentName == null ? null : equipmentName.trim();
+        String normalizedTypeName = typeName == null ? null : typeName.trim();
+        if (normalizedEquipmentName == null && normalizedTypeName == null) {
+            return null;
+        }
+        return (normalizedEquipmentName == null ? "" : normalizedEquipmentName)
+                + "|"
+                + (normalizedTypeName == null ? "" : normalizedTypeName);
     }
 }
