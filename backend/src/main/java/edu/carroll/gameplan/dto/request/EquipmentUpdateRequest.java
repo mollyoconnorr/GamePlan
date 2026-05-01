@@ -20,6 +20,9 @@ public class EquipmentUpdateRequest {
      */
     private Map<String, String> attributes;
 
+    /**
+     * Request body used when editing equipment identity, type, and dynamic attributes.
+     */
     public EquipmentUpdateRequest() {
     }
 

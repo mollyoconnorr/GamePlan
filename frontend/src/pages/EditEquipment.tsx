@@ -19,6 +19,9 @@ import type {
     EquipmentUpdateRequest,
 } from "../api/Equipment.ts";
 
+/**
+ * Editable equipment attribute row paired with the attribute definitions for the selected type.
+ */
 type AttributeRow = {
     id: string;
     name: string;
@@ -31,6 +34,9 @@ const statusOptions = [
     {value: "MAINTENANCE", label: "Maintenance"},
 ];
 
+/**
+ * Renders the EditEquipment view.
+ */
 export default function EditEquipment() {
     const {equipmentId} = useParams<{equipmentId: string}>();
     const navigate = useNavigate();
@@ -67,6 +73,9 @@ export default function EditEquipment() {
             });
     }, []);
 
+    /**
+     * Maps map attributes to record into the structure used by the form state.
+     */
     const mapAttributesToRecord = (rows?: EquipmentDTO["attributes"]) =>
         (rows ?? []).reduce<Record<string, string>>((acc, row) => {
             const trimmedName = row.name?.trim();
@@ -77,6 +86,9 @@ export default function EditEquipment() {
             return acc;
         }, {});
 
+    /**
+     * Parses input into TypeAttributes.
+     */
     const parseTypeAttributes = (rows: EquipmentTypeAttributeResponse[]) => {
         const grouped = new Map<string, Set<string>>();
 
@@ -126,6 +138,9 @@ export default function EditEquipment() {
         });
     };
 
+    /**
+     * Loads attribute definitions for the selected type and merges existing equipment values into editable rows.
+     */
     const loadTypeAttributeRows = async (typeId: number, currentValues: Record<string, string>) => {
         try {
             const typeAttributeData = await getEquipmentTypeAttributes(typeId);
@@ -161,12 +176,18 @@ export default function EditEquipment() {
             .finally(() => setLoading(false));
     }, [equipmentId]);
 
+    /**
+     * Updates one editable dynamic attribute value in local form state.
+     */
     const updateAttributeValue = (id: string, value: string) => {
         setAttributes((prev) =>
             prev.map((row) => (row.id === id ? {...row, value} : row))
         );
     };
 
+    /**
+     * Saves name, type, and dynamic attributes together so backend validation sees one coherent equipment update.
+     */
     const handleSave = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!equipmentId || !selectedTypeId || !name.trim()) {
@@ -205,6 +226,9 @@ export default function EditEquipment() {
         }
     };
 
+    /**
+     * Updates maintenance/availability status and keeps the local equipment snapshot in sync.
+     */
     const handleStatusChange = async (nextStatus: string) => {
         if (!equipmentId) return;
         setStatusUpdating(true);
@@ -221,6 +245,9 @@ export default function EditEquipment() {
         }
     };
 
+    /**
+     * Deletes the current equipment item and returns to the inventory list on success.
+     */
     const handleDelete = async () => {
         if (!equipmentId) return;
 
@@ -237,6 +264,9 @@ export default function EditEquipment() {
         return <p>Equipment not found.</p>;
     }
 
+    /**
+     * Rebuilds attribute rows when the equipment type changes because schemas are type-specific.
+     */
     const handleTypeChange = async (nextTypeId: number | null) => {
         setSelectedTypeId(nextTypeId);
         if (!nextTypeId) {

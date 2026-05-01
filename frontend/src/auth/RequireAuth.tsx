@@ -3,11 +3,17 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import LoadingPage from "../pages/LoadingPage";
 
+/**
+ * Defines the props required by the RequireAuth component.
+ */
 interface RequireAuthProps {
     children: React.ReactNode;
     redirectTo?: string;
 }
 
+/**
+ * Renders the RequireAuth view.
+ */
 export default function RequireAuth({
                                         children,
                                         redirectTo = "/",

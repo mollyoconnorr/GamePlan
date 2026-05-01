@@ -27,12 +27,20 @@ public class ScheduleBlockController {
     private final UserService userService;
     private final ScheduleBlockService scheduleBlockService;
 
+    /**
+     * Exposes admin endpoints for creating, updating, listing, and cancelling schedule blocks.
+     */
     public ScheduleBlockController(UserService userService,
                                    ScheduleBlockService scheduleBlockService) {
         this.userService = userService;
         this.scheduleBlockService = scheduleBlockService;
     }
 
+    /**
+     * Returns the Blocks.
+     *
+     * @return the current value
+     */
     @GetMapping
     public List<ScheduleBlockResponse> getBlocks(OAuth2AuthenticationToken authentication,
                                                  @RequestParam(required = false) Instant from,
@@ -50,6 +58,9 @@ public class ScheduleBlockController {
                 .toList();
     }
 
+    /**
+     * Creates an admin schedule block from the request payload and returns the cancelled reservation count.
+     */
     @PostMapping
     public ScheduleBlockResponse createBlock(OAuth2AuthenticationToken authentication,
                                              @RequestBody ScheduleBlockRequest request) {
@@ -78,6 +89,9 @@ public class ScheduleBlockController {
         );
     }
 
+    /**
+     * Updates an existing admin schedule block and returns the cancelled reservation count.
+     */
     @PutMapping("/{id}")
     public ScheduleBlockResponse updateBlock(@PathVariable Long id,
                                              OAuth2AuthenticationToken authentication,
@@ -107,6 +121,9 @@ public class ScheduleBlockController {
         );
     }
 
+    /**
+     * Cancels an admin schedule block by id after the frontend has confirmed the deletion.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteBlock(@PathVariable Long id,
                                               OAuth2AuthenticationToken authentication) {
@@ -117,6 +134,9 @@ public class ScheduleBlockController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Maps a user entity into the admin response shape expected by the frontend.
+     */
     private ScheduleBlockResponse toResponse(ScheduleBlock block) {
         return new ScheduleBlockResponse(
                 block.getId(),
@@ -128,6 +148,9 @@ public class ScheduleBlockController {
         );
     }
 
+    /**
+     * Resolves block type from request or application context.
+     */
     private ScheduleBlockType resolveBlockType(ScheduleBlock block) {
         if (block.getBlockType() != null) {
             return block.getBlockType();
@@ -136,6 +159,9 @@ public class ScheduleBlockController {
         return ScheduleBlockType.BLOCK;
     }
 
+    /**
+     * Parses block type into the frontend model used by the app.
+     */
     private ScheduleBlockType parseBlockType(String value) {
         if (value == null || value.isBlank()) {
             return ScheduleBlockType.BLOCK;

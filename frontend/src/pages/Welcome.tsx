@@ -4,6 +4,9 @@ import Button from "../components/Button.tsx";
 import Footer from "../components/Footer.tsx";
 import {useAuth} from "../auth/AuthContext.tsx";
 
+/**
+ * Renders the Welcome view.
+ */
 export default function Welcome() {
     const navigate = useNavigate();
 
@@ -11,7 +14,7 @@ export default function Welcome() {
 
     return (
         <div className="min-h-screen flex flex-col">
-            <Navbar username={user?.username || ""} logout={logout} />
+            <Navbar username={user?.email || ""} logout={logout} />
 
             <main className="flex-1 flex flex-col items-center justify-center text-center px-6">
                 <h1 className="text-4xl font-bold mb-4">

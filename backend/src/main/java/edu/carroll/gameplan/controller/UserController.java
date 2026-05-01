@@ -27,6 +27,9 @@ public class UserController {
      */
     private final UserService userService;
 
+    /**
+     * Exposes authenticated user profile and session state endpoints for the frontend.
+     */
     public UserController(UserService userService) {
         this.userService = userService;
     }

@@ -1,12 +1,16 @@
 import type {Dayjs} from "dayjs";
 import type {CalendarEvent} from "../../types.ts";
 
+/**
+ * Defines the props required by the Calendar component.
+ */
 export interface CalendarProps {
     firstDate: Dayjs;
     numDays: number;
     startTime: Dayjs;
     endTime: Dayjs;
     timeStepMin: number
+    maxResTime: number
     variant: "user" | "equip" | "trainer"
     reservations?: CalendarEvent[];
     equipmentId?: number;
@@ -16,11 +20,15 @@ export interface CalendarProps {
     onDeleteReservation?: (id: number) => Promise<void> | void;
 }
 
+/**
+ * Defines the props required by the CalendarContent component.
+ */
 export interface CalendarContentProps {
     firstDate: Dayjs,
     startTime: Dayjs,
     endTime: Dayjs,
     timeStepMin: number,
+    maxResTime: number,
     top: number,
     left: number,
     height: number,

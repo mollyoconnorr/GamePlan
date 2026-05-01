@@ -92,7 +92,7 @@ Use `npm ci` for reproducible installs from `package-lock.json`. Use `npm instal
 Start the backend first from `backend/`:
 
 ```bash
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
 Then start the frontend from `frontend/`:
@@ -253,6 +253,7 @@ Unsafe methods are any methods outside `GET`, `HEAD`, `OPTIONS`, and `TRACE`.
 - Shared app-level calendar state and reservation refresh logic live in `AppShell` inside `src/App.tsx`.
 - Reservation data refreshes on initial load, relevant custom app events, focus/visibility changes, and a 30-second visible-tab interval.
 - App settings from `/api/admin/settings` drive calendar window, time step, maximum reservation time, and weekend blocking behavior.
+- Reservation create and edit controls must use the configured maximum reservation time when building end-time choices. Do not hardcode a 30-minute edit limit; use the same `maxResTime` setting that the booking flow uses.
 - Athlete home notifications use `src/api/Notifications.ts` and poll unread notification state while the user is active in the app.
 
 ## Adding New Frontend Features
@@ -283,7 +284,7 @@ When adding a new backend-backed feature:
 - Do not put secrets in frontend code, Vite config, `.env` files committed to git, or built assets.
 - Only expose frontend environment variables intentionally. Vite exposes variables prefixed with `VITE_` to browser code.
 - Treat any value in the frontend bundle as public.
-- OAuth client secrets, database passwords, mail passwords, and signing secrets must stay server-side and should be supplied through environment-specific backend configuration.
+- OAuth client secrets, database passwords, and signing secrets must stay server-side and should be supplied through environment-specific backend configuration.
 
 ### Dependency Safety
 

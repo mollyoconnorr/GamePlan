@@ -10,12 +10,18 @@ import Toast from "../components/Toast.tsx";
 import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
 import {apiFetch} from "../api/apiFetch.ts";
 
+/**
+ * Equipment status option shown in maintenance and availability controls.
+ */
 type StatusOption = {
     value: string;
     label: string;
     disabled?: boolean;
 };
 
+/**
+ * Stores the equipment status change that is waiting for confirmation.
+ */
 type PendingMaintenanceChange = {
     equipmentId: number;
     equipmentName: string;
@@ -23,12 +29,18 @@ type PendingMaintenanceChange = {
     canceledReservations: number;
 };
 
+/**
+ * Stores the equipment delete action that is waiting for confirmation.
+ */
 type PendingDeleteChange = {
     equipmentId: number;
     equipmentName: string;
     canceledReservations: number;
 };
 
+/**
+ * Equipment type attribute definition used to format dynamic attribute columns.
+ */
 type TypeAttributeDefinition = {
     name: string;
     options: string[];
@@ -39,6 +51,9 @@ const equipmentStatusOptions: StatusOption[] = [
     { value: "MAINTENANCE", label: "Maintenance" }
 ];
 
+/**
+ * Renders the AllEquipment view.
+ */
 export default function AllEquipment() {
     const navigate = useNavigate();
     const [equipmentList, setEquipmentList] = useState<EquipmentDTO[]>([]);
@@ -56,6 +71,9 @@ export default function AllEquipment() {
         return () => clearTimeout(timeout);
     }, [toastMessage]);
 
+    /**
+     * Deletes equipment after confirmation and broadcasts reservation changes when active bookings were cancelled.
+     */
     const handleDelete = async (id: number, canceledReservations = 0) => {
         setDeleteBusyId(id);
         try {
@@ -85,6 +103,9 @@ export default function AllEquipment() {
         }
     };
 
+    /**
+     * Persists an equipment status change and updates the row with the backend response.
+     */
     const handleStatusChange = async (id: number, nextStatus: string) => {
         setStatusUpdatingId(id);
         try {
@@ -109,6 +130,9 @@ export default function AllEquipment() {
         }
     };
 
+    /**
+     * Intercepts AVAILABLE to MAINTENANCE changes so active reservations can be shown before cancellation.
+     */
     const handleSelectStatusChange = async (equipment: EquipmentDTO, nextStatus: string) => {
         const currentStatus = equipment.status ?? "AVAILABLE";
         if (currentStatus === nextStatus) {
@@ -146,6 +170,9 @@ export default function AllEquipment() {
         await handleStatusChange(equipment.id, nextStatus);
     };
 
+    /**
+     * Applies the queued maintenance change after the user confirms affected reservations.
+     */
     const handleConfirmMaintenanceChange = async () => {
         if (!pendingMaintenanceChange) return;
         const {equipmentId, nextStatus} = pendingMaintenanceChange;
@@ -156,6 +183,9 @@ export default function AllEquipment() {
         }
     };
 
+    /**
+     * Opens the delete confirmation after checking how many active reservations would be cancelled.
+     */
     const handleOpenDeleteChange = async (equipment: EquipmentDTO) => {
         setDeleteBusyId(equipment.id);
         try {
@@ -173,6 +203,9 @@ export default function AllEquipment() {
         }
     };
 
+    /**
+     * Applies the queued delete after the user confirms affected reservations.
+     */
     const handleConfirmDeleteChange = async () => {
         if (!pendingDeleteChange) return;
 
@@ -191,6 +224,7 @@ export default function AllEquipment() {
         ? "reservation"
         : "reservations";
 
+    // Attribute schemas are stored per type, but equipment rows only carry values; group schema rows for display.
     const parseTypeAttributes = (rows: EquipmentTypeAttributeResponse[]): TypeAttributeDefinition[] => {
         const grouped = new Map<string, Set<string>>();
 
@@ -220,6 +254,9 @@ export default function AllEquipment() {
         }));
     };
 
+    /**
+     * Loads attribute definitions for each equipment type represented in the current inventory list.
+     */
     const loadTypeAttributeDefinitions = async (equipment: EquipmentDTO[]) => {
         const typeIds = Array.from(
             new Set(
@@ -234,6 +271,7 @@ export default function AllEquipment() {
             return;
         }
 
+        // A single failed schema request should not prevent the inventory table from rendering.
         const definitionEntries = await Promise.allSettled(
             typeIds.map(async (typeId) => {
                 const attributes = await getEquipmentTypeAttributes(typeId);
@@ -259,6 +297,9 @@ export default function AllEquipment() {
         setTypeAttributesByTypeId(nextMap);
     };
 
+    /**
+     * Formats equipment attributes for display.
+     */
     const formatEquipmentAttributes = (equipment: EquipmentDTO) => {
         const persistedValueMap = new Map(
             (equipment.attributes ?? []).map((attribute) => [attribute.name, attribute.value])
@@ -268,6 +309,7 @@ export default function AllEquipment() {
             ? (typeAttributesByTypeId[equipment.typeId] ?? [])
             : [];
 
+        // Use schema defaults when old equipment records do not yet have values for newly added attributes.
         if (typeAttributes.length > 0) {
             return typeAttributes.map((typeAttribute) => {
                 const persistedValue = persistedValueMap.get(typeAttribute.name);
@@ -287,6 +329,9 @@ export default function AllEquipment() {
     useEffect(() => {
         let cancelled = false;
 
+        /**
+         * Loads inventory first, then loads schema definitions needed to format dynamic attribute columns.
+         */
         const loadEquipment = async () => {
             try {
                 const response = await apiFetch("/api/equipment");

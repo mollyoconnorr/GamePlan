@@ -13,17 +13,26 @@ public class AuthRedirectController {
 
     private final SecurityProps securityProps;
 
+    /**
+     * Provides OAuth error redirect endpoints that return users to the frontend with a readable reason.
+     */
     public AuthRedirectController(
             @Qualifier("app.security-edu.carroll.gameplan.config.SecurityProps") SecurityProps securityProps
     ) {
         this.securityProps = securityProps;
     }
 
+    /**
+     * Redirects failed OAuth logins back to the frontend with a login error flag.
+     */
     @GetMapping("/login/error")
     public String redirectLoginError() {
         return "redirect:" + buildLoginFailureRedirectUrl(securityProps.getLogoutUrl());
     }
 
+    /**
+     * Builds a frontend-safe login failure URL with the encoded OAuth error reason.
+     */
     private String buildLoginFailureRedirectUrl(String logoutUrl) {
         if (logoutUrl == null || logoutUrl.isBlank()) {
             return "/?loginError=true";

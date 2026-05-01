@@ -2,6 +2,9 @@ import dayjs from "dayjs";
 import type {CalendarEvent, RawScheduleBlock} from "../types.ts";
 
 // Keep block events chronologically ordered so Calendar rendering is deterministic.
+/**
+ * Sorts calendar events by their ISO start timestamp so notices render chronologically.
+ */
 export function sortEventsByStartIso(events: CalendarEvent[]) {
     return [...events].sort((a, b) => {
         const aStart = a.startIso ? dayjs(a.startIso).valueOf() : 0;
@@ -11,6 +14,9 @@ export function sortEventsByStartIso(events: CalendarEvent[]) {
 }
 
 // Convert backend schedule-block payloads into the shared calendar event shape.
+/**
+ * Parses input into RawBlockToEvent.
+ */
 export function parseRawBlockToEvent(block: RawScheduleBlock): CalendarEvent {
     const start = dayjs(block.start);
     const end = dayjs(block.end);

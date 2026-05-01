@@ -11,9 +11,8 @@ backend/out/
 backend/local.properties
 backend/.env
 backend/src/main/resources/application.properties
-backend/src/main/resources/application.yaml
-backend/src/main/resources/application-dev.yaml
-backend/src/main/resources/application-prod.yaml
+backend/src/main/resources/*.yaml
+!backend/src/main/resources/application-example.yaml
 src/local.properties
 
 # Ignore static files

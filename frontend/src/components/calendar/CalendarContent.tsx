@@ -135,6 +135,7 @@ export default function CalendarContent(props: CalendarContentProps) {
                             startTime={props.startTime}
                             endTime={props.endTime}
                             timeStepMin={props.timeStepMin}
+                            maxResTime={props.maxResTime}
                             startIndex={startIndex}
                             endIndex={endIndex}
                             groupStartIndex={groupStartIndex}
@@ -179,6 +180,9 @@ export default function CalendarContent(props: CalendarContentProps) {
     );
 }
 
+/**
+ * Builds CalendarEventKey.
+ */
 function buildCalendarEventKey(event: CalendarEvent) {
     return [
         event.id,

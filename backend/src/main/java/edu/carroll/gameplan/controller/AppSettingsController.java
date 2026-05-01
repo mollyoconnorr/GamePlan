@@ -16,6 +16,9 @@ public class AppSettingsController {
     private final UserService userService;
     private final AppSettingsService appSettingsService;
 
+    /**
+     * Exposes read and update endpoints for global calendar and reservation settings.
+     */
     public AppSettingsController(UserService userService, AppSettingsService appSettingsService) {
         this.userService = userService;
         this.appSettingsService = appSettingsService;

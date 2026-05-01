@@ -28,6 +28,7 @@ function renderManageReservations(overrides: Partial<ComponentProps<typeof Manag
         startTime: dayjs().startOf("day").hour(8),
         endTime: dayjs().startOf("day").hour(17),
         timeStepMin: 30,
+        maxResTime: 120,
         onEditReservation: vi.fn().mockResolvedValue(undefined),
         onDeleteReservation: vi.fn().mockResolvedValue(undefined),
         isPrivileged: false,
@@ -58,6 +59,7 @@ describe("ManageReservations", () => {
         const { props, reservation } = renderManageReservations();
 
         fireEvent.click(screen.getByTitle("Edit Reservation"));
+        fireEvent.change(await screen.findByLabelText("End time"), { target: { value: "10:00" } });
         fireEvent.click(await screen.findByRole("button", { name: "Save" }));
 
         await waitFor(() => {
@@ -88,6 +90,16 @@ describe("ManageReservations", () => {
             expect(screen.getByText("Weekend reservations are disabled. Choose a weekday.")).toBeInTheDocument();
         });
         expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    it("limits edit end times using the configured max reservation time", async () => {
+        renderManageReservations({ maxResTime: 30 });
+
+        fireEvent.click(screen.getByTitle("Edit Reservation"));
+
+        const endSelect = await screen.findByLabelText("End time");
+        expect(endSelect).toHaveTextContent("9:30 AM");
+        expect(endSelect).not.toHaveTextContent("10:00 AM");
     });
 
     it("hides edit and delete controls in read-only mode", () => {

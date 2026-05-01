@@ -22,7 +22,7 @@ import static edu.carroll.gameplan.AppConstants.MIN_DAYS_TO_SHOW;
 import static edu.carroll.gameplan.AppConstants.MIN_TIME_STEP_MINUTES;
 
 /**
- * Handles retrieval and validation of global application settings.
+ * Manages retrieval, validation, persistence, and side effects for global application settings.
  */
 @Service
 public class AppSettingsService {
@@ -283,6 +283,11 @@ public class AppSettingsService {
         return numDaysToShow != null && numDaysToShow >= MIN_DAYS_TO_SHOW && numDaysToShow <= MAX_DAYS_TO_SHOW;
     }
 
+    /**
+     * Indicates whether ValidWeekendAutoBlockEnabled is true.
+     *
+     * @return true when the condition is met
+     */
     private boolean isValidWeekendAutoBlockEnabled(Boolean weekendAutoBlockEnabled) {
         return weekendAutoBlockEnabled != null;
     }

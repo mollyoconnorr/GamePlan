@@ -13,6 +13,9 @@ public record ScheduleBlockResponse(
         String blockType,
         Integer canceledReservations
 ) {
+    /**
+     * Creates the schedule block response DTO returned by admin block endpoints.
+     */
     public ScheduleBlockResponse(Long id, LocalDateTime start, LocalDateTime end, String reason) {
         this(id, start.toString(), end.toString(), reason, null, null);
     }

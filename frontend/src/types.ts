@@ -2,6 +2,9 @@ import {type JSX} from "react";
 import * as React from "react";
 import {type Dayjs} from "dayjs";
 
+/**
+ * Represents the authenticated user profile returned to the frontend.
+ */
 export type User = {
     id: string;
     email: string;
@@ -12,6 +15,9 @@ export type User = {
     pendingApproval?: boolean;
 };
 
+/**
+ * Tracks whether authentication is loading and which user, if any, is signed in.
+ */
 export type AuthState = {
     user: User | null;
     loading: boolean;
@@ -21,6 +27,9 @@ export type AuthState = {
     logout: () => void;
 }
 
+/**
+ * Represents the user management row shown in the admin screen.
+ */
 export interface AdminUser {
     id: number;
     oidcUserId: string;
@@ -31,23 +40,35 @@ export interface AdminUser {
     pendingApproval: boolean;
 }
 
+/**
+ * Creates a notification entity for a user-facing message.
+ */
 export interface Notification {
     id: number;
     message: string;
     createdAt: string;
 }
 
+/**
+ * Defines the props required by the ham component.
+ */
 export interface hamProps {
     navHTML: JSX.Element[];
     display: boolean;
     setDisplay: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+/**
+ * Inputs required to render navigation and sign-out controls.
+ */
 export interface NavbarProps {
     username: string;
     logout: () => void;
 }
 
+/**
+ * Backend reservation payload before frontend date parsing.
+ */
 export interface RawReservation {
     id: number,
     equipmentName: string,
@@ -56,6 +77,9 @@ export interface RawReservation {
     color?: string;
 }
 
+/**
+ * Frontend reservation model with parsed calendar-ready fields.
+ */
 export interface Reservation {
     id: number;
     name: string;
@@ -65,6 +89,9 @@ export interface Reservation {
     description?: string;
 }
 
+/**
+ * Unified calendar event model for reservations and schedule blocks.
+ */
 export interface CalendarEvent {
     id: number,
     startTime: string;
@@ -88,6 +115,9 @@ export interface CalendarEvent {
     blockType?: string;
 }
 
+/**
+ * Backend admin reservation payload including athlete details.
+ */
 export interface RawAdminReservation {
     id: number;
     equipmentName: string;
@@ -98,6 +128,9 @@ export interface RawAdminReservation {
     color?: string;
 }
 
+/**
+ * Backend schedule block payload before frontend date parsing.
+ */
 export interface RawScheduleBlock {
     id: number;
     start: string;
@@ -107,17 +140,26 @@ export interface RawScheduleBlock {
     canceledReservations?: number | null;
 }
 
+/**
+ * Name/value equipment attribute shown in equipment lists and filters.
+ */
 export interface EquipmentAttribute {
     name: string;
     value: string;
 }
 
+/**
+ * Small reservation summary embedded in equipment availability responses.
+ */
 export interface EquipmentReservationSummary {
     id: number;
     start: string;
     end: string;
 }
 
+/**
+ * Equipment option with attributes and existing reservations for availability checks.
+ */
 export interface EquipmentWithReservations {
     id: number;
     name: string;
@@ -125,6 +167,9 @@ export interface EquipmentWithReservations {
     reservations: EquipmentReservationSummary[];
 }
 
+/**
+ * Inputs supported by the reusable button component.
+ */
 export type ButtonProps = {
     text: string;
     className?: string;
@@ -133,11 +178,17 @@ export type ButtonProps = {
     disabled?: boolean;
 };
 
+/**
+ * Tracks the reservation selected for delete confirmation.
+ */
 export type PendingDelete = {
     id: number;
     name: string;
 };
 
+/**
+ * Shared calendar settings passed from the app shell into calendar-based pages.
+ */
 export interface CalendarData {
     // Window start date in local timezone (week/day aligned by settings).
     firstDate: Dayjs;
@@ -150,4 +201,7 @@ export interface CalendarData {
 }
 
 // Parsed time is reused for both alignment checks and start/end comparisons.
+/**
+ * Time parsing result with hour, minute, and total-minute forms.
+ */
 export type ParsedTime = {hour: number; minute: number; totalMinutes: number};

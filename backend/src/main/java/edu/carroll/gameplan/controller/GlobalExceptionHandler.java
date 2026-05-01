@@ -24,6 +24,9 @@ import java.time.Instant;
 public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Converts validation failures into client-readable bad-request responses.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex,
                                                                   HttpServletRequest request) {
@@ -32,6 +35,9 @@ public class GlobalExceptionHandler {
         return buildResponse(status, ex, request);
     }
 
+    /**
+     * Converts authorization failures into consistent forbidden responses.
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex,
                                                                HttpServletRequest request) {
@@ -40,6 +46,9 @@ public class GlobalExceptionHandler {
         return buildResponse(status, ex, request);
     }
 
+    /**
+     * Preserves explicit ResponseStatusException codes while applying the shared error response format.
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatus(ResponseStatusException ex,
                                                                  HttpServletRequest request) {
@@ -47,6 +56,9 @@ public class GlobalExceptionHandler {
         return buildResponse(ex.getStatusCode(), ex, request);
     }
 
+    /**
+     * Logs unexpected server errors and returns a generic response to avoid leaking internals.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
         final HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -63,6 +75,9 @@ public class GlobalExceptionHandler {
         return buildResponse(status, ex, request);
     }
 
+    /**
+     * Logs handled exceptions with request context at an appropriate severity.
+     */
     private void logHandledException(HttpServletRequest request, HttpStatusCode status, Exception ex) {
         logger.warn(
                 "Handled request exception: method={}, path={}, status={}, requestId={}, message={}",
@@ -74,12 +89,18 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Builds response from validated input values.
+     */
     private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status,
                                                            Exception ex,
                                                            HttpServletRequest request) {
         return buildResponse((HttpStatusCode) status, ex, request);
     }
 
+    /**
+     * Builds response from validated input values.
+     */
     private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatusCode status,
                                                            Exception ex,
                                                            HttpServletRequest request) {
@@ -97,6 +118,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 
+    /**
+     * Chooses the human-readable status phrase used in API error responses.
+     */
     private String resolveReasonPhrase(HttpStatusCode status) {
         if (status instanceof HttpStatus httpStatus) {
             return httpStatus.getReasonPhrase();
@@ -105,6 +129,9 @@ public class GlobalExceptionHandler {
         return "HTTP " + status.value();
     }
 
+    /**
+     * Selects the safest client-facing message for an exception response.
+     */
     private String resolveErrorMessage(HttpStatusCode status, Exception ex, String fallback) {
         if (ex instanceof ResponseStatusException responseStatusException
                 && StringUtils.hasText(responseStatusException.getReason())) {
@@ -119,6 +146,9 @@ public class GlobalExceptionHandler {
         return fallback;
     }
 
+    /**
+     * Uses an inbound request id when available or creates one for log correlation.
+     */
     private String resolveRequestId(HttpServletRequest request) {
         final String mdcRequestId = MDC.get(RequestLoggingFilter.REQUEST_ID_MDC_KEY);
         if (StringUtils.hasText(mdcRequestId)) {
@@ -131,6 +161,9 @@ public class GlobalExceptionHandler {
         return "n/a";
     }
 
+    /**
+     * Immutable data transfer object for ApiErrorResponse.
+     */
     private record ApiErrorResponse(
             Instant timestamp,
             int status,

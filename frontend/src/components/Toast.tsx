@@ -1,9 +1,15 @@
 import { createPortal } from "react-dom";
 
+/**
+ * Defines the props required by the Toast component.
+ */
 type ToastProps = {
     message: string;
 };
 
+/**
+ * Renders the Toast view.
+ */
 export default function Toast({ message }: ToastProps) {
     if (!message || typeof document === "undefined") return null;
 

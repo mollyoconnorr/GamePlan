@@ -22,7 +22,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
     runtimeOnly 'com.mysql:mysql-connector-j'
     testImplementation 'com.h2database:h2'
@@ -54,26 +53,6 @@ bootRun {
     environment "OKTA_CLIENT_ID", localProperties["OKTA_CLIENT_ID"]
     environment "OKTA_CLIENT_SECRET", localProperties["OKTA_CLIENT_SECRET"]
     environment "OKTA_ISSUER", localProperties["OKTA_ISSUER"]
-
-    def passThroughProps = [
-            "APP_NOTIFICATIONS_EMAIL_ENABLED": "app.notifications.email.enabled",
-            "APP_NOTIFICATIONS_EMAIL_FROM": "app.notifications.email.from",
-            "APP_NOTIFICATIONS_EMAIL_SUBJECT": "app.notifications.email.subject",
-            "SPRING_MAIL_HOST": "spring.mail.host",
-            "SPRING_MAIL_PORT": "spring.mail.port",
-            "SPRING_MAIL_USERNAME": "spring.mail.username",
-            "SPRING_MAIL_PASSWORD": "spring.mail.password",
-            "SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH": "spring.mail.properties.mail.smtp.auth",
-            "SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE": "spring.mail.properties.mail.smtp.starttls.enable",
-            "SPRING_MAIL_PROPERTIES_MAIL_DEBUG": "spring.mail.properties.mail.debug"
-    ]
-
-    passThroughProps.each { envName, propName ->
-        def value = System.getenv(envName)
-        if (value != null && !value.isBlank()) {
-            systemProperty propName, value
-        }
-    }
 }
 
 def frontendDir = layout.projectDirectory.dir("../frontend")

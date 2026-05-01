@@ -19,6 +19,9 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Seeds local development data so the application has usable equipment, users, and reservations after startup.
+ */
 @Configuration
 @Profile("!test")
 public class DataSeeder {
@@ -112,19 +115,6 @@ public class DataSeeder {
             kris.setOidcUserId(null);
             kris.setRole(UserRole.ADMIN);
             ur.save(kris);
-        }
-
-        // testing purposes
-        User nick = ur.findByEmailIgnoreCase("nclouse@carroll.edu").orElse(null);
-
-        if (nick == null){
-            nick = new User();
-            nick.setEmail("nclouse@carroll.edu");
-            nick.setFirstName("Nick");
-            nick.setLastName("Clouse");
-            nick.setOidcUserId(null);
-            nick.setRole(UserRole.ADMIN);
-            ur.save(nick);
         }
 
         EquipmentType wiredBootsType = etr.findByName("Wired Boots").orElseThrow();
@@ -237,6 +227,9 @@ public class DataSeeder {
 
     }
 
+    /**
+     * Returns an existing seeded equipment type or creates it when local development data is missing.
+     */
     private EquipmentType findOrCreateEquipmentType(EquipmentTypeRepository etr,
                                                     String name,
                                                     String fieldSchema,
@@ -250,6 +243,9 @@ public class DataSeeder {
         });
     }
 
+    /**
+     * Finds seeded equipment by display name so duplicate seed rows are not created.
+     */
     private Equipment findEquipmentByName(EquipmentRepository er, String name) {
         return er.findAll()
                 .stream()
@@ -258,6 +254,9 @@ public class DataSeeder {
                 .orElseThrow();
     }
 
+    /**
+     * Creates a seeded bath equipment record with its fixed type attribute.
+     */
     private Equipment createBath(String name, String type, EquipmentType bathType, EquipmentRepository er) {
         Equipment existingBath = er.findByNameAndEquipmentType(name, bathType).orElse(null);
         if (existingBath != null) {
@@ -279,6 +278,9 @@ public class DataSeeder {
         return bath;
     }
 
+    /**
+     * Creates the requested number of seeded boot records for a size.
+     */
     private List<Equipment> createBoots(String baseName, String size, EquipmentType type, EquipmentRepository er, int quantity) {
         List<Equipment> bootsList = new ArrayList<>();
         for (int i = 1; i <= quantity; i++) {
@@ -306,6 +308,9 @@ public class DataSeeder {
         return bootsList;
     }
 
+    /**
+     * Attempts to create seed reservation data while ignoring conflicts that can happen on repeated startup.
+     */
     private void createReservationIfPossible(ReservationService rs,
                                              User user,
                                              Equipment equipment,
@@ -319,6 +324,9 @@ public class DataSeeder {
         }
     }
 
+    /**
+     * Attempts to create seed schedule blocks while ignoring conflicts that can happen on repeated startup.
+     */
     private void createBlockIfPossible(ScheduleBlockService sbs,
                                        User createdBy,
                                        LocalDateTime start,

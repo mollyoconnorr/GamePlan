@@ -38,9 +38,15 @@ public class ScheduleBlock {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    /**
+     * Creates a schedule block entity with default active status and timestamps managed by lifecycle callbacks.
+     */
     public ScheduleBlock() {
     }
 
+    /**
+     * Initializes schedule block timestamps before first persistence.
+     */
     @PrePersist
     protected void onCreate() {
         if (blockType == null) {
@@ -50,6 +56,9 @@ public class ScheduleBlock {
         updatedAt = createdAt;
     }
 
+    /**
+     * Updates the schedule block modification timestamp before each save.
+     */
     @PreUpdate
     protected void onUpdate() {
         if (blockType == null) {
@@ -58,74 +67,164 @@ public class ScheduleBlock {
         updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * Returns the Id.
+     *
+     * @return the current value
+     */
     public Long getId() {
         return id;
     }
 
+    /**
+     * Sets the Id.
+     *
+     * @param value the new value
+     */
     public void setId(Long id) {
         this.id = id;
     }
 
+    /**
+     * Returns the StartDatetime.
+     *
+     * @return the current value
+     */
     public LocalDateTime getStartDatetime() {
         return startDatetime;
     }
 
+    /**
+     * Sets the StartDatetime.
+     *
+     * @param value the new value
+     */
     public void setStartDatetime(LocalDateTime startDatetime) {
         this.startDatetime = startDatetime;
     }
 
+    /**
+     * Returns the EndDatetime.
+     *
+     * @return the current value
+     */
     public LocalDateTime getEndDatetime() {
         return endDatetime;
     }
 
+    /**
+     * Sets the EndDatetime.
+     *
+     * @param value the new value
+     */
     public void setEndDatetime(LocalDateTime endDatetime) {
         this.endDatetime = endDatetime;
     }
 
+    /**
+     * Returns the Status.
+     *
+     * @return the current value
+     */
     public ScheduleBlockStatus getStatus() {
         return status;
     }
 
+    /**
+     * Sets the Status.
+     *
+     * @param value the new value
+     */
     public void setStatus(ScheduleBlockStatus status) {
         this.status = status;
     }
 
+    /**
+     * Returns the BlockType.
+     *
+     * @return the current value
+     */
     public ScheduleBlockType getBlockType() {
         return blockType;
     }
 
+    /**
+     * Sets the BlockType.
+     *
+     * @param value the new value
+     */
     public void setBlockType(ScheduleBlockType blockType) {
         this.blockType = blockType;
     }
 
+    /**
+     * Returns the Reason.
+     *
+     * @return the current value
+     */
     public String getReason() {
         return reason;
     }
 
+    /**
+     * Sets the Reason.
+     *
+     * @param value the new value
+     */
     public void setReason(String reason) {
         this.reason = reason;
     }
 
+    /**
+     * Returns the CreatedBy.
+     *
+     * @return the current value
+     */
     public User getCreatedBy() {
         return createdBy;
     }
 
+    /**
+     * Sets the CreatedBy.
+     *
+     * @param value the new value
+     */
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
     }
 
+    /**
+     * Returns the CreatedAt.
+     *
+     * @return the current value
+     */
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
+    /**
+     * Sets the CreatedAt.
+     *
+     * @param value the new value
+     */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
+    /**
+     * Returns the UpdatedAt.
+     *
+     * @return the current value
+     */
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
+    /**
+     * Sets the UpdatedAt.
+     *
+     * @param value the new value
+     */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }

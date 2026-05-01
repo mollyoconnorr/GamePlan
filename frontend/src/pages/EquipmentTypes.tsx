@@ -9,12 +9,18 @@ import {apiFetch} from "../api/apiFetch.ts";
 import type {EquipmentDTO, EquipmentType} from "../api/Equipment.ts";
 import {dispatchReservationDataChanged} from "../util/AppDataEvents.ts";
 
+/**
+ * Editable equipment type attribute row before it is serialized into the backend schema string.
+ */
 type EquipmentTypeAttributeDraft = {
     id: string;
     name: string;
     options: string;
 };
 
+/**
+ * Creates a stable client-side id for editable attribute draft rows.
+ */
 const createAttributeDraftId = () =>
     `attr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -54,6 +60,9 @@ const parseFieldSchemaToDrafts = (fieldSchema?: string | null): EquipmentTypeAtt
     }
 };
 
+/**
+ * Builds FieldSchema.
+ */
 const buildFieldSchema = (attributes: EquipmentTypeAttributeDraft[]) => {
     const schema: Record<string, { type: "enum"; options: string[] }> = {};
 
@@ -73,6 +82,9 @@ const buildFieldSchema = (attributes: EquipmentTypeAttributeDraft[]) => {
     return JSON.stringify(schema);
 };
 
+/**
+ * Renders the EquipmentTypes view.
+ */
 export default function EquipmentTypes() {
     const navigate = useNavigate();
     const [types, setTypes] = useState<EquipmentType[]>([]);
@@ -94,6 +106,9 @@ export default function EquipmentTypes() {
         return () => clearTimeout(timeout);
     }, [toastMessage]);
 
+    /**
+     * Loads equipment type records for the management table.
+     */
     const loadTypes = async () => {
         try {
             const data = await getEquipmentTypes();
@@ -107,6 +122,9 @@ export default function EquipmentTypes() {
         loadTypes();
     }, []);
 
+    /**
+     * Counts active reservations across every equipment item in a type before forced deletion.
+     */
     const loadActiveReservationCountForType = async (typeId: number) => {
         const equipmentResponse = await apiFetch("/api/equipment");
         if (!equipmentResponse.ok) {
@@ -127,6 +145,9 @@ export default function EquipmentTypes() {
         return reservationLists.reduce((total, reservations) => total + reservations.length, 0);
     };
 
+    /**
+     * Opens forced-delete confirmation after calculating the reservation impact.
+     */
     const handleDeleteType = async (type: EquipmentType) => {
         setPreparingDeleteTypeId(type.id);
         try {
@@ -144,12 +165,18 @@ export default function EquipmentTypes() {
 
     const deleteReservationSuffix = pendingDeleteReservationCount === 1 ? "" : "s";
 
+    /**
+     * Cancels the delete flow and resets pending state.
+     */
     const cancelDelete = () => {
         setDeletingType(null);
         setConfirmInput("");
         setPendingDeleteReservationCount(0);
     };
 
+    /**
+     * Confirms the pending delete action and applies the result.
+     */
     const confirmDelete = async () => {
         if (!deletingType) return;
         if (confirmInput.trim().toLowerCase() !== "confirm") {
@@ -187,6 +214,9 @@ export default function EquipmentTypes() {
         }
     };
 
+    /**
+     * Copies the selected equipment type into edit form state so changes can be reviewed before saving.
+     */
     const startEdit = (type: EquipmentType) => {
         setEditingType(type);
         setFormName(type.name);
@@ -194,6 +224,9 @@ export default function EquipmentTypes() {
         setFormAttributes(parseFieldSchemaToDrafts(type.fieldSchema));
     };
 
+    /**
+     * Cancels the edit flow and resets pending state.
+     */
     const cancelEdit = () => {
         setEditingType(null);
         setFormName("");
@@ -201,6 +234,9 @@ export default function EquipmentTypes() {
         setFormAttributes([]);
     };
 
+    /**
+     * Adds an empty attribute row to the equipment type schema form.
+     */
     const addFormAttribute = () => {
         setFormAttributes((prev) => [
             ...prev,
@@ -208,6 +244,9 @@ export default function EquipmentTypes() {
         ]);
     };
 
+    /**
+     * Updates one field of an equipment type attribute draft in the edit form.
+     */
     const updateFormAttribute = (id: string, field: "name" | "options", value: string) => {
         setFormAttributes((prev) =>
             prev.map((attribute) =>
@@ -216,10 +255,16 @@ export default function EquipmentTypes() {
         );
     };
 
+    /**
+     * Removes an attribute row from the equipment type schema form.
+     */
     const removeFormAttribute = (id: string) => {
         setFormAttributes((prev) => prev.filter((attribute) => attribute.id !== id));
     };
 
+    /**
+     * Validates the edited equipment type schema and sends the update to the backend.
+     */
     const saveEdit = async () => {
         if (!editingType) return;
         setIsSaving(true);

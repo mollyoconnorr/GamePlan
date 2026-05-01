@@ -3,6 +3,9 @@ import {Menu, X, CircleUserRound, LogOut,Calendar1} from "lucide-react";
 import type {hamProps, NavbarProps} from "../types.ts";
 import {useLocation, useNavigate} from "react-router-dom";
 
+/**
+ * Renders the Navbar view.
+ */
 export default function Navbar({ username, logout }: NavbarProps) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -12,6 +15,9 @@ export default function Navbar({ username, logout }: NavbarProps) {
 
     const isHome = location.pathname === "/app/home";
     const isProfile = location.pathname === "/app/profile";
+    /**
+     * Processes the sign out interaction and updates the affected UI state.
+     */
     const handleSignOut = () => {
         setDisplayHamMenu(false);
 
@@ -89,6 +95,9 @@ export default function Navbar({ username, logout }: NavbarProps) {
     </header>;
 };
 
+/**
+ * Renders the HamMenu view.
+ */
 function HamMenu({navHTML, display, setDisplay} : hamProps) {
     if (!display){
         return null; // Return nothing if not display

@@ -1,5 +1,8 @@
 import dayjs, { type Dayjs } from "dayjs";
 
+/**
+ * Selectable time option used by time pickers.
+ */
 export type TimeOption = {
     value: string;
     label: string;
@@ -61,5 +64,36 @@ export const filterPastTimesForDate = (
             .millisecond(0);
 
         return !optionDateTime.isBefore(now);
+    });
+};
+
+/**
+ * Keeps edit end-time choices after the selected start time and within the configured max duration.
+ */
+export const filterEndTimesByMaxDuration = (
+    options: TimeOption[],
+    selectedStartTime: string,
+    maxDurationMinutes: number
+): TimeOption[] => {
+    if (!selectedStartTime || maxDurationMinutes <= 0) {
+        return [];
+    }
+
+    const [startHour, startMinute] = selectedStartTime.split(":").map(Number);
+    if (Number.isNaN(startHour) || Number.isNaN(startMinute)) {
+        return [];
+    }
+
+    const startMinutes = startHour * 60 + startMinute;
+    const maxEndMinutes = startMinutes + maxDurationMinutes;
+
+    return options.filter((option) => {
+        const [hour, minute] = option.value.split(":").map(Number);
+        if (Number.isNaN(hour) || Number.isNaN(minute)) {
+            return false;
+        }
+
+        const optionMinutes = hour * 60 + minute;
+        return optionMinutes > startMinutes && optionMinutes <= maxEndMinutes;
     });
 };

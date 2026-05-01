@@ -1,5 +1,8 @@
 import type {ButtonProps} from '../types.ts';
 
+/**
+ * Renders the Button view.
+ */
 export default function Button({ text, className = "", onClick, style, disabled = false }: ButtonProps) {
     return (
         <button

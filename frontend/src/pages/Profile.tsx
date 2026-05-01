@@ -1,5 +1,8 @@
 import {useAuthedUser} from "../auth/AuthContext.tsx";
 
+/**
+ * Renders the Profile view.
+ */
 export default function Profile() {
     const user = useAuthedUser();
 

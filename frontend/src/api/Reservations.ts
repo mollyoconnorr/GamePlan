@@ -37,6 +37,9 @@ export async function getReservations() {
     return res.json();
 }
 
+/**
+ * Fetches all active reservations visible to trainers and admins.
+ */
 export async function getActiveReservationsForAdmin() {
     const res = await apiFetch("/api/reservations/admin", {
         method: "GET",
@@ -49,6 +52,9 @@ export async function getActiveReservationsForAdmin() {
     return res.json() as Promise<RawAdminReservation[]>;
 }
 
+/**
+ * Sends the delete request for reservation after confirmation.
+ */
 export async function deleteReservation(id: number) {
     const res = await apiFetch(`/api/reservations/${id}`, {
         method: "DELETE",
@@ -59,6 +65,9 @@ export async function deleteReservation(id: number) {
     }
 }
 
+/**
+ * Payload sent when changing an existing reservation time range.
+ */
 interface UpdateReservationRequest {
     start: string;
     end: string;
@@ -82,6 +91,9 @@ export async function updateReservation(id: number, request: UpdateReservationRe
     }
 }
 
+/**
+ * Fetches active reservations for a single equipment item.
+ */
 export async function getEquipmentReservations(id: number) {
     const res = await apiFetch(`/api/reservations/${id}`, {
         method: "GET",
@@ -94,6 +106,9 @@ export async function getEquipmentReservations(id: number) {
     return res.json() as Promise<RawReservation[]>;
 }
 
+/**
+ * Payload sent when booking equipment for a selected date-time range.
+ */
 interface MakeReservationRequest {
     equipmentId: number;
     start: string;

@@ -36,7 +36,7 @@ export default function Calendar(props: CalendarProps) {
         minWidth: props.numDays * DAY_MIN_W,
     };
 
-    // Create day headers
+    // Build day labels and a lookup map used by overlay positioning in CalendarContent.
     const dayHTML: JSX.Element[] = [];
     const dayMap: Map<string, number> = new Map();
     for (let i = 0; i < props.numDays; i++) {
@@ -54,7 +54,7 @@ export default function Calendar(props: CalendarProps) {
         dayMap.set(currDay, i);
     }
 
-    // Creates the time column
+    // Build time labels and a lookup map so event cards can align to row boundaries.
     const timeColHTML: JSX.Element[] = [];
     const timeMap: Map<string, number> = new Map();
     for (let i = 0; i <= numRows; i++) {
@@ -75,6 +75,9 @@ export default function Calendar(props: CalendarProps) {
     }
 
     // Blocked slots take priority. Otherwise show availability tint.
+    /**
+     * Chooses the calendar cell background color based on blocked, selected, and normal states.
+     */
     const getCellBackground = (dayIdx: number, rowIdx: number) => {
         const dayDate = props.firstDate.add(dayIdx, "day");
         const slotStart = dayDate
@@ -84,6 +87,7 @@ export default function Calendar(props: CalendarProps) {
             .millisecond(0)
             .add(rowIdx * props.timeStepMin, "minute");
         const slotEnd = slotStart.add(props.timeStepMin, "minute");
+        // A hard block wins over any open-window tint for the same slot.
         const blockedWindowHit = backgroundEvents.some((event) => {
             if (event.isAvailability) {
                 return false;
@@ -98,6 +102,7 @@ export default function Calendar(props: CalendarProps) {
             return slotStart.isBefore(eventEnd) && eventStart.isBefore(slotEnd);
         });
 
+        // Open windows are availability overlays that make blocked weekends reservable for that range.
         const openWindowHit = backgroundEvents.some((event) => {
             if (!event.startIso || !event.endIso) {
                 return false;
@@ -132,6 +137,7 @@ export default function Calendar(props: CalendarProps) {
     const [size, setSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
+        // ResizeObserver keeps overlay card calculations accurate as the responsive grid width changes.
         if (!divRef.current) return;
 
         const observer = new ResizeObserver(([entry]) => {
@@ -145,6 +151,7 @@ export default function Calendar(props: CalendarProps) {
     }, []);
 
     useEffect(() => {
+        // Reservation edits can ask the calendar to scroll to a specific event's day/time.
         if (!props.focusStartIso || !scrollContainerRef.current) {
             return;
         }
@@ -229,6 +236,7 @@ export default function Calendar(props: CalendarProps) {
                     startTime={props.startTime}
                     endTime={props.endTime}
                     timeStepMin={props.timeStepMin}
+                    maxResTime={props.maxResTime}
                     top={CELL_H}
                     left={TIME_W}
                     height={CELL_H * (numRows + 1)}

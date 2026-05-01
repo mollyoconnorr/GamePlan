@@ -1,3 +1,6 @@
+/**
+ * Maps backend reservation validation messages to friendlier text for the reservation form.
+ */
 export function getFriendlyReservationErrorMessage(rawMessage: string) {
     if (!rawMessage) {
         return "Something went wrong while updating the reservation.";

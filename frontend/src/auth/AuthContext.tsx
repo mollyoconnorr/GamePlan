@@ -54,6 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [refresh]);
 
     useEffect(() => {
+        /**
+         * Clears the cached user when the API reports that role-based session data is stale.
+         */
         const handleSessionInvalidated = (event: Event) => {
             const detail = (event as CustomEvent<{ message?: string }>).detail;
             setUser(null);
@@ -106,6 +109,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
  * Helper method to access auth data (User, loading, refresh, login, logout)
  */
 // eslint-disable-next-line react-refresh/only-export-components
+/**
+ * React hook for useAuth.
+ */
 export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error("useAuth must be used within the AuthProvider");
@@ -117,6 +123,9 @@ export function useAuth() {
  * Returns a non-null User for correct TS typing.
  */
 // eslint-disable-next-line react-refresh/only-export-components
+/**
+ * React hook for useAuthedUser.
+ */
 export function useAuthedUser(): User {
     const { user } = useAuth();
     if (!user) {

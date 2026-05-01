@@ -19,6 +19,9 @@ public final class AppConstants {
      */
     public static final int MIN_TIME_STEP_MINUTES = 15;
 
+    /**
+     * Private constructor prevents instantiation of this constants-only utility class.
+     */
     private AppConstants() {
         // Utility class.
     }

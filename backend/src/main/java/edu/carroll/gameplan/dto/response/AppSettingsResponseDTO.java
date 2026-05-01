@@ -27,6 +27,9 @@ public record AppSettingsResponseDTO(
         LocalDate startDate,
         Boolean weekendAutoBlockEnabled
 ) {
+    /**
+     * Creates the app settings response DTO used by the frontend settings form.
+     */
     public AppSettingsResponseDTO(
             CalendarFirstDay startDay,
             LocalTime startTime,

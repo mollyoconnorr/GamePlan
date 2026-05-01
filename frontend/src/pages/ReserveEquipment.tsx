@@ -27,14 +27,26 @@ import {
     type ReservationDataChangedDetail,
 } from "../util/AppDataEvents.ts";
 
+/**
+ * Defines the props required by the ReserveEquipment component.
+ */
 interface ReserveEquipmentProps extends CalendarData {
     reservations: Reservation[];
     setReservations: Dispatch<SetStateAction<Reservation[]>>;
     weekendAutoBlockEnabled: boolean;
 }
 
+/**
+ * Label/value option used by equipment type, attribute, and equipment dropdowns.
+ */
 type Option = { label: string; value: string }; // value = actual attr value or id for equipment/type
+/**
+ * Minimal equipment type record needed to populate the reservation type dropdown.
+ */
 type EquipmentTypeResponse = { id: number; name: string };
+/**
+ * Attribute name and allowed values used to render reservation filters.
+ */
 type AttributeDefinition = { name: string; options: string[] };
 
 /**
@@ -69,6 +81,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     const [reservationErrorMessage, setReservationErrorMessage] = useState("");
     const [showCalendar, setShowCalendar] = useState(true);
 
+    /**
+     * Loads attribute definitions and available equipment for the selected reservation type.
+     */
     const loadEquipmentTypeData = async (typeId: number) => {
         const [attributeData, equipmentResponse] = await Promise.all([
             getEquipmentTypeAttributes(typeId),
@@ -234,6 +249,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         ]
     );
 
+    // Calendar can hold events outside the current window after background refreshes; trim before display.
     const visibleDateLabels = useMemo(
         () => new Set(Array.from({ length: numDays }, (_, index) => firstDate.add(index, "day").format("ddd M/D"))),
         [firstDate, numDays]
@@ -244,6 +260,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         [displayedReservations, visibleDateLabels]
     );
 
+    // Collapse all conflict sources into one flag/message so submit and warning UI stay consistent.
     const scheduleBlockConflict = scheduleBlocksWithConflict.some((event) => event.conflict);
     const hasConflict =
         equipmentReservationsWithConflict.some((event) => event.conflict) ||
@@ -264,6 +281,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         (definition) => Boolean(selectedAttributeValues[definition.name])
     );
 
+    // Equipment choices are hidden until required attribute filters are complete to avoid ambiguous bookings.
     const equipmentOptions = useMemo(() => {
         if (!needsAttributeSelections) {
             return allEquipmentOptions;
@@ -293,6 +311,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         selectedAttributeValues,
     ]);
 
+    // Submit requires the full selection plus a valid preview event, which proves the date/time parse succeeded.
     const allResInfoPresent = selectedType !== null &&
         allAttributeValuesSelected &&
         selectedEquipment !== null &&
@@ -328,6 +347,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     };
 
     // Rehydrate type metadata and equipment list (used by polling + data-change event listener).
+    /**
+     * Refreshes selected type data while preserving the current page state.
+     */
     const refreshSelectedType = async (silent = true) => {
         if (selectedType === null) {
             return;
@@ -351,16 +373,20 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         }
     };
 
-    // Fetch equipment data whenever one is selected
+    // Fetch equipment reservations whenever one is selected so the conflict preview reflects the chosen item.
     useEffect(() => {
         void loadSelectedEquipmentReservations();
     }, [selectedEquipment]);
 
+    // Schedule blocks are shared across all equipment, so load them for the visible calendar range.
     useEffect(() => {
         if (numDays <= 0 || !firstDate.isValid()) {
             return;
         }
 
+        /**
+         * Fetches schedule blocks for the visible reservation calendar window.
+         */
         const fetchBlocks = async () => {
             const from = firstDate.startOf("day");
             const to = firstDate.add(numDays, "day").startOf("day");
@@ -390,6 +416,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         }
 
         let active = true;
+        /**
+         * Refreshes reservations data while preserving the current page state.
+         */
         const refreshReservations = () => {
             if (document.visibilityState !== "visible") {
                 return;
@@ -415,6 +444,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
 
     // Cross-page refresh when reservations are created/canceled elsewhere in the app.
     useEffect(() => {
+        /**
+         * Processes the reservation change interaction and updates the affected UI state.
+         */
         const handleReservationChange = (event: Event) => {
             const detail = (event as CustomEvent<ReservationDataChangedDetail>).detail;
             if (!detail) {
@@ -437,6 +469,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         setReservationErrorMessage("");
     }, [selectedEquipment, selectedDate, selectedStartTime, selectedEndTime]);
 
+    // If admins enable weekend auto-blocking while this page is open, clear weekend draft selections immediately.
     useEffect(() => {
         if (!weekendAutoBlockEnabled || !selectedDate) {
             return;
@@ -454,7 +487,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         setSelectedEndTime("");
     }, [selectedDate, weekendAutoBlockEnabled]);
 
-    // Fetch equipment types on load
+    // Equipment types are static enough for this page that a one-time load is sufficient.
     useEffect(() => {
         apiFetch("/api/equipment-types")
             .then(res => res.json())
@@ -497,12 +530,18 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         }));
     };
 
+    /**
+     * Creates the initial selected-value map for each attribute filter on a chosen equipment type.
+     */
     const initializeSelectedAttributeValues = (definitions: AttributeDefinition[]) =>
         definitions.reduce<Record<string, string>>((acc, definition) => {
             acc[definition.name] = "";
             return acc;
         }, {});
 
+    /**
+     * Formats equipment attributes for display.
+     */
     const formatEquipmentAttributes = (equipment: EquipmentWithReservations) => {
         const valueByAttribute = new Map(
             equipment.attributes.map((attribute) => [attribute.name, attribute.value])
@@ -562,7 +601,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         return optionsByAttribute;
     }, [allEquipmentOptions, attributeDefinitions, selectedAttributeValues, selectedType]);
 
-    // When equipment type changes
+    /**
+     * Replaces all dependent selections when the equipment type changes because attributes and equipment are type-specific.
+     */
     const handleTypeChange = async (typeIdStr: string) => {
         const typeId = Number.parseInt(typeIdStr, 10);
         if (Number.isNaN(typeId)) {
@@ -588,6 +629,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         }
     };
 
+    /**
+     * Updates one attribute filter and clears selected equipment because the old item may no longer match.
+     */
     const handleAttributeValueChange = (attributeName: string, value: string) => {
         setSelectedAttributeValues((prev) => ({
             ...prev,
@@ -596,6 +640,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
         setSelectedEquipment(null);
     };
 
+    /**
+     * Submits the validated reservation request and returns the user to Home with a success toast.
+     */
     const handleMakeReservation = async () => {
         if (!allResInfoPresent) return;
 
@@ -858,6 +905,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                 startTime={startTime}
                                 endTime={endTime}
                                 timeStepMin={timeStep}
+                                maxResTime={maxResTime}
                                 variant={"equip"}
                                 reservations={visibleDisplayedReservations}
                                 loading={loading}
@@ -871,6 +919,7 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
                                 startTime={startTime}
                                 endTime={endTime}
                                 timeStepMin={timeStep}
+                                maxResTime={maxResTime}
                                 isPrivileged={false}
                                 readOnly
                                 emptyMessage="No reservations found for the selected equipment this week."
@@ -883,6 +932,9 @@ export default function ReserveEquipment({firstDate,startTime,endTime,timeStep,
     );
 }
 
+/**
+ * Renders the LegendItem view.
+ */
 function LegendItem({
                         fillColor,
                         borderColor,
@@ -905,6 +957,9 @@ function LegendItem({
     );
 }
 
+/**
+ * Renders the DropdownSelect view.
+ */
 function DropdownSelect({
                             id,
                             value,

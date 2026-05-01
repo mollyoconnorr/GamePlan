@@ -1,11 +1,17 @@
 import {useMemo} from "react";
 import type {CalendarEvent} from "../types.ts";
 
+/**
+ * Defines the props required by the BlockedTimeNotice component.
+ */
 type BlockedTimeNoticeProps = {
     events?: CalendarEvent[];
     className?: string;
 };
 
+/**
+ * Renders the BlockedTimeNotice view.
+ */
 export default function BlockedTimeNotice({events = [], className = ""}: BlockedTimeNoticeProps) {
     const blockedEvents = useMemo(() => {
         return events

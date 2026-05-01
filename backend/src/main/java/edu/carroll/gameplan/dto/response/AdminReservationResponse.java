@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 public record AdminReservationResponse(Long id, String equipmentName, String start, String end, String athleteFirstName,
                                        String athleteLastName, String color) {
 
+    /**
+     * Creates the admin reservation response DTO with equipment and athlete display details.
+     */
     public AdminReservationResponse(Long id,
                                     String equipmentName,
                                     LocalDateTime start,

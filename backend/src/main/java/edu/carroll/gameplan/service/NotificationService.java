@@ -2,7 +2,6 @@ package edu.carroll.gameplan.service;
 
 import edu.carroll.gameplan.model.Notification;
 import edu.carroll.gameplan.model.User;
-import edu.carroll.gameplan.model.UserRole;
 import edu.carroll.gameplan.repository.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,19 +12,19 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Service responsible for creating and delivering notifications to users.
+ * Service responsible for creating and managing in-app notifications for users.
  */
 @Service
 public class NotificationService {
     private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
-    private final EmailNotificationService emailNotificationService;
 
-    public NotificationService(NotificationRepository notificationRepository,
-                               EmailNotificationService emailNotificationService) {
+    /**
+     * Creates a notification service backed by the notification repository.
+     */
+    public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
-        this.emailNotificationService = emailNotificationService;
     }
 
     /**
@@ -44,14 +43,6 @@ public class NotificationService {
                 user != null ? user.getId() : null,
                 user != null ? user.getRole() : null,
                 user != null ? user.getEmail() : null);
-        if (user != null && UserRole.ATHLETE.equals(user.getRole())) {
-            logger.debug("Attempting notification email send for athlete userId={}", user.getId());
-            emailNotificationService.sendNotificationEmail(user, message);
-        } else {
-            logger.debug("Skipping notification email send because user is not ATHLETE. userId={}, role={}",
-                    user != null ? user.getId() : null,
-                    user != null ? user.getRole() : null);
-        }
     }
 
     /**

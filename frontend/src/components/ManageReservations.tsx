@@ -8,9 +8,7 @@ import ConfirmDialog from "./ConfirmDialog.tsx";
 import Toast from "./Toast.tsx";
 import { createPortal } from "react-dom";
 import { getFriendlyReservationErrorMessage } from "../util/ReservationErrorMessages.ts";
-import {buildTimeOptions, filterPastTimesForDate} from "../util/TimeOptions.ts";
-
-const EDIT_RESERVATION_MAX_AHEAD_MINUTES = 30;
+import {buildTimeOptions, filterEndTimesByMaxDuration, filterPastTimesForDate} from "../util/TimeOptions.ts";
 
 type ManageReservationsProps = {
     reservations: Reservation[];
@@ -19,6 +17,7 @@ type ManageReservationsProps = {
     startTime: Dayjs;
     endTime: Dayjs;
     timeStepMin: number;
+    maxResTime: number;
     onEditReservation?: (id: number, start: Dayjs, end: Dayjs) => Promise<void> | void;
     onDeleteReservation?: (id: number) => Promise<void> | void;
     isPrivileged: boolean;
@@ -26,6 +25,9 @@ type ManageReservationsProps = {
     emptyMessage?: string;
 };
 
+/**
+ * Reservation data enriched for display in the manage-reservations list.
+ */
 type DisplayReservation = {
     id: number;
     name: string;
@@ -35,6 +37,9 @@ type DisplayReservation = {
     description?: string;
 };
 
+/**
+ * Renders the ManageReservations view.
+ */
 export default function ManageReservations({
     reservations,
     calendarEvents,
@@ -42,6 +47,7 @@ export default function ManageReservations({
     startTime,
     endTime,
     timeStepMin,
+    maxResTime,
     onEditReservation,
     onDeleteReservation,
     isPrivileged,
@@ -99,6 +105,7 @@ export default function ManageReservations({
         return buildTimeOptions(startTime, endTime, timeStepMin);
     }, [startTime, endTime, timeStepMin]);
 
+    // Editing a same-day reservation cannot offer start times that have already passed.
     const startTimeOptions = useMemo(() => {
         if (!pendingEdit) {
             return timeOptions;
@@ -107,27 +114,14 @@ export default function ManageReservations({
         return filterPastTimesForDate(timeOptions, pendingEdit.start);
     }, [pendingEdit, timeOptions]);
 
+    // End time options are constrained by the selected start time so the modal cannot build invalid ranges.
     const endTimeOptions = useMemo(() => {
-        if (!selectedStartTime) return [];
-        const startMinutes = selectedStartTime.split(":").map(Number);
-        const [startHour, startMinute] = startMinutes;
-        if (Number.isNaN(startHour) || Number.isNaN(startMinute)) {
-            return [];
-        }
+        return filterEndTimesByMaxDuration(startTimeOptions, selectedStartTime, maxResTime);
+    }, [maxResTime, selectedStartTime, startTimeOptions]);
 
-        const maxEndMinutes = startHour * 60 + startMinute + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
-
-        return startTimeOptions.filter((option) => {
-            const [hour, minute] = option.value.split(":").map(Number);
-            if (Number.isNaN(hour) || Number.isNaN(minute)) {
-                return false;
-            }
-
-            const optionMinutes = hour * 60 + minute;
-            return optionMinutes > startHour * 60 + startMinute && optionMinutes <= maxEndMinutes;
-        });
-    }, [selectedStartTime, startTimeOptions]);
-
+    /**
+     * Runs the parent delete callback after confirmation and keeps the modal busy until it finishes.
+     */
     const handleConfirmDelete = async () => {
         if (!pendingDelete || readOnly || !onDeleteReservation) return;
 
@@ -143,6 +137,9 @@ export default function ManageReservations({
         }
     };
 
+    /**
+     * Opens the edit modal with values clamped to currently valid calendar bounds.
+     */
     const handleOpenEdit = (reservation: Reservation) => {
         if (readOnly || !onEditReservation) {
             return;
@@ -161,17 +158,11 @@ export default function ManageReservations({
             ? reservationStart
             : (availableStartTimeOptions[0]?.value ?? "");
 
-        const [boundedStartHour, boundedStartMinute] = boundedStartTime.split(":").map(Number);
-        const boundedStartMinutes = boundedStartHour * 60 + boundedStartMinute;
-        const boundedEndTimeOptions = availableStartTimeOptions.filter((option) => {
-            const [hour, minute] = option.value.split(":").map(Number);
-            if (Number.isNaN(hour) || Number.isNaN(minute)) {
-                return false;
-            }
-
-            const optionMinutes = hour * 60 + minute;
-            return optionMinutes > boundedStartMinutes && optionMinutes <= boundedStartMinutes + EDIT_RESERVATION_MAX_AHEAD_MINUTES;
-        });
+        const boundedEndTimeOptions = filterEndTimesByMaxDuration(
+            availableStartTimeOptions,
+            boundedStartTime,
+            maxResTime
+        );
         const boundedEndTime = boundedEndTimeOptions.some((option) => option.value === reservationEnd)
             ? reservationEnd
             : (boundedEndTimeOptions[0]?.value ?? "");
@@ -182,6 +173,9 @@ export default function ManageReservations({
         setEditErrorMessage("");
     };
 
+    /**
+     * Closes the edit modal and clears temporary selection/error state.
+     */
     const handleCloseEdit = () => {
         if (isEditing) return;
         setPendingEdit(null);
@@ -222,6 +216,7 @@ export default function ManageReservations({
         };
     }, [pendingEdit, selectedStartTime, selectedEndTime]);
 
+    // Conflict detection is local preview validation; the backend still performs final enforcement on save.
     const editHasConflict = useMemo(() => {
         if (!editedRange) return false;
         return displayReservations.some((res) => {
@@ -240,6 +235,9 @@ export default function ManageReservations({
         return editedRange.start.isBefore(dayjs());
     }, [editedRange]);
 
+    /**
+     * Sends the edited range to the parent and leaves backend validation messages visible in the modal.
+     */
     const handleSaveEdit = async () => {
         if (!pendingEdit || !selectedStartTime || !selectedEndTime || !onEditReservation) return;
 
@@ -483,6 +481,9 @@ export default function ManageReservations({
     );
 }
 
+/**
+ * Renders the ReservationCard view.
+ */
 function ReservationCard({
     startTime,
     endTime,
@@ -553,6 +554,9 @@ function ReservationCard({
     );
 }
 
+/**
+ * Chooses black or white text for sufficient contrast against a supplied background color.
+ */
 function getReadableTextColor(backgroundColor: string): string {
     const rgb = parseColorToRgb(backgroundColor);
     if (!rgb) {
@@ -563,6 +567,9 @@ function getReadableTextColor(backgroundColor: string): string {
     return brightness < 140 ? "#f9fafb" : "#111827";
 }
 
+/**
+ * Parses input into ColorToRgb.
+ */
 function parseColorToRgb(color: string): { r: number; g: number; b: number } | null {
     const normalized = color.trim();
 
