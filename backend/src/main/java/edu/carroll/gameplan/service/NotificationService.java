@@ -12,7 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Service responsible for creating and managing in-app notifications for users.
+ * Service responsible for creating and managing in-app notifications.
+ *
+ * <p>Notifications are used for reservation cancellations, maintenance events,
+ * and other state changes that the UI should surface to the user.</p>
  */
 @Service
 public class NotificationService {
@@ -80,8 +83,9 @@ public class NotificationService {
             logger.debug("Notification marked read: notificationId={}, userId={}", notificationId, user.getId());
         }
     }
+
     /**
-     * Counts how many unread notifications the user currently has without marking them read.
+     * Counts how many unread notifications the user currently has.
      */
     @Transactional(readOnly = true)
     public long countUnread(User user) {

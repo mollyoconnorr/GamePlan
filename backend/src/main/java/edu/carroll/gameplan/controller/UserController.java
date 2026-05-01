@@ -12,33 +12,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST controller for handling user-related API endpoints.
- * <p>
- * This controller currently provides a single endpoint to retrieve
- * the authenticated user's information from the OAuth2/OIDC authentication token.
- * </p>
+ * User endpoints for the authenticated SPA session.
+ *
+ * <p>The frontend uses this controller to load the current local user record
+ * after Okta completes login.</p>
  */
 @RestController
 @RequestMapping("/api")
 public class UserController {
 
-    /**
-     * Service used to resolve the authenticated user's persisted data.
-     */
+    /** Service used to resolve the authenticated user's persisted data. */
     private final UserService userService;
 
     /**
-     * Exposes authenticated user profile and session state endpoints for the frontend.
+     * Exposes the authenticated user endpoint used by the frontend auth context.
      */
     public UserController(UserService userService) {
         this.userService = userService;
     }
 
     /**
-     * Returns the DTO for the authenticated user, including the stored application role.
-     *
-     * @param authentication current OAuth2 authentication token
-     * @return OK with {@link UserDto} when the user exists; 404 when authentication is absent
+     * Returns the local GamePlan user record for the current Okta session.
      */
     @GetMapping("/user")
     public ResponseEntity<UserDto> getUser(OAuth2AuthenticationToken authentication) {

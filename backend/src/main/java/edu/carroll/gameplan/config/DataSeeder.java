@@ -20,12 +20,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Seeds local development data so the application has usable equipment, users, and reservations after startup.
+ * Seeds baseline data for non-test profiles so the app starts with usable
+ * users, equipment, settings, and demo calendar data.
+ *
+ * <p>The baseline rows are shared across environments, while the dev-only
+ * rows add convenience data for local manual testing.</p>
  */
 @Configuration
 @Profile("!test")
 public class DataSeeder {
 
+    /**
+     * Loads the non-test baseline seed set during application startup.
+     */
     @Bean
     @Order(1)
     CommandLineRunner seedBaselineData(UserRepository ur,
@@ -35,6 +42,9 @@ public class DataSeeder {
         return args -> seedBaselineRows(ur, etr, er, asr);
     }
 
+    /**
+     * Loads extra demo users, reservations, and blocks when the dev profile is active.
+     */
     @Bean
     @Profile("dev")
     @Order(2)
@@ -45,6 +55,9 @@ public class DataSeeder {
         return args -> seedDevRows(ur, er, rs, sbs);
     }
 
+    /**
+     * Seeds the rows that every non-test environment expects to exist.
+     */
     @Transactional
     void seedBaselineRows(UserRepository ur,
                           EquipmentTypeRepository etr,
@@ -135,6 +148,9 @@ public class DataSeeder {
         List<Equipment> mediumWirelessBoots = createBoots("Medium Wireless Boots", "M", wirelessBootsType, er, 2);
     }
 
+    /**
+     * Seeds convenience demo data used by the local development profile.
+     */
     @Transactional
     void seedDevRows(UserRepository ur,
                      EquipmentRepository er,

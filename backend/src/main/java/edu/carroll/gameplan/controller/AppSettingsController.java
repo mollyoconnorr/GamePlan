@@ -8,7 +8,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Admin endpoints for reading and updating global application settings.
+ * Admin endpoints for reading and updating the singleton application settings row.
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -29,12 +29,11 @@ public class AppSettingsController {
      */
     @GetMapping("/settings")
     public AppSettingsResponseDTO getAppSettings() {
-
         return appSettingsService.getAppSettings();
     }
 
     /**
-     * Updates application settings.
+     * Updates global calendar and reservation settings after admin authorization.
      */
     @PutMapping("/settings")
     public AppSettingsResponseDTO updateAppSettings(

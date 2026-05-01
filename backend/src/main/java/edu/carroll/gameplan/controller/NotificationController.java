@@ -17,7 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Provides the logged-in user with stored notifications such as reservation cancellations.
+ * Notification endpoints for the authenticated user.
+ *
+ * <p>These routes expose unread notifications, a count badge, and a way to
+ * mark one notification as read.</p>
  */
 @RestController
 @RequestMapping("/api/notifications")
@@ -48,9 +51,7 @@ public class NotificationController {
     }
 
     /**
-     * Returns the UnreadCount.
-     *
-     * @return the current value
+     * Returns the unread notification count for the current user.
      */
     @GetMapping("/unread-count")
     public NotificationCountResponse getUnreadCount(OAuth2AuthenticationToken authentication) {
@@ -59,7 +60,7 @@ public class NotificationController {
     }
 
     /**
-     * Marks read through the backend API and updates local state.
+     * Marks a notification as read for the current user.
      */
     @PatchMapping("/{id}/read")
     public ResponseEntity<Void> markRead(@PathVariable Long id,

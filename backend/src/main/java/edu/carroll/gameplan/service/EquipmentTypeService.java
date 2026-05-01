@@ -28,10 +28,9 @@ import java.time.LocalDateTime;
 
 /**
  * Service class for handling business logic related to {@link EquipmentType}.
- * <p>
- * This includes parsing dynamic attribute schemas, retrieving attribute definitions,
- * and enforcing rules such as preventing deletion when equipment exists.
- * </p>
+ *
+ * <p>This includes schema parsing, type CRUD, attribute discovery, and the
+ * deletion rules that protect linked equipment and reservations.</p>
  */
 @Service
 public class EquipmentTypeService {
@@ -42,9 +41,7 @@ public class EquipmentTypeService {
     private final ReservationRepository reservationRepository;
 
     /**
-     * Constructor for dependency injection.
-     *
-     * @param equipmentTypeRepository repository for EquipmentType entities
+     * Creates the service with the repositories needed for type and reservation lookups.
      */
     public EquipmentTypeService(EquipmentTypeRepository equipmentTypeRepository,
                                 EquipmentRepository equipmentRepository,
@@ -55,29 +52,7 @@ public class EquipmentTypeService {
     }
 
     /**
-     * Parses a JSON field schema and converts it into a list of attribute DTOs.
-     * <p>
-     * Each field in the JSON schema represents an attribute, optionally containing
-     * a list of allowed values under the "options" key.
-     * </p>
-     *
-     * <p><b>Example schema:</b></p>
-     * <pre>
-     * {
-     *   "size": { "options": ["S", "M", "L"] },
-     *   "color": { "options": ["red", "blue"] }
-     * }
-     * </pre>
-     *
-     * <p><b>Result:</b></p>
-     * A list of {@link EquipmentTypeAttributeDTO} objects:
-     * <ul>
-     *   <li>name = "size", options = ["S", "M", "L"]</li>
-     *   <li>name = "color", options = ["red", "blue"]</li>
-     * </ul>
-     *
-     * @param fieldSchema JSON schema string defining attributes
-     * @return list of parsed attribute DTOs (empty if parsing fails)
+     * Parses a JSON schema into attribute definitions for the frontend.
      */
     public List<EquipmentTypeAttributeDTO> getAttributesFromSchema(String fieldSchema) {
         List<EquipmentTypeAttributeDTO> attributes = new ArrayList<>();
@@ -188,15 +163,7 @@ public class EquipmentTypeService {
     }
 
     /**
-     * Retrieves all attribute definitions for a given equipment type.
-     * <p>
-     * This method loads the EquipmentType from the database and parses its
-     * JSON schema into a structured list of attributes.
-     * </p>
-     *
-     * @param equipmentTypeId ID of the equipment type
-     * @return list of attribute DTOs
-     * @throws RuntimeException if the equipment type is not found
+     * Returns every schema-defined attribute for the requested equipment type.
      */
     public List<EquipmentTypeAttributeDTO> getAllAttributes(Long equipmentTypeId) {
         EquipmentType type = equipmentTypeRepository.findById(equipmentTypeId)
@@ -206,18 +173,7 @@ public class EquipmentTypeService {
     }
 
     /**
-     * Deletes an equipment type if no equipment is associated with it.
-     * <p>
-     * Business rule:
-     * <ul>
-     *   <li>If equipment exists for this type → throw exception (409 Conflict)</li>
-     *   <li>If not found → throw exception (404 Not Found)</li>
-     * </ul>
-     * </p>
-     *
-     * @param id ID of the equipment type to delete
-     * @throws RuntimeException      if the equipment type is not found
-     * @throws IllegalStateException if equipment exists for this type
+     * Deletes an equipment type unless equipment records still reference it.
      */
     public void deleteEquipmentType(Long id) {
         EquipmentType type = equipmentTypeRepository.findById(id)
@@ -238,9 +194,7 @@ public class EquipmentTypeService {
     }
 
     /**
-     * Deletes an equipment type along with all related equipment and reservations.
-     *
-     * @param id ID of the equipment type
+     * Force deletes an equipment type and all equipment currently attached to it.
      */
     public void forceDeleteEquipmentType(Long id) {
         EquipmentType type = equipmentTypeRepository.findById(id)

@@ -10,7 +10,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Delegating OIDC user that carries the application auth version.
+ * Delegating OIDC user that carries the local application auth version.
+ *
+ * <p>The extra attribute lets the backend detect when a user's role or
+ * approval state changed and force the browser to sign in again.</p>
  */
 public class VersionedOidcUser implements OidcUser {
 
@@ -20,7 +23,7 @@ public class VersionedOidcUser implements OidcUser {
     private final Map<String, Object> attributes;
 
     /**
-     * Wraps an OIDC user with the local authorization version so session invalidation can detect role changes.
+     * Wraps an OIDC user with the local authorization version for session checks.
      */
     public VersionedOidcUser(OidcUser delegate, long authVersion) {
         this.delegate = delegate;
@@ -29,9 +32,9 @@ public class VersionedOidcUser implements OidcUser {
     }
 
     /**
-     * Returns the Attributes.
+     * Returns the attribute map, including the local `appAuthVersion` entry.
      *
-     * @return the current value
+     * @return the current attributes
      */
     @Override
     public Map<String, Object> getAttributes() {
@@ -39,9 +42,9 @@ public class VersionedOidcUser implements OidcUser {
     }
 
     /**
-     * Returns the Authorities.
+     * Returns the authorities granted by the upstream OIDC identity.
      *
-     * @return the current value
+     * @return the granted authorities
      */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -49,9 +52,9 @@ public class VersionedOidcUser implements OidcUser {
     }
 
     /**
-     * Returns the Name.
+     * Returns the display name from the upstream OIDC identity.
      *
-     * @return the current value
+     * @return the principal name
      */
     @Override
     public String getName() {
@@ -59,9 +62,9 @@ public class VersionedOidcUser implements OidcUser {
     }
 
     /**
-     * Returns the Claims.
+     * Returns the claims from the upstream OIDC identity.
      *
-     * @return the current value
+     * @return the claim map
      */
     @Override
     public Map<String, Object> getClaims() {
@@ -69,9 +72,9 @@ public class VersionedOidcUser implements OidcUser {
     }
 
     /**
-     * Returns the UserInfo.
+     * Returns the OIDC user-info payload.
      *
-     * @return the current value
+     * @return the user info
      */
     @Override
     public OidcUserInfo getUserInfo() {
@@ -79,9 +82,9 @@ public class VersionedOidcUser implements OidcUser {
     }
 
     /**
-     * Returns the IdToken.
+     * Returns the OIDC ID token.
      *
-     * @return the current value
+     * @return the ID token
      */
     @Override
     public OidcIdToken getIdToken() {
