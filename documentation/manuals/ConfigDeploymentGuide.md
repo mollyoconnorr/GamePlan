@@ -6,8 +6,8 @@ This manual documents how to set up a Ubuntu VM for GamePlan and run the app as 
 
 - Gradle: `9.3.0` from the backend wrapper in `backend/gradle/wrapper/gradle-wrapper.properties`
 - Java: `21`
-- Node.js: not pinned in the repo; use a current LTS release that satisfies Vite 7 when you run the frontend build
-- MySQL: not pinned in the repo; install the `mysql-server` package that is available for your Ubuntu release
+- Node.js: `22.19.0`
+- MySQL: `8.0`
 
 # Software Installation
 
@@ -25,7 +25,7 @@ The version output should show OpenJDK 21.
 
 ## MySQL
 
-GamePlan uses MySQL and the `mysql-connector-j` driver, but the repository does not pin a specific server minor version.
+GamePlan uses MySQL `8.0` and the `mysql-connector-j` driver.
 
 ```bash
 sudo apt update
@@ -52,7 +52,7 @@ Typical choices:
 ## Node.js and npm
 
 The Gradle production build runs the frontend build, so Node.js and npm must be installed wherever `./gradlew bootJar` is run.
-The repository does not pin a Node version, so install a current LTS release that is compatible with Vite 7.
+Install Node.js `22.19.0` and npm wherever `./gradlew bootJar` is run.
 
 ```bash
 sudo apt update

@@ -71,7 +71,7 @@ frontend/
 
 ## Prerequisites
 
-- Node.js compatible with Vite 7. Use a current LTS release that satisfies Vite's Node requirement.
+- Node.js `22.19.0`.
 - npm.
 - Java 21 and the backend dependencies if running the full application locally.
 - A local backend on `http://localhost:8080` for authenticated app flows and API calls.
