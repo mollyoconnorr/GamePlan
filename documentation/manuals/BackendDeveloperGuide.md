@@ -23,6 +23,9 @@ This guide documents the GamePlan backend: how it is structured, how it runs, ho
     - [Important Notes](#important-notes)
   - [Seeded Users And Data](#seeded-users-and-data)
   - [Okta Configuration](#okta-configuration)
+  - [Set Up An Okta Developer Account](#set-up-an-okta-developer-account)
+  - [Create The Okta Application](#create-the-okta-application)
+  - [Create Okta Groups For Roles](#create-okta-groups-for-roles)
   - [How Okta Works In GamePlan](#how-okta-works-in-gameplan)
   - [Production Packaging](#production-packaging)
   - [Authentication And Security](#authentication-and-security)
@@ -83,8 +86,6 @@ backend/
         repository/    Spring Data repository interfaces
         service/       Business logic for users, reservations, blocks, equipment, and settings
       resources/
-        application-dev.yaml
-        application-prod.yaml
         application-example.yaml
         logback-spring.xml
         templates/     Server-side HTML templates used by a few routes
@@ -152,7 +153,17 @@ Typical use:
 - store temporary Okta values outside tracked YAML files
 - test an alternate Okta app without committing credentials
 
-To make `local.properties` drive local Okta configuration, update the active YAML profile to reference the environment variables, for example `${OKTA_CLIENT_ID}`, `${OKTA_CLIENT_SECRET}`, and `${OKTA_ISSUER}`.
+If you want those values to drive local Okta configuration, update the active dev profile to reference the environment variables, for example `${OKTA_CLIENT_ID}`, `${OKTA_CLIENT_SECRET}`, and `${OKTA_ISSUER}`.
+
+A typical `backend/local.properties` file looks like this:
+
+```properties
+OKTA_CLIENT_ID=your-client-id
+OKTA_CLIENT_SECRET=your-client-secret
+OKTA_ISSUER=https://your-okta-domain/oauth2/default
+```
+
+If you prefer to keep the values directly in `application-dev.yaml`, that also works. The key is to keep the Okta issuer, client ID, client secret, redirect URI, and frontend success URL aligned with the same Okta app.
 
 ## Running Tests
 
@@ -176,13 +187,18 @@ The test suite includes:
 
 GamePlan uses Spring profiles and YAML files to separate environments. There is no main-resource `application.yaml`; each profile file carries the settings it needs. The application fallback profile is `prod`, and `dev` must be selected explicitly.
 
-`backend/src/main/resources/application-example.yaml` is tracked as a placeholder template. The active main-resource YAML files under `backend/src/main/resources` are ignored local files because they can contain environment-specific values and secrets. Create them locally from the example file or the templates below.
+The repository tracks only two YAML files:
+
+- `backend/src/main/resources/application-example.yaml`
+- `backend/src/test/resources/application.yaml`
+
+The active main-resource profile files, `application-dev.yaml` and `application-prod.yaml`, are local ignored files because they can contain environment-specific values and secrets. Create them locally from the example file or the templates below, and keep production secrets in `/etc/gameplan/application-prod.yaml` as described in the IT manual.
 
 Do not commit real production secrets. Use placeholders in local examples and put deployed secrets in `/etc/gameplan` as described in the IT manual.
 
 ### `application-dev.yaml`
 
-Location: `backend/src/main/resources/application-dev.yaml`
+Location: local file `backend/src/main/resources/application-dev.yaml` (not tracked)
 
 This ignored local file contains local development overrides.
 
@@ -238,7 +254,7 @@ Behavior:
 
 ### `application-prod.yaml`
 
-Location: `backend/src/main/resources/application-prod.yaml`
+Location: local file `backend/src/main/resources/application-prod.yaml` (not tracked)
 
 This ignored local file contains production-style overrides for local packaging or smoke checks. In a real deployment, `/etc/gameplan/application-prod.yaml` should provide VM-specific values and secrets.
 
@@ -298,7 +314,7 @@ Behavior:
 
 Location: `backend/src/main/resources/application-example.yaml`
 
-This tracked file contains placeholder values for dev and production-style profile settings. Copy the relevant values into the ignored local profile files and replace the placeholder secrets.
+This tracked file contains placeholder values for dev and production-style profile settings. Copy the relevant values into the ignored local profile files and replace the placeholder secrets. It is the main resource YAML template that lives in the repository.
 
 ### Test `application.yaml`
 
@@ -406,6 +422,96 @@ The prod profile is configured for Carroll Okta:
 - app callback path: `/authorization-code/callback`
 
 Production deployments should put the real client ID and secret in `/etc/gameplan/application-prod.yaml` as described in the IT manual, not in tracked repository files.
+
+## Set Up An Okta Developer Account
+
+Use the Okta developer site to create the free test org used for local development.
+
+1. Open [https://developer.okta.com/](https://developer.okta.com/).
+2. Select the sign-up option for the Okta Integrator Free Plan.
+3. Create the account with your name, business email, country, and any other required sign-up details.
+4. Check your email for the Okta verification message.
+5. Follow the activation link in that email.
+6. Set your password and any required authenticators.
+7. Finish activation and open the Okta Admin Console for the new org.
+8. Save the Okta domain that Okta gives you, because you will use it as the issuer URL in Spring.
+
+If you are using a fresh org, keep in mind that the Integrator Free Plan is meant for development and testing, not production. It is the right choice for this project because the backend expects an Okta OIDC issuer, a client ID, and a client secret during local login.
+
+The backend already has the Okta integration points in place:
+
+- `SecurityConfig` sets up the OAuth2 login flow, CSRF, logout, and callback path handling
+- `CustomOidcUserService` links the Okta identity to the local user record
+- `UserService` uses the Okta subject to resolve the authenticated local user
+
+To test developer mode end to end, create the Okta app, wire the credentials into `backend/local.properties` or `application-dev.yaml`, and then run:
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+In a separate terminal, start the frontend with:
+
+```bash
+npm run dev
+```
+
+## Create The Okta Application
+
+After the developer org is ready, create the OIDC application that GamePlan will use.
+
+1. Sign in to the Okta Admin Console.
+2. Go to `Applications > Applications`.
+3. Click `Create App Integration`.
+4. Select `OIDC - OpenID Connect` as the sign-in method.
+5. Select `Web Application` as the application type.
+6. Click `Next`.
+7. Enter an app name such as `GamePlan Local Dev`.
+8. Set the grant type to `Authorization Code`.
+9. Add the local sign-in redirect URI used by this project:
+
+```text
+http://localhost:8080/login/oauth2/code/okta
+```
+
+10. Add the local sign-out redirect URI used by this project:
+
+```text
+http://localhost:5173/
+```
+
+11. Leave the controlled access setting on `Allow everyone in your organization to access` unless you are intentionally restricting the app to a test group.
+12. Click `Save`.
+13. Open the app's `General` tab and copy the `Client ID`.
+14. Click `Show` in the `Client Credentials` section and copy the `Client Secret`.
+15. Copy the issuer URL from the Okta org or authorization server that you want Spring Security to use.
+
+For this repo, the backend reads those values from the active Spring profile. In local development, the important values are:
+
+- issuer: the Integrator Free Plan org issuer
+- client ID: the OIDC app client ID
+- client secret: the OIDC app client secret
+- sign-in redirect URI: `http://localhost:8080/login/oauth2/code/okta`
+- sign-out redirect URI: `http://localhost:5173/`
+
+If you change any of those values in Okta, update the matching Spring config at the same time. The callback URI must match exactly, including the port number.
+
+If you use `backend/local.properties`, make sure the dev YAML file references the environment variables and that the Okta redirect URI in the app matches `http://localhost:8080/login/oauth2/code/okta` exactly.
+
+## Create Okta Groups For Roles
+
+GamePlan does not automatically turn Okta groups into application roles, but groups are still useful for testing and for optional claims in tokens.
+
+1. In the Okta Admin Console, go to `Directory > Groups`.
+2. Click `Add Group`.
+3. Create groups that match the kind of access you want to test, such as `Athlete`, `Athletic Trainer`, and `Admin`.
+4. Add your test users to the groups.
+5. If you want the groups to appear in the token, configure a `groups` claim for the OIDC app.
+6. Use the `Security > API` or app token settings flow in Okta to add the claim.
+7. Set the claim filter so the token returns the groups you want to test.
+8. Save the claim and refresh the app data if Okta asks you to.
+
+In GamePlan itself, the actual authorization source is still the local `User.role` value in the database. Okta groups are helpful for organization and testing, but they are not the same thing as the app's role checks.
 
 ## How Okta Works In GamePlan
 

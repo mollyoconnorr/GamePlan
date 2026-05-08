@@ -2,6 +2,13 @@
 
 This manual documents how to set up a Ubuntu VM for GamePlan and run the app as a `systemd` service. The production deployment uses one Spring Boot JAR that contains both the backend and the built frontend.
 
+## Version Notes
+
+- Gradle: `9.3.0` from the backend wrapper in `backend/gradle/wrapper/gradle-wrapper.properties`
+- Java: `21`
+- Node.js: not pinned in the repo; use a current LTS release that satisfies Vite 7 when you run the frontend build
+- MySQL: not pinned in the repo; install the `mysql-server` package that is available for your Ubuntu release
+
 # Software Installation
 
 ## Java
@@ -17,6 +24,8 @@ java --version
 The version output should show OpenJDK 21.
 
 ## MySQL
+
+GamePlan uses MySQL and the `mysql-connector-j` driver, but the repository does not pin a specific server minor version.
 
 ```bash
 sudo apt update
@@ -43,6 +52,7 @@ Typical choices:
 ## Node.js and npm
 
 The Gradle production build runs the frontend build, so Node.js and npm must be installed wherever `./gradlew bootJar` is run.
+The repository does not pin a Node version, so install a current LTS release that is compatible with Vite 7.
 
 ```bash
 sudo apt update
@@ -202,6 +212,8 @@ After changing Okta settings, restart the service:
 sudo systemctl restart gameplan
 sudo systemctl status gameplan
 ```
+
+For local developer-mode Okta setup, see [GamePlan Backend Developer Guide](BackendDeveloperGuide.md).
 
 # Seeded Accounts and Data
 
